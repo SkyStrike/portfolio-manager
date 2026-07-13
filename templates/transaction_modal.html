@@ -1,0 +1,198 @@
+<!-- MODAL: ADD/EDIT TRANSACTION -->
+<div class="modal-overlay" id="transaction-modal">
+    <div class="modal-content modal-content-medium">
+        <div class="modal-header modal-header-border">
+            <span id="transaction-modal-title">New transaction</span>
+            <button class="modal-close-btn" onclick="closeModal('transaction-modal')">&times;</button>
+        </div>
+        
+        <!-- Modal Tabs -->
+        <div class="modal-tabs">
+            <button type="button" class="modal-tab-btn active" data-tab="trades">Trades</button>
+            <button type="button" class="modal-tab-btn" data-tab="incomes">Incomes</button>
+            <button type="button" class="modal-tab-btn" data-tab="expenses">Expenses</button>
+        </div>
+        
+        <form id="transaction-form" class="margin-top-10">
+            <input type="hidden" id="tx-id">
+            <input type="hidden" id="tx-tab" value="trades">
+            
+            <!-- Portfolio Select (Common) -->
+            <div class="form-group">
+                <label for="tx-portfolio">Portfolio</label>
+                <select id="tx-portfolio" required></select>
+            </div>
+            
+            <!-- TRADES TAB WRAPPER -->
+            <div id="wrapper-trades" class="tab-wrapper-content">
+                <div class="form-row">
+                    <div class="form-group flex-2 pos-relative">
+                        <label for="tx-ticker">Ticker/Company *</label>
+                        <div class="autocomplete-container">
+                            <input type="text" id="tx-ticker" autocomplete="off" placeholder="Start entering symbol or name..">
+                            <div class="autocomplete-suggestions" id="tx-ticker-suggestions"></div>
+                        </div>
+                    </div>
+                    <div class="form-group flex-1">
+                        <label for="tx-exchange">Exchange</label>
+                        <select id="tx-exchange" class="modal-exchange-select">
+                            <option value="US">US (default)</option>
+                            <option value="TO">TO (Toronto TSX)</option>
+                            <option value="V">V (TSX Venture)</option>
+                            <option value="NE">NE (NEO Canada)</option>
+                            <option value="SG">SG (Singapore SGX)</option>
+                        </select>
+                    </div>
+                    <div class="form-group flex-1">
+                        <label for="tx-currency">Currency</label>
+                        <select id="tx-currency">
+                            <option value="USD">USD</option>
+                            <option value="SGD">SGD</option>
+                            <option value="CAD">CAD</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group flex-1">
+                        <label for="tx-action">Operation *</label>
+                        <select id="tx-action">
+                            <option value="BUY">BUY</option>
+                            <option value="SELL">SELL</option>
+                            <option value="SPLIT">STOCK SPLIT</option>
+                        </select>
+                    </div>
+                    <div class="form-group flex-1">
+                        <label for="tx-date">Date *</label>
+                        <input type="datetime-local" id="tx-date">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group flex-1">
+                        <label for="tx-quantity">Shares *</label>
+                        <input type="number" step="any" id="tx-quantity" placeholder="Shares">
+                        <div id="tx-shares-help" class="input-help-text" style="display: none;"></div>
+                    </div>
+                    <div class="form-group flex-1">
+                        <label for="tx-price">Price *</label>
+                        <input type="number" step="any" id="tx-price" placeholder="Price">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="tx-commission">Fee</label>
+                    <input type="number" step="any" id="tx-commission" placeholder="Fee">
+                </div>
+                
+                <!-- Dynamic Trade Value Display -->
+                <div id="tx-trade-value-container" class="modal-calc-container">
+                    <div class="flex-between-center text-sm">
+                        <span class="text-secondary">Total Trade Value:</span>
+                        <div class="text-right">
+                            <span id="tx-trade-value-native" class="text-md font-600 display-block"></span>
+                            <span id="tx-trade-value-sgd" class="text-xs font-500 display-block margin-top-2"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- INCOMES TAB WRAPPER -->
+            <div id="wrapper-incomes" class="tab-wrapper-content" style="display: none;">
+                <div class="form-row">
+                    <div class="form-group flex-2 pos-relative">
+                        <label for="div-ticker">Ticker/Company *</label>
+                        <div class="autocomplete-container">
+                            <input type="text" id="div-ticker" autocomplete="off" placeholder="Start entering symbol or name..">
+                            <div class="autocomplete-suggestions" id="div-ticker-suggestions"></div>
+                        </div>
+                    </div>
+                    <div class="form-group flex-1">
+                        <label for="div-currency">Currency</label>
+                        <select id="div-currency">
+                            <option value="USD">USD</option>
+                            <option value="SGD">SGD</option>
+                            <option value="CAD">CAD</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group flex-1">
+                        <label for="div-date">Date *</label>
+                        <input type="date" id="div-date">
+                    </div>
+                    <div class="form-group flex-1">
+                        <label for="div-qty">No. of Shares *</label>
+                        <input type="number" step="any" id="div-qty" placeholder="Quantity">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group flex-1">
+                        <label for="div-tax-rate">Tax Rate (%)</label>
+                        <input type="number" step="any" id="div-tax-rate" placeholder="Auto">
+                    </div>
+                    <div class="form-group flex-1">
+                        <label for="div-amount">Gross Amount *</label>
+                        <input type="number" step="any" id="div-amount" placeholder="0.00">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="div-tax">Tax Paid (Withholding)</label>
+                    <input type="number" step="any" id="div-tax" placeholder="Leave blank for auto-calculation">
+                </div>
+
+                <!-- Dynamic Dividend Display -->
+                <div id="div-calc-container" class="modal-calc-container">
+                    <div class="flex-between-center text-sm">
+                        <span class="text-secondary">Per Share Dividends:</span>
+                        <div class="text-right">
+                            <span class="text-sm font-600 display-block">
+                                Gross/Share: <span id="div-calc-gross-share">-</span>
+                            </span>
+                            <span class="text-sm font-600 display-block margin-top-2 text-gain">
+                                Net/Share: <span id="div-calc-net-share">-</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- EXPENSES TAB WRAPPER -->
+            <div id="wrapper-expenses" class="tab-wrapper-content" style="display: none;">
+                <div class="form-row">
+                    <div class="form-group flex-1">
+                        <label for="exp-date">Date *</label>
+                        <input type="date" id="exp-date">
+                    </div>
+                    <div class="form-group flex-1">
+                        <label for="exp-amount">Amount *</label>
+                        <input type="number" step="any" id="exp-amount" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="exp-currency">Currency *</label>
+                    <select id="exp-currency">
+                        <option value="SGD">SGD</option>
+                        <option value="USD">USD</option>
+                        <option value="CAD">CAD</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Notes (Common to all tabs) -->
+            <div class="form-group margin-top-10">
+                <label for="tx-notes">Note</label>
+                <textarea id="tx-notes" rows="3" placeholder="Optional notes..."></textarea>
+            </div>
+            
+            <div class="modal-footer modal-footer-border">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('transaction-modal')">Cancel</button>
+                <button type="button" class="btn btn-secondary btn-muted-bg" id="btn-save-transaction">Save</button>
+                <button type="button" class="btn btn-primary" id="btn-save-add-more-transaction">Save and add more</button>
+            </div>
+        </form>
+    </div>
+</div>

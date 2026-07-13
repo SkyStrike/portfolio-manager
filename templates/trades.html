@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Manager - Trades Ledger</title>
+    <!-- Premium Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="{{ BASE_PATH }}/static/global-theme.css">
+    <link rel="stylesheet" href="{{ BASE_PATH }}/static/css/style.css">
+    <script>
+        window.BASE_PATH = {{ BASE_PATH | tojson | safe }};
+        (function() {
+            const base = window.BASE_PATH;
+            if (base) {
+                const originalFetch = window.fetch;
+                window.fetch = function(input, init) {
+                    if (typeof input === 'string' && input.startsWith('/api/')) {
+                        input = base + input;
+                    } else if (input instanceof URL && input.pathname.startsWith('/api/')) {
+                        input.pathname = base + input.pathname;
+                    }
+                    return originalFetch(input, init);
+                };
+            }
+        })();
+        window.globalNavConfig = {
+            apps: [
+                { name: 'Active', url: {{ BASE_PATH | tojson | safe }} + '/portfolio_active.html', match: new RegExp('^' + {{ BASE_PATH | tojson | safe }} + '(/|/portfolio_active\\.html)?$') },
+                { name: 'Closed', url: {{ BASE_PATH | tojson | safe }} + '/portfolio_closed.html', match: /portfolio_closed\.html/ },
+                { name: 'Charts', url: {{ BASE_PATH | tojson | safe }} + '/charts.html', match: /charts\.html/ },
+                { name: 'History', url: {{ BASE_PATH | tojson | safe }} + '/transaction_history.html', match: /transaction_history\.html/ }
+            ]
+        };
+    </script>
+    <script src="{{ BASE_PATH }}/static/global-nav.js" defer></script>
+</head>
+<body>
+
+    <!-- Header Navigation Section -->
+    <header id="main-header">
+        <div class="header-inner">
+            <div class="logo-section" onclick="window.location.href='{{ BASE_PATH }}/'">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <defs>
+                        <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#8b5cf6" stop-opacity="1" />
+                            <stop offset="100%" stop-color="#6366f1" stop-opacity="1" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                    <path d="M2 17l10 5 10-5"></path>
+                    <path d="M2 12l10 5 10-5"></path>
+                </svg>
+            </div>
+            
+            <!-- Hamburger Menu Button -->
+            <button class="menu-toggle-btn" id="menu-toggle-btn" aria-label="Toggle Navigation Menu">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="3" y1="12" x2="21" y2="12" class="line-mid"></line>
+                    <line x1="3" y1="6" x2="21" y2="6" class="line-top"></line>
+                    <line x1="3" y1="18" x2="21" y2="18" class="line-bot"></line>
+                </svg>
+            </button>
+
+            <div class="header-nav-container" id="header-nav-container">
+                <nav class="header-nav">
+                    <ul>
+                        <li><a href="{{ BASE_PATH }}/" id="nav-active-main">Dashboard</a></li>
+                        <li class="nav-dropdown-container">
+                            <a href="#" id="nav-perf-toggle" class="nav-dropdown-toggle">
+                                Analytics
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </a>
+                            <div class="nav-dropdown-menu" id="nav-perf-dropdown">
+                                <a href="{{ BASE_PATH }}/performance_report.html" id="nav-perf-main">Performance Report</a>
+                                <a href="{{ BASE_PATH }}/charts.html" id="nav-charts-main">Charts</a>
+                                <a href="{{ BASE_PATH }}/closed" id="nav-closed-main">Closed Positions</a>
+                                <a href="{{ BASE_PATH }}/history" id="nav-history-main">Transaction History</a>
+                                <a href="{{ BASE_PATH }}/analytics/fd-comparison" id="nav-fd-comparison">vs Fixed Deposits</a>
+                            </div>
+                        </li>
+                        <li><a href="{{ BASE_PATH }}/dividend-calendar" id="nav-dividend-calendar">Dividend Calendar</a></li>
+                        {% if OPTIONS_TRACKER_URL or BACKTESTER_URL %}
+                        <li class="nav-dropdown-container">
+                            <a href="#" id="nav-services-toggle" class="nav-dropdown-toggle">
+                                Services
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </a>
+                            <div class="nav-dropdown-menu" id="nav-services-dropdown">
+                                {% if OPTIONS_TRACKER_URL %}
+                                <a href="{{ OPTIONS_TRACKER_URL }}" target="_blank" class="service-link">
+                                    Manage Options
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                        <polyline points="15 3 21 3 21 9"></polyline>
+                                        <line x1="10" y1="14" x2="21" y2="3"></line>
+                                    </svg>
+                                </a>
+                                {% endif %}
+                                {% if BACKTESTER_URL %}
+                                <a href="{{ BACKTESTER_URL }}" target="_blank" class="service-link">
+                                    Backtester
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                        <polyline points="15 3 21 3 21 9"></polyline>
+                                        <line x1="10" y1="14" x2="21" y2="3"></line>
+                                    </svg>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </li>
+                        {% endif %}
+                        <li class="nav-dropdown-container">
+                            <a href="#" id="nav-tools-main" class="nav-dropdown-toggle">
+                                Portfolio
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </a>
+                            <div class="nav-dropdown-menu" id="nav-tools-dropdown">
+                                <a href="{{ BASE_PATH }}/trades" id="nav-admin-main">Trades Ledger</a>
+                                <a href="{{ BASE_PATH }}/control-center" id="nav-settings-main">Control Center</a>
+                            </div>
+                        </li>
+                        <li class="nav-dropdown-container nav-add-container">
+                            <a href="#" id="nav-add-toggle" class="nav-add-toggle">
+                                <span>+</span> Add
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </a>
+                            <div class="nav-dropdown-menu" id="nav-add-dropdown">
+                                <a href="{{ BASE_PATH }}/trades?add=trades" id="nav-add-trade">Add Trade</a>
+                                <a href="{{ BASE_PATH }}/trades?add=incomes" id="nav-add-income">Add Dividend Income</a>
+                                <a href="{{ BASE_PATH }}/control-center?add=capital" id="nav-add-capital">Add Base Capital</a>
+                                <a href="{{ BASE_PATH }}/control-center?add=cash-metrics" id="nav-add-cash-metrics">Record Daily Cash Metrics</a>
+                            </div>
+                        </li>
+                    </ul>
+                </nav>
+
+                <!-- Portfolio Selection Dropdown -->
+                <div class="portfolio-selector-container">
+                    <button class="portfolio-select-btn" id="portfolio-select-btn">
+                        <span id="current-portfolio-display">💰 My Net Worth</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </button>
+                    <div class="portfolio-dropdown-menu" id="portfolio-dropdown-menu">
+                        <div class="portfolio-list-wrapper" id="portfolio-dropdown-list">
+                            <!-- Portfolios will be rendered dynamically here -->
+                        </div>
+                        <div class="portfolio-dropdown-footer">
+                            <a href="{{ BASE_PATH }}/trades?action=add_portfolio" id="add-portfolio-trigger-btn">+ Add Portfolio</a>
+                            <a href="{{ BASE_PATH }}/trades?action=manage_portfolios" id="manage-portfolios-trigger-btn">⚙️ My Portfolios</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Secondary sub-navigation bar for data entry tabs -->
+    <div class="category-sub-nav">
+        <div class="report-nav-pills local-nav">
+            <a class="nav-pill active" id="nav-transactions">Trades</a>
+            <a class="nav-pill" id="nav-dividends">Dividends</a>
+            <a class="nav-pill" id="nav-tickers">Tickers</a>
+        </div>
+    </div>
+
+    <main class="container">
+
+        <!-- SECTION: TRANSACTIONS / TRADES LOG -->
+        <section id="section-transactions">
+            <div class="table-card">
+                <div class="table-header-row-3col">
+                    <div class="table-title">Trade Transactions</div>
+                     <!-- Pagination Controls (Top) -->
+                    <div class="pagination-container pagination-trades" id="pagination-trades-top">
+                        <button class="btn btn-secondary btn-prev" disabled>Previous</button>
+                        <span class="page-info">Page 1 of 1</span>
+                        <button class="btn btn-secondary btn-next" disabled>Next</button>
+                    </div>
+                    <div class="transactions-header-search">
+                        <div class="search-input-wrapper">
+                            <input type="text" id="transaction-search-input" placeholder="Search by ticker, action, notes..." class="search-input-field">
+                        </div>
+                        <button class="btn btn-primary" id="add-transaction-btn">+ Add Transaction</button>
+                    </div>
+                </div>
+               
+                
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Ticker</th>
+                                <th>Action</th>
+                                <th>Price</th>
+                                <th>Quantity</th>
+                                <th>Currency</th>
+                                <th>Fee/Comm</th>
+                                <th>Cost Basis After</th>
+                                <th>Realized P&L</th>
+                                <th>Portfolio</th>
+                                <th>Notes</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactions-table-body">
+                            <!-- Dynamic rows will go here -->
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Pagination Controls -->
+                <!-- Pagination Controls (Bottom) -->
+                <div class="pagination-container pagination-trades" id="pagination-trades-bottom">
+                    <button class="btn btn-secondary btn-prev" disabled>Previous</button>
+                    <span class="page-info">Page 1 of 1</span>
+                    <button class="btn btn-secondary btn-next" disabled>Next</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: DIVIDENDS LOG -->
+        <section id="section-dividends" style="display: none;">
+            <div class="table-card">
+                <div class="table-header-row-3col">
+                    <div class="table-title">Dividends Log</div>
+                    <!-- Pagination Controls (Top) -->
+                    <div class="pagination-container pagination-dividends" id="pagination-dividends-top">
+                        <button class="btn btn-secondary btn-prev" disabled>Previous</button>
+                        <span class="page-info">Page 1 of 1</span>
+                        <button class="btn btn-secondary btn-next" disabled>Next</button>
+                    </div>
+                    <div class="transactions-header-search">
+                        <div class="search-input-wrapper">
+                            <input type="text" id="dividend-search-input" placeholder="Search by ticker, notes..." class="search-input-field">
+                        </div>
+                        <button class="btn btn-primary" id="add-dividend-btn">+ Record Dividend</button>
+                    </div>
+                </div>
+                
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Ticker</th>
+                                <th>Qty</th>
+                                <th>Amount</th>
+                                <th>Currency</th>
+                                <th>Tax Paid</th>
+                                <th>Net Received</th>
+                                <th>Net/Share</th>
+                                <th>Portfolio</th>
+                                <th>Notes</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dividends-table-body">
+                            <!-- Dynamic rows will go here -->
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Pagination Controls (Bottom) -->
+                <div class="pagination-container pagination-dividends" id="pagination-dividends-bottom">
+                    <button class="btn btn-secondary btn-prev" disabled>Previous</button>
+                    <span class="page-info">Page 1 of 1</span>
+                    <button class="btn btn-secondary btn-next" disabled>Next</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: TICKERS LIST -->
+        <section id="section-tickers" style="display: none;">
+            <div class="table-card">
+                <div class="table-header-row-3col">
+                    <div class="table-title">Ticker Settings & Profiles</div>
+                    <!-- Pagination Controls (Top) -->
+                    <div class="pagination-container pagination-tickers" id="pagination-tickers-top">
+                        <button class="btn btn-secondary btn-prev" disabled>Previous</button>
+                        <span class="page-info">Page 1 of 1</span>
+                        <button class="btn btn-secondary btn-next" disabled>Next</button>
+                    </div>
+                    <div class="tickers-header-actions">
+                        <label class="tickers-active-label">
+                            <input type="checkbox" id="ticker-active-toggle" checked class="tickers-active-checkbox">
+                            Active only
+                        </label>
+                        <div class="tickers-search-wrapper">
+                            <input type="text" id="ticker-search-input" placeholder="Search by ticker, name, or notes..." class="search-input-field">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Ticker</th>
+                                <th>Friendly Name</th>
+                                <th>Underlying</th>
+                                <th>Tax Rate</th>
+                                <th>Exchange</th>
+                                <th>Category</th>
+                                <th>Notes</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tickers-table-body">
+                            <!-- Dynamic rows will go here -->
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Pagination Controls (Bottom) -->
+                <div class="pagination-container pagination-tickers" id="pagination-tickers-bottom">
+                    <button class="btn btn-secondary btn-prev" disabled>Previous</button>
+                    <span class="page-info">Page 1 of 1</span>
+                    <button class="btn btn-secondary btn-next" disabled>Next</button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div class="toast-container" id="toast-container"></div>
+
+    {% include "transaction_modal.html" %}
+
+    <!-- MODAL: EDIT TICKER PROFILE -->
+    <div class="modal-overlay" id="ticker-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>Edit Ticker Settings</span>
+                <button class="modal-close-btn" onclick="closeModal('ticker-modal')">&times;</button>
+            </div>
+            <form id="ticker-form">
+                <input type="hidden" id="ticker-id">
+                <div class="form-group">
+                    <label for="ticker-symbol">Symbol</label>
+                    <input type="text" id="ticker-symbol" disabled>
+                </div>
+                <div class="form-group">
+                    <label for="ticker-exchange">Exchange</label>
+                    <select id="ticker-exchange" class="modal-exchange-select">
+                        <option value="US">US (default)</option>
+                        <option value="TO">TO (Toronto TSX)</option>
+                        <option value="V">V (TSX Venture)</option>
+                        <option value="NE">NE (NEO Canada)</option>
+                        <option value="SG">SG (Singapore SGX)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ticker-name">Friendly Name</label>
+                    <input type="text" id="ticker-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="ticker-underlying">Underlying Asset</label>
+                    <input type="text" id="ticker-underlying" list="underlying-assets-list" placeholder="e.g. Nvidia, Bitcoin, Index - Tech">
+                    <datalist id="underlying-assets-list"></datalist>
+                </div>
+                <div class="form-group">
+                    <label for="ticker-tax">Default Tax Rate (e.g. 0.30 for 30%)</label>
+                    <input type="number" step="0.01" id="ticker-tax" required placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label for="ticker-category">Category</label>
+                    <select id="ticker-category" class="modal-exchange-select">
+                        <option value="income">Income</option>
+                        <option value="growth">Growth</option>
+                        <option value="swing">Swing</option>
+                        <option value="conviction">Conviction</option>
+                        <option value="lotto">Lotto</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ticker-notes">Notes</label>
+                    <textarea id="ticker-notes" rows="2"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('ticker-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Ticker Settings</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD PORTFOLIO -->
+    <div class="modal-overlay" id="portfolio-add-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>Add New Portfolio</span>
+                <button class="modal-close-btn" onclick="closeModal('portfolio-add-modal')">&times;</button>
+            </div>
+            <form id="portfolio-add-form">
+                <div class="form-group">
+                    <label for="new-portfolio-name">Portfolio Name</label>
+                    <input type="text" id="new-portfolio-name" required placeholder="e.g. SRS, Speculative Account">
+                </div>
+                <div class="form-group">
+                    <label for="new-portfolio-classification">Classification</label>
+                    <input type="text" id="new-portfolio-classification" placeholder="e.g. Income + Growth, Discord">
+                </div>
+                <div class="form-group">
+                    <label for="new-portfolio-broker">Broker</label>
+                    <select id="new-portfolio-broker" class="modal-exchange-select">
+                        {% for b in BROKERS %}
+                        <option value="{{ b }}">{{ b }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('portfolio-add-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Portfolio</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: MANAGE PORTFOLIOS -->
+    <div class="modal-overlay" id="portfolio-manage-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>Manage My Portfolios</span>
+                <button class="modal-close-btn" onclick="closeModal('portfolio-manage-modal')">&times;</button>
+            </div>
+            <div class="table-wrapper capital-table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Classification</th>
+                            <th>Broker</th>
+                            <th>Order</th>
+                            <th>Delete</th>
+                        </tr>
+                    </thead>
+                    <tbody id="manage-portfolios-list">
+                        <!-- Portfolios with Delete buttons go here -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="closeModal('portfolio-manage-modal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Application Logic -->
+    <script id="active-brokers-data" type="application/json">
+        {{ BROKERS | tojson | safe }}
+    </script>
+    <script src="{{ BASE_PATH }}/static/js/app.js"></script>
+</body>
+</html>

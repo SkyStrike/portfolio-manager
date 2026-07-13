@@ -1,0 +1,6 @@
+- If you need to run the code, use `docker compose up -d --build` to build the code instead of executing it natively. 
+- If it is only a non code change (e.g. md file), do not re-run the build.
+- if a menu item is added globally, ensure `templates/base.html`, `templates/trades.html`, and `templates/control_center.html` are all updated.
+- for database schema changes, use `alembic`
+- for data patching, prepare shell and python patch scripts in `patching/{4 digit running number}` directory so that I can execute these within the running container or via `docker exec` or equivalent. The python script must have a `def patch(params: dict = None):` function that allows the patch to be executed via the maintenance module.
+- for implemented html codes, favor css class over inline styles.

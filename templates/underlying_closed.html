@@ -1,0 +1,29 @@
+<div class="underlying-section" data-search="{{ u_name }}">
+<h1 id="{{ u_name | slugify }}">
+    <span>{{ u_name }}
+        (<span class="{{ 'neg-val' if u.roi < 0 else 'pos-val' }}">{{ u.gl | commas(2, sign=True) }} SGD, {{ u.roi | roi }}</span>)
+    </span>
+</h1>
+
+<div class="summary-wrapper">
+    <div class="summary-stats" style="flex: 1;">
+        <h2>Summary</h2>
+        <ul>
+            <li><strong>Total Invested:</strong> {{ u.inv | commas(2) }} SGD</li>
+            <li><strong>Total Income:</strong> {{ u.inc | commas(2) }} SGD</li>
+            <li><strong>Total Fees:</strong> {{ u.fee | commas(2) }} SGD</li>
+            <li>
+                <strong>Total Profit:</strong> 
+                <span class="{{ 'neg-val' if u.roi < 0 else 'pos-val' }}">
+                    {{ u.gl | commas(2, sign=True) }} SGD ({{ u.roi | roi }})
+                </span>
+            </li>
+        </ul>
+    </div>
+</div>
+
+{% for p in u.symbols %}
+    {% include "symbol_card.html" %}
+{% endfor %}
+<hr>
+</div>

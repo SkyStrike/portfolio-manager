@@ -1,0 +1,16 @@
+services:
+  portfolio-manager:
+    build: .
+    container_name: portfolio-manager
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+    environment:
+      - PORTFOLIO_DB_FILE=/app/data/portfolio.db
+      - exchange_rates_file=/app/data/exchange_rates.json
+      - exchange_rates_max_poll_hours=6
+      - exchange_rates_decimals=4
+      - BASE_PATH=${BASE_PATH:-}
+    restart: unless-stopped

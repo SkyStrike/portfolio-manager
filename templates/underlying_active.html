@@ -1,0 +1,67 @@
+{% from "macros.html" import performance_chart %}
+<h1 id="{{ u_name | slugify }}" class="report-header-multiline">
+    <div class="header-content">
+        <div class="title">
+            {{ u_name }}
+            {% if u.backtest_url %}
+            <a href="{{ u.backtest_url }}" target="_blank" class="backtest-link" title="Backtest underlying assets">
+                <span class="backtest-icon">📊</span> Backtest
+            </a>
+            {% endif %}
+        </div>
+        <div class="subtitle">
+            Allocation: {{ u.alloc_pct | round(2) }}%, {{ u.curr | commas(2) }} SGD
+        </div>
+        <div class="highlight">
+            Daily P/L: 
+            <span class="{{ 'neg-val' if u.daily_val < 0 else 'pos-val' }}">
+                {{ u.daily_val | commas(2, sign=True) }} SGD ({{ u.daily_pct | round(2, sign=True) }}%)
+            </span>
+        </div>
+    </div>
+    <a href="#detailed-holdings-breakdown" class="back-to-toc" title="Return to Detailed Holdings Breakdown">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="18 15 12 9 6 15"></polyline>
+        </svg>
+    </a>
+</h1>
+
+<div class="summary-wrapper">
+    <div class="summary-stats">
+        <h2>Summary</h2>
+        <ul>
+            <li><strong>Total Invested:</strong> {{ u.inv | commas(2) }} SGD ({{ u.invested_pct | commas(2) }}%)</li>
+            <li><strong>Current Value:</strong> {{ u.curr | commas(2) }} SGD ({{ u.alloc_pct | commas(2) }}%)</li>
+            <li>
+                <strong>Daily Change:</strong> 
+                <span class="{{ 'neg-val' if u.daily_val < 0 else 'pos-val' }}">
+                    {{ u.daily_val | commas(2, sign=True) }} SGD ({{ u.daily_pct | round(2, sign=True) }}%)
+                </span>
+            </li>
+            <li><strong>Total Income:</strong> {{ u.inc | commas(2) }} SGD</li>
+            <li><strong>Total Fees:</strong> {{ u.fee | commas(2) }} SGD</li>
+            <li>
+                <strong>Total Profit:</strong> 
+                <span class="{{ 'neg-val' if u.roi < 0 else 'pos-val' }}">
+                    {{ u.gl | commas(2, sign=True) }} SGD ({{ u.roi | roi }})
+                </span>
+            </li>
+            <li><strong>Days Since First Tx:</strong> {{ u.days }}</li>
+            <li>
+                <strong>Average Returns Per Year:</strong> 
+                {% set avg_roi = (u.roi / u.days * 365 if u.days > 0 else 0) %}
+                <span class="{{ 'neg-val' if avg_roi < 0 else 'pos-val' }}">
+                    {{ avg_roi | round(2) }}%
+                </span>
+            </li>
+        </ul>
+    </div>
+    <div class="summary-chart">
+        {{ performance_chart(u_name | slugify, none, u.symbols | tojson, none, none, none) }}
+    </div>
+</div>
+
+{% for p in u.symbols %}
+    {% include "symbol_card.html" %}
+{% endfor %}
+<hr>

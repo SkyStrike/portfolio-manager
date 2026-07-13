@@ -1,0 +1,495 @@
+<!-- fixed_deposit_comparison.html -->
+<style>
+.fd-comparison-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    margin-top: 15px;
+}
+
+.fd-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.fd-kpi-card {
+    background: var(--card-bg, #1e293b);
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+}
+
+.fd-kpi-title {
+    font-size: 0.85rem;
+    color: var(--text-secondary, #94a3b8);
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.fd-kpi-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text-primary, #f8fafc);
+}
+
+.fd-controls-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+}
+
+@media (max-width: 1024px) {
+    .fd-controls-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+.fd-card {
+    background: var(--card-bg, #1e293b);
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.fd-card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: var(--text-primary, #f8fafc);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 10px;
+}
+
+.fd-form-group {
+    margin-bottom: 20px;
+}
+
+.fd-form-label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--text-secondary, #94a3b8);
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.fd-btn-group {
+    display: inline-flex;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: #0f172a;
+}
+
+.fd-toggle-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary, #94a3b8);
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    outline: none;
+}
+
+.fd-toggle-btn.active {
+    background: #38bdf8;
+    color: #0f172a;
+}
+
+.fd-input {
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    color: #f8fafc;
+    font-size: 0.9rem;
+    padding: 8px 12px;
+    width: 100%;
+    max-width: 200px;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.fd-input:focus {
+    border-color: #38bdf8;
+}
+
+.fd-file-upload {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+
+.fd-file-input {
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+
+.fd-upload-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: #1e293b;
+    border: 1px dashed rgba(255, 255, 255, 0.25);
+    border-radius: 6px;
+    color: var(--text-secondary, #94a3b8);
+    padding: 12px;
+    font-size: 0.85rem;
+    transition: border-color 0.15s, color 0.15s;
+    text-align: center;
+}
+
+.fd-file-upload:hover .fd-upload-btn {
+    border-color: #38bdf8;
+    color: #f8fafc;
+}
+
+.fd-assumptions-list {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 0.85rem;
+    color: var(--text-secondary, #94a3b8);
+    line-height: 1.6;
+}
+
+.fd-assumptions-list li {
+    margin-bottom: 8px;
+}
+
+.fd-table-container {
+    overflow-x: auto;
+    background: var(--card-bg, #1e293b);
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.fd-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    text-align: left;
+}
+
+.fd-table th {
+    color: var(--text-secondary, #94a3b8);
+    font-weight: 600;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+    padding: 12px 10px;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+}
+
+.fd-table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: var(--text-primary, #f8fafc);
+}
+
+.fd-table tr:hover td {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.fd-delta-positive {
+    color: #4ade80 !important;
+}
+
+.fd-delta-negative {
+    color: #f87171 !important;
+}
+
+.fd-upload-status {
+    font-size: 0.8rem;
+    color: #38bdf8;
+    margin-top: 5px;
+    display: none;
+}
+
+.fd-upload-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.fd-reference-link {
+    font-size: 0.8rem;
+    color: #38bdf8;
+    text-decoration: none;
+}
+
+.fd-reference-link:hover {
+    text-decoration: underline;
+}
+
+.fd-upload-label {
+    margin-bottom: 0;
+}
+</style>
+
+<h1>
+    <span>vs Fixed Deposits (Alternative Cash Analysis)</span>
+</h1>
+
+<div class="fd-comparison-layout">
+    <!-- Top Summary KPI Grid -->
+    <div class="fd-kpi-grid">
+        <div class="fd-kpi-card">
+            <div class="fd-kpi-title">Simulated FD Portfolio Value</div>
+            <div class="fd-kpi-value" id="kpi-fd-value">SG$ 0.00</div>
+        </div>
+        <div class="fd-kpi-card">
+            <div class="fd-kpi-title">Current Portfolio Market Value</div>
+            <div class="fd-kpi-value" id="kpi-market-value">SG$ 0.00</div>
+        </div>
+        <div class="fd-kpi-card">
+            <div class="fd-kpi-title">FD vs Market Difference</div>
+            <div class="fd-kpi-value" id="kpi-delta-value">SG$ 0.00</div>
+        </div>
+    </div>
+
+    <!-- Controls and Assumptions Row -->
+    <div class="fd-controls-row">
+        <!-- Controls Card -->
+        <div class="fd-card">
+            <h4 class="fd-card-title">Simulator Settings</h4>
+            
+            <div class="fd-form-group">
+                <span class="fd-form-label">Simulation Mode</span>
+                <div class="fd-btn-group">
+                    <button class="fd-toggle-btn active" id="btn-mode-fixed" onclick="setRateMode('fixed')">Simplistic Fixed Rate</button>
+                    <button class="fd-toggle-btn" id="btn-mode-csv" onclick="setRateMode('csv')">CSV Rates File (Upload)</button>
+                </div>
+            </div>
+
+            <!-- Fixed Rate Input -->
+            <div class="fd-form-group" id="group-fixed-rate">
+                <label class="fd-form-label" for="fixed-rate-input">Annual FD Interest Rate (%)</label>
+                <input type="number" id="fixed-rate-input" class="fd-input" value="2.0" step="0.05" min="0" onchange="triggerRecalculation()">
+            </div>
+
+            <!-- CSV Upload Input -->
+            <div class="fd-form-group" id="group-csv-upload" style="display: none;">
+                <div class="fd-upload-header">
+                    <span class="fd-form-label fd-upload-label">Upload FD Rates CSV File</span>
+                    <a href="{{ BASE_PATH }}/static/rates.csv" download="rates.csv" class="fd-reference-link">⬇️ Reference CSV</a>
+                </div>
+                <div class="fd-file-upload">
+                    <input type="file" id="csv-file-input" class="fd-file-input" accept=".csv" onchange="handleFileSelected(this)">
+                    <div class="fd-upload-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <span id="upload-btn-label">Choose CSV File...</span>
+                    </div>
+                </div>
+                <div class="fd-upload-status" id="upload-file-status">File uploaded successfully in-memory.</div>
+            </div>
+        </div>
+
+        <!-- Assumptions Card -->
+        <div class="fd-card">
+            <h4 class="fd-card-title">Simulator Core Assumptions</h4>
+            <ul class="fd-assumptions-list">
+                <li><strong>1-Year Lock-in</strong>: All fixed deposits run for exactly 12 months.</li>
+                <li><strong>Shifted Availability</strong>: Base capital additions are shifted forward by 1 month to set the start date (placed on the 1st).</li>
+                <li><strong>No Withdrawals</strong>: Assumes zero cash withdrawals out of the capital.</li>
+                <li><strong>Maturity Payouts</strong>: Interest earned is generated and paid out only on maturity (end of 1 year).</li>
+                <li><strong>Auto Rollover</strong>: On maturity, matured principal and earned interest are immediately rolled into another 1-year FD at the new rate.</li>
+                <li><strong>No Minimum sum limits</strong>: No minimum balance restrictions apply to opening FDs.</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Comparison Table Card -->
+    <div class="fd-table-container">
+        <h4 class="fd-card-title" style="margin-bottom: 15px; border-bottom: none; padding-bottom: 0;">Month-By-Month Comparison Table</h4>
+        <table class="fd-table" id="fd-comparison-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th style="text-align: right;">Injected This Month</th>
+                    <th style="text-align: right;">Total Principal Injected</th>
+                    <th style="text-align: center;">Effective FD Rate</th>
+                    <th style="text-align: right;">Interest Earned (Month)</th>
+                    <th style="text-align: right;">Accum. Interest Received</th>
+                    <th style="text-align: right;">Current FD Value</th>
+                    <th style="text-align: right;">Actual Market Value</th>
+                    <th style="text-align: right;">FD vs Market Delta</th>
+                </tr>
+            </thead>
+            <tbody id="fd-table-body">
+                <tr>
+                    <td colspan="9" style="text-align: center; padding: 30px; color: var(--text-secondary);">Loading simulation data...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+let currentRateMode = "fixed";
+let uploadedFileBytes = null;
+
+function setRateMode(mode) {
+    currentRateMode = mode;
+    document.getElementById("btn-mode-fixed").classList.toggle("active", mode === "fixed");
+    document.getElementById("btn-mode-csv").classList.toggle("active", mode === "csv");
+    
+    document.getElementById("group-fixed-rate").style.display = mode === "fixed" ? "" : "none";
+    document.getElementById("group-csv-upload").style.display = mode === "csv" ? "" : "none";
+    
+    triggerRecalculation();
+}
+
+function handleFileSelected(input) {
+    const file = input.files[0];
+    if (file) {
+        document.getElementById("upload-btn-label").textContent = file.name;
+        document.getElementById("upload-file-status").style.display = "block";
+        triggerRecalculation();
+    }
+}
+
+function triggerRecalculation() {
+    const tableBody = document.getElementById("fd-table-body");
+    tableBody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 30px; color: var(--text-secondary);">Recalculating simulation data...</td></tr>`;
+
+    const rateValue = parseFloat(document.getElementById("fixed-rate-input").value) || 2.0;
+    const fileInput = document.getElementById("csv-file-input");
+    
+    const formData = new FormData();
+    formData.append("rate_mode", currentRateMode);
+    formData.append("fixed_rate", rateValue);
+    
+    if (currentRateMode === "csv" && fileInput.files[0]) {
+        formData.append("file", fileInput.files[0]);
+    }
+
+    fetch('/api/analytics/fd-comparison', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            tableBody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 30px; color: #f87171;">Error: ${data.error}</td></tr>`;
+            return;
+        }
+        renderSimulation(data);
+    })
+    .catch(err => {
+        logger.error("Simulation request failed", err);
+        tableBody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 30px; color: #f87171;">Request failed. Check server connection.</td></tr>`;
+    });
+}
+
+function formatCurrency(val) {
+    if (val === null || val === undefined) return "-";
+    return (val >= 0 ? "" : "-") + "SG$ " + Math.abs(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatPercent(val) {
+    if (val === null || val === undefined) return "-";
+    return (val >= 0 ? "+" : "") + val.toFixed(2) + "%";
+}
+
+function renderSimulation(data) {
+    // 1. Render KPIs
+    const summary = data.summary;
+    document.getElementById("kpi-fd-value").textContent = formatCurrency(summary.total_fd_value);
+    document.getElementById("kpi-market-value").textContent = formatCurrency(summary.total_market_value);
+    
+    const deltaEl = document.getElementById("kpi-delta-value");
+    const deltaVal = summary.delta_value;
+    const deltaPct = summary.delta_pct;
+    
+    deltaEl.textContent = formatCurrency(deltaVal) + " (" + (deltaPct >= 0 ? "+" : "") + deltaPct.toFixed(2) + "%)";
+    deltaEl.className = "fd-kpi-value " + (deltaVal >= 0 ? "fd-delta-positive" : "fd-delta-negative");
+
+    // 2. Render Table Rows
+    const tableBody = document.getElementById("fd-table-body");
+    tableBody.innerHTML = "";
+
+    data.rows.forEach(row => {
+        const tr = document.createElement("tr");
+        
+        // Date column
+        const tdDate = document.createElement("td");
+        tdDate.innerHTML = `<strong>${row.date}</strong>`;
+        tr.appendChild(tdDate);
+
+        // Injected This Month
+        const tdInjected = document.createElement("td");
+        tdInjected.style.textAlign = "right";
+        tdInjected.textContent = row.capital_injected > 0 ? formatCurrency(row.capital_injected) : "-";
+        tr.appendChild(tdInjected);
+
+        // Total Principal Injected
+        const tdTotalPrincipal = document.createElement("td");
+        tdTotalPrincipal.style.textAlign = "right";
+        tdTotalPrincipal.textContent = formatCurrency(row.total_capital_injected);
+        tr.appendChild(tdTotalPrincipal);
+
+        // Effective FD Rate
+        const tdRate = document.createElement("td");
+        tdRate.style.textAlign = "center";
+        tdRate.textContent = (row.effective_rate * 100).toFixed(2) + "%";
+        tr.appendChild(tdRate);
+
+        // Interest Earned (Month)
+        const tdInterestMonth = document.createElement("td");
+        tdInterestMonth.style.textAlign = "right";
+        tdInterestMonth.textContent = row.interest_earned > 0 ? formatCurrency(row.interest_earned) : "-";
+        tr.appendChild(tdInterestMonth);
+
+        // Accum. Interest Received
+        const tdAccumInterest = document.createElement("td");
+        tdAccumInterest.style.textAlign = "right";
+        tdAccumInterest.textContent = row.accum_interest > 0 ? formatCurrency(row.accum_interest) : "-";
+        tr.appendChild(tdAccumInterest);
+
+        // Current FD Value
+        const tdFdValue = document.createElement("td");
+        tdFdValue.style.textAlign = "right";
+        tdFdValue.textContent = formatCurrency(row.fd_value);
+        tr.appendChild(tdFdValue);
+
+        // Actual Market Value
+        const tdMarket = document.createElement("td");
+        tdMarket.style.textAlign = "right";
+        tdMarket.textContent = row.market_value !== null ? formatCurrency(row.market_value) : "N/A";
+        tr.appendChild(tdMarket);
+
+        // Delta
+        const tdDelta = document.createElement("td");
+        tdDelta.style.textAlign = "right";
+        if (row.delta_val !== null) {
+            tdDelta.textContent = formatCurrency(row.delta_val) + " (" + formatPercent(row.delta_pct) + ")";
+            tdDelta.className = row.delta_val >= 0 ? "fd-delta-positive" : "fd-delta-negative";
+        } else {
+            tdDelta.textContent = "N/A";
+            tdDelta.style.color = "var(--text-secondary)";
+        }
+        tr.appendChild(tdDelta);
+
+        tableBody.appendChild(tr);
+    });
+}
+
+// Initial calculation trigger
+document.addEventListener("DOMContentLoaded", () => {
+    triggerRecalculation();
+});
+</script>

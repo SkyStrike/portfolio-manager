@@ -1,0 +1,7 @@
+{
+  "id": "0001",
+  "name": "Recalculate Dividend Quantities",
+  "description": "Calculates and updates missing dividend quantities ('qty' IS NULL) based on holding shares on the dividend payment date.",
+  "script": "patch_dividends_qty.py",
+  "parameters": []
+}

@@ -1,0 +1,133 @@
+<div class="report-container">
+    <div class="sidebar">
+        <h1>Transaction History</h1>
+
+        <div class="symbol-stats-grid" style="grid-template-columns: 1fr; padding: 15px; margin-bottom: 20px;">
+            <h2 style="margin-top: 0; font-size: 1.2rem; color: var(--accent-color); border: none;">Lifetime Summary</h2>
+            <div class="stat-group">
+                <div class="stat-item">
+                    <span class="stat-label">Total Outflow</span>
+                    <span class="stat-value pos-flow dynamic-global tooltip-trigger" data-tooltip="Total buys" id="global-expense" data-orig="{{ global_summary.expense }}">
+                        {{ global_summary.expense | commas(2) }} SGD
+                    </span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Total Inflow</span>
+                    <span class="stat-value neg-flow dynamic-global tooltip-trigger" data-tooltip="Total sell" id="global-income" data-orig="{{ global_summary.income }}">
+                        {{ global_summary.income | commas(2) }} SGD
+                    </span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label tooltip-trigger" data-tooltip="Estimated portfolio cost basis value">Net Flow</span>
+                    <span class="stat-value dynamic-global {{ 'pos-flow' if global_summary.net > 0 else ('neg-flow' if global_summary.net < 0 else '') }}" id="global-net" data-orig="{{ global_summary.net }}">
+                        {{ global_summary.net | commas(2, sign=True) }} SGD
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar-controls">
+            <div class="search-wrapper">
+                <input type="text" id="tx-search" placeholder="Filter by Symbol (e.g. AAPL)..." onkeyup="filterTransactions()">
+                <span class="clear-search" id="clear-tx-search" onclick="clearTxSearch()">×</span>
+            </div>
+        </div>
+
+        <h2>Table of Contents</h2>
+        <ul class="toc" style="column-count: 1; padding: 20px;">
+            {% for year in tree.keys() | sort(reverse=True) %}
+                <li>
+                    <a href="#year-{{ year }}"><strong>{{ year }}</strong></a>
+                    <ul>
+                        {% for month in tree[year].keys() | sort(reverse=True) %}
+                            <li><a href="#month-{{ year }}-{{ month }}">{{ month | month_name }}</a></li>
+                        {% endfor %}
+                    </ul>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div class="controls" style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+            <button onclick="toggleTxChart()" id="chart-btn" style="background: #27ae60; margin: 0;">📊 Show Filtered Chart</button>
+            
+            <div style="height: 30px; width: 1px; background: #444;"></div>
+
+            <div class="control-group">
+                <span style="font-size: 0.9rem; color: #888;">Years:</span>
+                <button class="small-btn" onclick="toggleLevel(1, true)">+</button>
+                <button class="small-btn" onclick="toggleLevel(1, false)">-</button>
+            </div>
+
+            <div class="control-group">
+                <span style="font-size: 0.9rem; color: #888;">Months:</span>
+                <button class="small-btn" onclick="toggleLevel(2, true)">+</button>
+                <button class="small-btn" onclick="toggleLevel(2, false)">-</button>
+            </div>
+
+            <div class="control-group">
+                <span style="font-size: 0.9rem; color: #888;">Tickers:</span>
+                <button class="small-btn" onclick="toggleLevel(3, true)">+</button>
+                <button class="small-btn" onclick="toggleLevel(3, false)">-</button>
+            </div>
+        </div>
+
+        <div id="chart-wrapper" style="display: none; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; margin-bottom: 30px;">
+            <div id="filtered-chart"></div>
+        </div>
+
+        {% for year in tree.keys() | sort(reverse=True) %}
+            {% set y_flow = year_totals[year] %}
+            <details {{ 'open' if year == latest_year else '' }} id="year-{{ year }}">
+                <summary>
+                    Year: {{ year }} 
+                    (Net Flow: <span class="dynamic-total year-total" data-year="{{ year }}" data-orig="{{ y_flow }}">{{ y_flow | commas(2, sign=True) }} SGD</span>)
+                </summary>
+                {% for month in tree[year].keys() | sort(reverse=True) %}
+                    {% set m_flow = month_totals[year][month] %}
+                    <details {{ 'open' if year == latest_year and month == latest_month else '' }} id="month-{{ year }}-{{ month }}">
+                        <summary>
+                            {{ month | month_name }} 
+                            (Net Flow: <span class="dynamic-total month-total" data-month-id="{{ year }}-{{ month }}" data-orig="{{ m_flow }}">{{ m_flow | commas(2, sign=True) }} SGD</span>)
+                        </summary>
+                        {% for underlying in tree[year][month].keys() | sort %}
+                            {% set net_flow = underlying_totals[year][month][underlying] %}
+                            <details>
+                                <summary>
+                                    {{ underlying }} 
+                                    (Net Flow: <span class="dynamic-total underlying-total" data-und-id="{{ year }}-{{ month }}-{{ underlying | slugify }}" data-orig="{{ net_flow }}">{{ net_flow | commas(2, sign=True) }} SGD</span>)
+                                </summary>
+                                <ul class="tx-list">
+                                    {% for tx in tree[year][month][underlying] %}
+                                        <li class="tx-item" id="{{ tx.id }}" data-flow="{{ tx.sgd_impact }}" data-month="{{ tx.date[:7] }}">
+                                            [{{ tx.symbol }}] 
+                                            <span class="{{ tx.action.lower() }}">[{{ tx.action.upper() }}]</span>
+                                            [{{ tx.date }}] 
+                                            {{ tx.qty | format_qty }} @ {{ tx.price | commas(4) }} {{ tx.currency }}, 
+                                            Fees: {{ tx.fee | commas(2) }} 
+                                            ({{ tx.total_net | commas(2) }} {{ tx.currency }})
+                                            
+                                            {% if tx.action == 'Buy' and not tx.is_closed %}
+                                                <span class="metadata">
+                                                    (Current Value: {{ tx.current_val | commas(2) }} {{ tx.currency }}, 
+                                                    <span class="{{ 'neg-val' if tx.gain_pct < 0 else 'pos-val' }}">
+                                                        {{ tx.gain_pct | round_sign(2) }}%, {{ (tx.current_val-tx.total_net) | commas(2, sign=True) }} {{ tx.currency }}
+                                                    </span>)
+                                                </span>
+                                            {% endif %}
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            </details>
+                        {% endfor %}
+                    </details>
+                {% endfor %}
+            </details>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    const txIndex = {{ search_index | tojson | safe }};
+</script>

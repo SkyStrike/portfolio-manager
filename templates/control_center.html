@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Manager - Control Center</title>
+    <!-- Premium Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="{{ BASE_PATH }}/static/global-theme.css">
+    <link rel="stylesheet" href="{{ BASE_PATH }}/static/css/style.css">
+    <script>
+        window.BASE_PATH = {{ BASE_PATH | tojson | safe }};
+        (function() {
+            const base = window.BASE_PATH;
+            if (base) {
+                const originalFetch = window.fetch;
+                window.fetch = function(input, init) {
+                    if (typeof input === 'string' && input.startsWith('/api/')) {
+                        input = base + input;
+                    } else if (input instanceof URL && input.pathname.startsWith('/api/')) {
+                        input.pathname = base + input.pathname;
+                    }
+                    return originalFetch(input, init);
+                };
+            }
+        })();
+        window.globalNavConfig = {
+            apps: [
+                { name: 'Active', url: {{ BASE_PATH | tojson | safe }} + '/portfolio_active.html', match: new RegExp('^' + {{ BASE_PATH | tojson | safe }} + '(/|/portfolio_active\\.html)?$') },
+                { name: 'Closed', url: {{ BASE_PATH | tojson | safe }} + '/portfolio_closed.html', match: /portfolio_closed\.html/ },
+                { name: 'Charts', url: {{ BASE_PATH | tojson | safe }} + '/charts.html', match: /charts\.html/ },
+                { name: 'History', url: {{ BASE_PATH | tojson | safe }} + '/transaction_history.html', match: /transaction_history\.html/ }
+            ]
+        };
+    </script>
+    <script src="{{ BASE_PATH }}/static/global-nav.js" defer></script>
+</head>
+<body>
+
+    <!-- Header Navigation Section -->
+    <header id="main-header">
+        <div class="header-inner">
+            <div class="logo-section" onclick="window.location.href='{{ BASE_PATH }}/'">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <defs>
+                        <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#8b5cf6" stop-opacity="1" />
+                            <stop offset="100%" stop-color="#6366f1" stop-opacity="1" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                    <path d="M2 17l10 5 10-5"></path>
+                    <path d="M2 12l10 5 10-5"></path>
+                </svg>
+            </div>
+            
+            <!-- Hamburger Menu Button -->
+            <button class="menu-toggle-btn" id="menu-toggle-btn" aria-label="Toggle Navigation Menu">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="3" y1="12" x2="21" y2="12" class="line-mid"></line>
+                    <line x1="3" y1="6" x2="21" y2="6" class="line-top"></line>
+                    <line x1="3" y1="18" x2="21" y2="18" class="line-bot"></line>
+                </svg>
+            </button>
+
+            <div class="header-nav-container" id="header-nav-container">
+                <nav class="header-nav">
+                    <ul>
+                        <li><a href="{{ BASE_PATH }}/" id="nav-active-main">Dashboard</a></li>
+                        <li class="nav-dropdown-container">
+                            <a href="#" id="nav-perf-toggle" class="nav-dropdown-toggle">
+                                Analytics
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </a>
+                            <div class="nav-dropdown-menu" id="nav-perf-dropdown">
+                                <a href="{{ BASE_PATH }}/performance_report.html" id="nav-perf-main">Performance Report</a>
+                                <a href="{{ BASE_PATH }}/charts.html" id="nav-charts-main">Charts</a>
+                                <a href="{{ BASE_PATH }}/closed" id="nav-closed-main">Closed Positions</a>
+                                <a href="{{ BASE_PATH }}/history" id="nav-history-main">Transaction History</a>
+                                <a href="{{ BASE_PATH }}/analytics/fd-comparison" id="nav-fd-comparison">vs Fixed Deposits</a>
+                            </div>
+                        </li>
+                        <li><a href="{{ BASE_PATH }}/dividend-calendar" id="nav-dividend-calendar">Dividend Calendar</a></li>
+                        {% if OPTIONS_TRACKER_URL or BACKTESTER_URL %}
+                        <li class="nav-dropdown-container">
+                            <a href="#" id="nav-services-toggle" class="nav-dropdown-toggle">
+                                Services
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </a>
+                            <div class="nav-dropdown-menu" id="nav-services-dropdown">
+                                {% if OPTIONS_TRACKER_URL %}
+                                <a href="{{ OPTIONS_TRACKER_URL }}" target="_blank" class="service-link">
+                                    Manage Options
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                        <polyline points="15 3 21 3 21 9"></polyline>
+                                        <line x1="10" y1="14" x2="21" y2="3"></line>
+                                    </svg>
+                                </a>
+                                {% endif %}
+                                {% if BACKTESTER_URL %}
+                                <a href="{{ BACKTESTER_URL }}" target="_blank" class="service-link">
+                                    Backtester
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                        <polyline points="15 3 21 3 21 9"></polyline>
+                                        <line x1="10" y1="14" x2="21" y2="3"></line>
+                                    </svg>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </li>
+                        {% endif %}
+                        <li class="nav-dropdown-container">
+                            <a href="#" id="nav-tools-main" class="nav-dropdown-toggle">
+                                Portfolio
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </a>
+                            <div class="nav-dropdown-menu" id="nav-tools-dropdown">
+                                <a href="{{ BASE_PATH }}/trades" id="nav-admin-main">Trades Ledger</a>
+                                <a href="{{ BASE_PATH }}/control-center" id="nav-settings-main">Control Center</a>
+                            </div>
+                        </li>
+                        <li class="nav-dropdown-container nav-add-container">
+                            <a href="#" id="nav-add-toggle" class="nav-add-toggle">
+                                <span>+</span> Add
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </a>
+                            <div class="nav-dropdown-menu" id="nav-add-dropdown">
+                                <a href="{{ BASE_PATH }}/trades?add=trades" id="nav-add-trade">Add Trade</a>
+                                <a href="{{ BASE_PATH }}/trades?add=incomes" id="nav-add-income">Add Dividend Income</a>
+                                <a href="{{ BASE_PATH }}/control-center?add=capital" id="nav-add-capital">Add Base Capital</a>
+                                <a href="{{ BASE_PATH }}/control-center?add=cash-metrics" id="nav-add-cash-metrics">Record Daily Cash Metrics</a>
+                            </div>
+                        </li>
+                    </ul>
+                </nav>
+
+                <!-- Portfolio Selection Dropdown -->
+                <div class="portfolio-selector-container">
+                    <button class="portfolio-select-btn" id="portfolio-select-btn">
+                        <span id="current-portfolio-display">💰 My Net Worth</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </button>
+                    <div class="portfolio-dropdown-menu" id="portfolio-dropdown-menu">
+                        <div class="portfolio-list-wrapper" id="portfolio-dropdown-list">
+                            <!-- Portfolios will be rendered dynamically here -->
+                        </div>
+                        <div class="portfolio-dropdown-footer">
+                            <a href="{{ BASE_PATH }}/control-center?action=add_portfolio" id="add-portfolio-trigger-btn">+ Add Portfolio</a>
+                            <a href="{{ BASE_PATH }}/control-center?action=manage_portfolios" id="manage-portfolios-trigger-btn">⚙️ My Portfolios</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Secondary sub-navigation bar for data entry tabs -->
+    <div class="category-sub-nav">
+        <div class="report-nav-pills local-nav">
+            <a class="nav-pill active" id="nav-settings">Configuration</a>
+            <a class="nav-pill" id="nav-import">Data Imports</a>
+            <a class="nav-pill" id="nav-capital">Base Capital</a>
+            <a class="nav-pill" id="nav-dailycash">Daily Cash</a>
+            <a class="nav-pill" id="nav-maintenance">Maintenance</a>
+        </div>
+    </div>
+
+    <main class="container">
+
+        <!-- SECTION: CONFIGURATION (SETTINGS) -->
+        <section id="section-settings">
+            <div class="settings-container">
+                <div class="table-card settings-card">
+                    <div class="table-header-row settings-header-row">
+                        <div class="table-title">Settings overrides</div>
+                    </div>
+                    <form id="settings-form">
+                        <div class="form-group">
+                            <label for="settings-classification-priority">Classification priority (comma-separated)</label>
+                            <input type="text" id="settings-classification-priority" placeholder="e.g. Income + Growth, Discord">
+                            <small class="form-help settings-help-text">
+                                Determines the custom sort/grouping sequence of classifications.
+                            </small>
+                        </div>
+                        <div class="form-group">
+                            <label for="settings-options-tracker-url">Options tracker API URL</label>
+                            <input type="url" id="settings-options-tracker-url" placeholder="http://yui.home/options-tracker">
+                        </div>
+                        <div class="form-group">
+                            <label for="settings-backtester-url">Backtester URL</label>
+                            <input type="url" id="settings-backtester-url" placeholder="http://yui.home/backtester/">
+                        </div>
+                        <div class="form-group">
+                            <label for="settings-metrics-run-hour">Daily metrics update hour (SGT, 0-23)</label>
+                            <input type="number" id="settings-metrics-run-hour" min="0" max="23" placeholder="6" value="{{ METRICS_RUN_HOUR }}" required class="settings-input-hour">
+                            <small class="form-help settings-help-text">
+                                Determines the hour (Singapore Time, GMT+8) to automatically update stock prices and record metrics on weekdays. The job will trigger within 15mins of the set hour. Default is 6 (6am SGT).
+                            </small>
+                        </div>
+                        <div class="margin-top-20">
+                            <button type="submit" id="settings-save-btn" class="btn btn-primary settings-save-btn">Save settings</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: DATA IMPORTS -->
+        <section id="section-import" style="display: none;">
+            <div class="table-card import-card-wrapper">
+                <div class="modal-tabs import-tabs-wrapper">
+                    <button type="button" class="modal-tab-btn active" id="btn-import-tab-ibkr">IBKR Dividend XML</button>
+                    <button type="button" class="modal-tab-btn" id="btn-import-tab-snowball">Snowball CSV</button>
+                    <button type="button" class="modal-tab-btn" id="btn-import-tab-capital">Base Capital CSV</button>
+                </div>
+
+                <!-- TAB: BASE CAPITAL CSV -->
+                <div id="import-tab-capital-content" class="tab-wrapper-content" style="display: none;">
+                    <div class="table-header-row import-title-margin">
+                        <div class="table-title">Upload Base Capital CSV</div>
+                    </div>
+                    <form id="capital-upload-form">
+                        <div class="form-group">
+                            <label for="capital-upload-file">Capital CSV File (capital.csv)</label>
+                            <input type="file" id="capital-upload-file" accept=".csv" required>
+                        </div>
+                        <div class="margin-top-20">
+                            <button type="submit" class="btn btn-primary import-submit-btn">Upload Capital Entries</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- TAB: IBKR DIVIDENDS -->
+                <div id="import-tab-ibkr-content" class="tab-wrapper-content">
+                    <div class="table-header-row import-title-margin">
+                        <div class="table-title">Import IBKR Dividends (XML)</div>
+                    </div>
+                    <form id="ibkr-import-form">
+                        <div class="form-group">
+                            <label for="ibkr-import-file">Dividends XML File (dividend-ytd.xml)</label>
+                            <input type="file" id="ibkr-import-file" accept=".xml" required>
+                        </div>
+                        <div class="form-row ibkr-date-row">
+                            <div class="form-group ibkr-date-group">
+                                <label for="ibkr-import-start-date">Start Date</label>
+                                <input type="date" id="ibkr-import-start-date" required>
+                            </div>
+                            <div class="form-group ibkr-date-group">
+                                <label for="ibkr-import-end-date">End Date</label>
+                                <input type="date" id="ibkr-import-end-date" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="ibkr-import-portfolio">Fallback Target Portfolio</label>
+                            <select id="ibkr-import-portfolio" required></select>
+                        </div>
+                        <div class="margin-top-20">
+                            <button type="submit" class="btn btn-primary import-submit-btn">Upload & Run Import</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- TAB: SNOWBALL CSV -->
+                <div id="import-tab-snowball-content" class="tab-wrapper-content" style="display: none;">
+                    <div class="table-header-row import-title-margin">
+                        <div class="table-title">Snowball Analytics Import Wizard</div>
+                    </div>
+                    <form id="import-form">
+                        <div class="form-group">
+                            <label for="import-portfolio-select">Target Portfolio</label>
+                            <select id="import-portfolio-select">
+                                <option value="">-- Select or Type Portfolio Name below --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="import-new-portfolio-name">Create Portfolio Name (if not in dropdown)</label>
+                            <input type="text" id="import-new-portfolio-name" placeholder="e.g. Income Factory">
+                        </div>
+                        <div class="form-group">
+                            <label for="import-holdings-file">Holdings CSV File (e.g. snowball-holdings.csv)</label>
+                            <input type="file" id="import-holdings-file" accept=".csv" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="import-transactions-file">Transactions CSV File (e.g. snowball-transactions.csv)</label>
+                            <input type="file" id="import-transactions-file" accept=".csv" required>
+                        </div>
+                        <div class="margin-top-20">
+                            <button type="submit" class="btn btn-primary import-submit-btn">Run Import Wizard</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: BASE CAPITAL -->
+        <section id="section-capital" style="display: none;">
+            <div class="table-card">
+                <div class="table-header-row-3col">
+                    <div>
+                        <div class="table-title">Base Capital Injections</div>
+                        <div class="capital-header-subtitle">Historical base capital adjustments.</div>
+                    </div>
+                    <!-- Pagination Controls (Top) -->
+                    <div class="pagination-container pagination-capital" id="pagination-capital-top">
+                        <button class="btn btn-secondary btn-prev" disabled>Previous</button>
+                        <span class="page-info">Page 1 of 1</span>
+                        <button class="btn btn-secondary btn-next" disabled>Next</button>
+                    </div>
+                    <button class="btn btn-primary" onclick="openCapitalAddModal()">+ Add Base Capital</button>
+                </div>
+                
+
+                <!-- Table showing existing entries -->
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Broker</th>
+                                <th>Remarks</th>
+                                <th class="capital-table-amount-header">Amount (SGD)</th>
+                                <th class="capital-table-delete-header">Delete</th>
+                            </tr>
+                        </thead>
+                        <tbody id="capital-entries-tbody">
+                            <!-- Loaded dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Pagination Controls (Bottom) -->
+                <div class="pagination-container pagination-capital" id="pagination-capital-bottom">
+                    <button class="btn btn-secondary btn-prev" disabled>Previous</button>
+                    <span class="page-info">Page 1 of 1</span>
+                    <button class="btn btn-secondary btn-next" disabled>Next</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: DAILY CASH -->
+        <section id="section-dailycash" style="display: none;">
+            <div class="daily-cash-wrapper">
+                <div class="table-card daily-cash-card">
+                    <div class="daily-cash-icon">💸</div>
+                    <div class="table-title daily-cash-title">Record Daily Cash Metrics</div>
+                    <p class="daily-cash-desc">
+                        Manually update the daily financial metrics (Liquidation Value, Total Stock Value, Cash on Hand) for each broker. You can customize the date (defaults to today) and the fields will pre-populate with the last recorded values for easy updates.
+                    </p>
+                    <div class="daily-cash-actions">
+                        <button class="btn daily-cash-action-btn daily-cash-ibkr-auto-btn" id="btn-ibkr-auto-ingest" onclick="triggerIbkrAutoIngest()">
+                            <span>⚡</span> Auto Update IBKR from File
+                        </button>
+                        {% for b in BROKERS %}
+                        <button class="btn btn-primary daily-cash-action-btn daily-cash-record-btn{% if b == 'IBKR' %} ibkr{% endif %}" onclick="openCashMetricsModal('{{ b }}')">
+                            <span>{% if b == 'MOOMOO' %}🐮{% elif b == 'IBKR' %}🦅{% else %}💼{% endif %}</span> Record {{ b }} Metrics
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- History Table Card -->
+                <div class="table-card daily-cash-history-card" style="margin-top: 2rem; padding: 1.5rem;">
+                    <div class="table-header-row-2col">
+                        <div class="table-title">Recent Daily Cash Metrics (90 Days)</div>
+                        <!-- Pagination Controls (Top) -->
+                        <div class="pagination-container pagination-dailycash" id="pagination-dailycash-top">
+                            <button class="btn btn-secondary btn-prev" disabled>Previous</button>
+                            <span class="page-info">Page 1 of 1</span>
+                            <button class="btn btn-secondary btn-next" disabled>Next</button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-wrapper">
+                        <table id="daily-cash-history-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Broker</th>
+                                    <th>Liquidation Value</th>
+                                    <th>Base Capital</th>
+                                    <th>Total Stock Value</th>
+                                    <th>Cash on Hand</th>
+                                </tr>
+                            </thead>
+                            <tbody id="daily-cash-history-body">
+                                <tr>
+                                    <td colspan="6" class="options-table-cell text-center text-secondary">Loading history...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Pagination Controls (Bottom) -->
+                    <div class="pagination-container pagination-dailycash pagination-right" id="pagination-dailycash-bottom">
+                        <button class="btn btn-secondary btn-prev" disabled>Previous</button>
+                        <span class="page-info">Page 1 of 1</span>
+                        <button class="btn btn-secondary btn-next" disabled>Next</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: MAINTENANCE -->
+        <section id="section-maintenance" style="display: none;">
+            <div class="maintenance-grid">
+                
+                <!-- LEFT COLUMN: BACKUP & RESTORE -->
+                <div class="table-card maintenance-card">
+                    <div class="table-header-row maintenance-card-title">
+                        <span>💾 Database Backup & Restore</span>
+                    </div>
+                    
+                    <!-- Backup DB Form -->
+                    <div class="form-group maintenance-group-border">
+                        <label for="db-backup-name" class="maintenance-field-label">Create New Database Backup</label>
+                        <div class="maintenance-backup-input-group">
+                            <input type="text" id="db-backup-name" placeholder="e.g. backup_today.db" class="modal-exchange-select maintenance-backup-input" />
+                            <button id="btn-db-backup" class="btn btn-primary">Create Backup</button>
+                        </div>
+                        <span class="maintenance-sub-label">The backup name must end with '.db' and not match the active database filename.</span>
+                    </div>
+
+                    <!-- List, Download & Delete Backups -->
+                    <div class="form-group maintenance-group-border">
+                        <label class="maintenance-field-label">Manage Database Backups</label>
+                        <div class="maintenance-list-container" id="db-backups-list">
+                            <!-- Populated via Javascript -->
+                            <div class="maintenance-list-empty">No backups found.</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Restore DB Form -->
+                    <div class="form-group">
+                        <label for="db-restore-select" class="maintenance-field-label">Restore Database</label>
+                        <div class="maintenance-restore-row">
+                            <div>
+                                <span class="maintenance-field-label">Select Backup File:</span>
+                                <select id="db-restore-select" class="modal-exchange-select"></select>
+                            </div>
+                            <div>
+                                <span class="maintenance-field-label">Restore Target (Active Database):</span>
+                                <select id="db-restore-target" class="modal-exchange-select maintenance-restore-target" disabled>
+                                    <option value="portfolio.db">portfolio.db (Active Database)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button id="btn-db-restore" class="btn btn-danger">Restore Selected Backup</button>
+                        <span class="maintenance-restore-warning">🚨 WARNING: Restoring will overwrite the current database file. This takes effect immediately.</span>
+                    </div>
+                </div>
+
+                <!-- RIGHT COLUMN: PATCHING ENGINE -->
+                <div class="table-card maintenance-card">
+                    <div class="table-header-row maintenance-card-title">
+                        <span>🛠️ Run System Patches</span>
+                    </div>
+                    
+                    <!-- Select Patch -->
+                    <div class="form-group">
+                        <label for="patch-select" class="maintenance-field-label">Select Maintenance Patch</label>
+                        <select id="patch-select" class="modal-exchange-select">
+                            <option value="">-- Select a patch to load --</option>
+                        </select>
+                    </div>
+
+                    <!-- Patch Description Card -->
+                    <div id="patch-desc-card" class="info-card maintenance-desc-card">
+                        <div id="patch-desc-text" class="maintenance-desc-text"></div>
+                    </div>
+
+                    <!-- Dynamic Parameters Fields Form -->
+                    <form id="patch-params-form" class="maintenance-params-form">
+                        <div id="patch-params-fields"></div>
+                    </form>
+                    
+                    <!-- Execute Button -->
+                    <button id="btn-patch-execute" class="btn btn-primary" disabled>Execute Patch</button>
+
+                    <!-- Console Logs Output Screen -->
+                    <div class="maintenance-console-header">
+                        <span>Console Output Logs:</span>
+                        <button id="btn-clear-logs" class="maintenance-console-clear-btn" onclick="document.getElementById('patch-console-pre').textContent = 'Console cleared.'">Clear logs</button>
+                    </div>
+                    <pre id="patch-console-pre" class="maintenance-console-pre">Console ready. Select a patch to begin.</pre>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- MODAL: ADD PORTFOLIO -->
+    <div class="modal-overlay" id="portfolio-add-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>Add New Portfolio</span>
+                <button class="modal-close-btn" onclick="closeModal('portfolio-add-modal')">&times;</button>
+            </div>
+            <form id="portfolio-add-form">
+                <div class="form-group">
+                    <label for="new-portfolio-name">Portfolio Name</label>
+                    <input type="text" id="new-portfolio-name" required placeholder="e.g. SRS, Speculative Account">
+                </div>
+                <div class="form-group">
+                    <label for="new-portfolio-classification">Classification</label>
+                    <input type="text" id="new-portfolio-classification" placeholder="e.g. Income + Growth, Discord">
+                </div>
+                <div class="form-group">
+                    <label for="new-portfolio-broker">Broker</label>
+                    <select id="new-portfolio-broker" class="modal-exchange-select">
+                        {% for b in BROKERS %}
+                        <option value="{{ b }}">{{ b }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('portfolio-add-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Portfolio</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: MANAGE PORTFOLIOS -->
+    <div class="modal-overlay" id="portfolio-manage-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>Manage My Portfolios</span>
+                <button class="modal-close-btn" onclick="closeModal('portfolio-manage-modal')">&times;</button>
+            </div>
+            <div class="table-wrapper capital-table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Classification</th>
+                            <th>Broker</th>
+                            <th>Order</th>
+                            <th>Delete</th>
+                        </tr>
+                    </thead>
+                    <tbody id="manage-portfolios-list">
+                        <!-- Portfolios with Delete buttons go here -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="closeModal('portfolio-manage-modal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: RECORD DAILY CASH METRICS (MOOMOO & IBKR) -->
+    <div class="modal-overlay" id="cash-metrics-modal">
+        <div class="modal-content modal-content-small">
+            <div class="modal-header">
+                <span id="cash-metrics-modal-title">Record Broker Metrics</span>
+                <button class="modal-close-btn" onclick="closeModal('cash-metrics-modal')">&times;</button>
+            </div>
+            <form id="cash-metrics-form">
+                <input type="hidden" id="cash-metrics-broker">
+                
+                <div class="form-group">
+                    <label for="cash-metrics-date">Date</label>
+                    <input type="date" id="cash-metrics-date" required class="modal-exchange-select">
+                </div>
+                
+                <div class="form-group">
+                    <label for="cash-metrics-liq">Liquidation Value (SGD)</label>
+                    <input type="number" step="0.01" id="cash-metrics-liq" required placeholder="0.00" class="modal-exchange-select">
+                </div>
+                
+                <div class="form-group">
+                    <label for="cash-metrics-stock">Total Stock Value (SGD)</label>
+                    <input type="number" step="0.01" id="cash-metrics-stock" required placeholder="0.00" class="modal-exchange-select">
+                </div>
+                
+                <div class="form-group">
+                    <label for="cash-metrics-cash">Cash on Hand (SGD)</label>
+                    <input type="number" step="0.01" id="cash-metrics-cash" required placeholder="0.00" class="modal-exchange-select">
+                </div>
+                
+                <div class="modal-footer margin-top-15">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('cash-metrics-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="cash-metrics-submit-btn">Save Metrics</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD BASE CAPITAL -->
+    <div class="modal-overlay" id="capital-add-modal">
+        <div class="modal-content modal-content-small">
+            <div class="modal-header">
+                <span>Add Base Capital Injection</span>
+                <button class="modal-close-btn" onclick="closeModal('capital-add-modal')">&times;</button>
+            </div>
+            <form id="capital-add-form">
+                <div class="form-group">
+                    <label for="cap-add-date">Date</label>
+                    <input type="date" id="cap-add-date" required class="modal-exchange-select">
+                </div>
+                
+                <div class="form-group">
+                    <label for="cap-add-broker">Broker</label>
+                    <select id="cap-add-broker" required class="modal-exchange-select">
+                        {% for b in BROKERS %}
+                        <option value="{{ b }}">{{ b }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="cap-add-amount">Amount (SGD)</label>
+                    <input type="number" step="0.01" id="cap-add-amount" placeholder="0.00" required class="modal-exchange-select">
+                </div>
+                
+                <div class="form-group">
+                    <label for="cap-add-remarks">Remarks</label>
+                    <input type="text" id="cap-add-remarks" placeholder="Salary, Bonus, Dip buying" class="modal-exchange-select">
+                </div>
+                
+                <div class="modal-footer margin-top-15">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('capital-add-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">+ Add Entry</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Script Application Logic -->
+    <script id="active-brokers-data" type="application/json">
+        {{ BROKERS | tojson | safe }}
+    </script>
+    <script src="{{ BASE_PATH }}/static/js/app.js"></script>
+</body>
+</html>

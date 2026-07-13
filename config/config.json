@@ -1,0 +1,36 @@
+{
+  "brokers": [
+    "IBKR",
+    "MOOMOO"
+  ],
+  "finance": {
+    "max_workers": 30,
+    "conversion_rates": {
+      "USD": 1.2754,
+      "CAD": 0.9327,
+      "SGD": 1.0
+    }
+  },
+  "ui": {
+    "page_width": "1800px",
+    "chart_height": "40vh",
+    "font_size": "1em",
+    "mobile_font_size": "0.8em",
+    "colors": {
+      "invested": "#7f8c8d",
+      "current": "#3498db",
+      "returns": "#2ecc71",
+      "income": "#2ecc71",
+      "positive": "#3498db",
+      "negative": "#e74c3c"
+    }
+  },
+  "allowed_documents": {
+    "stock-options": "data/stock-options.json",
+    "ib-data": "data/ib_data.json"
+  },
+  "external_services": {
+    "options_tracker_url": "",
+    "backtester_url": ""
+  }
+}

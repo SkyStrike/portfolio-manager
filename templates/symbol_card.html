@@ -1,0 +1,255 @@
+{% from "macros.html" import performance_chart %}
+{% set roi = p.metrics.roi_pct %}
+{% set roi_class = 'neg-val' if roi < 0 else 'pos-val' %}
+<h2 id="{{ p.symbol | slugify if is_closed else (u_name ~ '-' ~ p.symbol) | slugify }}" class="symbol-card-header">
+    <div class="header-content">
+        <div class="title" style="display: flex; align-items: center; gap: 8px; position: relative;">
+            <span>{{ p.symbol }}</span>
+            {% if p.is_augmented %}
+                <span class="augmented-badge tooltip-trigger" data-tooltip="Verified via IBKR (ib_data.json). Broker Cost Basis: {{ p.ib_cost_basis | commas(2) }} {{ p.currency }} | Broker Unr. PnL: {{ p.ib_unrealized_profits | commas(2) }} {{ p.currency }}" style="background: rgba(46, 204, 113, 0.15); color: #2ecc71; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(46, 204, 113, 0.3); font-weight: normal; text-transform: uppercase; letter-spacing: 0.5px;">IB Sync</span>
+            {% endif %}
+            {% if p.ib_mismatch %}
+                <span class="augmented-badge tooltip-trigger" data-tooltip="IBKR Quantity Mismatch! Broker (ib_data.json): {{ p.ib_actual_qty | commas(2) }} shares | Local (DB IBKR transactions): {{ p.ibkr_calc_qty | commas(2) }} shares" style="background: rgba(231, 76, 60, 0.15); color: #e74c3c; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(231, 76, 60, 0.3); font-weight: normal; text-transform: uppercase; letter-spacing: 0.5px;">IB Mismatch</span>
+            {% endif %}
+            
+            <!-- Ticker Utilities Context Dropdown -->
+            <div class="ticker-menu-container" style="position: relative; display: inline-block;">
+                <button class="ticker-menu-btn" onclick="toggleTickerMenu('{{ p.symbol }}', event)">⋮</button>
+                <div id="ticker-menu-{{ p.symbol }}" class="ticker-menu-dropdown">
+                    <a href="javascript:void(0)" onclick="addTickerToCalculator({
+                        symbol: '{{ p.symbol }}',
+                        currency: '{{ p.currency }}',
+                        price: {{ p.metrics.current_price | default(0.0) }},
+                        qty: {{ p.metrics.quantity | default(0.0) }},
+                        rate: {{ p.rate | default(1.0) }},
+                        totalMarket: {{ total_market | default(0.0) }},
+                        exchange: '{{ p.exchange | default("") }}'
+                    }, event)">🖩 Calculator</a>
+                </div>
+            </div>
+        </div>
+        <div class="subtitle">
+            {% if not is_closed and total_market > 0 %}
+                {% set alloc = (p.sgd_metrics.current_sgd / total_market) * 100 %}
+                Allocation: {{ alloc | round(2) }}%, {{ p.sgd_metrics.current_sgd | commas(2) }} SGD
+            {% else %}
+                ROI: <span class="{{ roi_class }}">{{ roi | round(2, sign=True) }}%</span>
+            {% endif %}
+        </div>
+        {% if not is_closed %}
+        <div class="highlight">
+            Daily P/L: 
+            <span class="{{ 'neg-val' if p.sgd_metrics.daily_val_sgd < 0 else 'pos-val' }}">
+                {{ p.sgd_metrics.daily_val_sgd | commas(2, sign=True) }} SGD ({{ p.metrics.daily_pct | round(2, sign=True) }}%)
+            </span>
+        </div>
+        {% endif %}
+    </div>
+    {% if not is_closed %}
+    <a href="#detailed-holdings-breakdown" class="back-to-toc" title="Return to Detailed Holdings Breakdown">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="18 15 12 9 6 15"></polyline>
+        </svg>
+    </a>
+    {% endif %}
+</h2>
+
+<div class="symbol-card-upper" style="margin-top: 20px; margin-bottom: 30px;">
+    <!-- 4-Column Summary Dashboard -->
+    <div class="symbol-stats-grid">
+        <!-- Col 1: Position -->
+        <div class="stat-group">
+            <h4>Position</h4>
+            <div class="stat-item">
+                <span class="stat-label">Total Quantity</span>
+                <span class="stat-value">{{ p.metrics.quantity | format_qty }}</span>
+                <span class="stat-subvalue">{{ p.subclass | capitalize }} subclass</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Allocation (Underlying)</span>
+                {% set u_alloc = (p.sgd_metrics.current_sgd / u.curr * 100) if u.curr > 0 else 0 %}
+                <span class="stat-value">{{ u_alloc | round(2) }}%</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Days Held</span>
+                <span class="stat-value">{{ p.metrics.days_since_first_tx }} days</span>
+                {% if p.metrics.latest_tx_date %}
+                    <span class="stat-subvalue">Last Tx: {{ p.metrics.latest_tx_date }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Col 2: Valuation -->
+        <div class="stat-group">
+            <h4>Valuation</h4>
+            <div class="stat-item">
+                <span class="stat-label">Invested Basis</span>
+                <span class="stat-value">{{ p.metrics.cost_basis | commas(2) }} {{ p.currency }}</span>
+                <span class="stat-subvalue">
+                    {% set alloc2 = (p.sgd_metrics.invested_sgd / total_invested_capital) * 100 %}
+                    {{ p.sgd_metrics.invested_sgd | commas(2) }} SGD ({{ alloc2 | round(2) }}%)
+                </span>
+            </div>
+            <div class="stat-item">
+                {% if not p.is_closed %}
+                    <span class="stat-label">Market Value</span>
+                    <span class="stat-value">{{ p.metrics.market_value | commas(2) }} {{ p.currency }}</span>
+                    <span class="stat-subvalue">{{ p.sgd_metrics.current_sgd | commas(2) }} SGD ({{ alloc | round(2) }}%)</span>
+                {% else %}
+                    <span class="stat-label">Exit Value</span>
+                    <span class="stat-value">{{ sum_exit_value(p) | commas(2) }} {{ p.currency }}</span>
+                    <span class="stat-subvalue">Realized outcome</span>
+                {% endif %}
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Average Buy Price</span>
+                <span class="stat-value">{{ p.metrics.average_buy_price | commas(4) }} {{ p.currency }}</span>
+                {% if not p.is_closed %}
+                    <span class="stat-subvalue">Current: {{ p.metrics.current_price | commas(4) }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Col 3: Performance -->
+        <div class="stat-group">
+            <h4>Performance</h4>
+            <div class="stat-item">
+                <span class="stat-label">Daily P/L</span>
+                <span class="stat-value {{ 'neg-val' if p.metrics.daily_val < 0 else 'pos-val' }}">
+                    {{ p.metrics.daily_val | commas(2, sign=True) }} {{ p.currency }}
+                </span>
+                <span class="stat-subvalue">
+                    {{ p.sgd_metrics.daily_val_sgd | commas(2, sign=True) }} SGD ({{ p.metrics.daily_pct | round(2, sign=True) }}%)
+                </span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Capital Gain/Loss</span>
+                <span class="stat-value {{ 'neg-val' if p.metrics.capital_gain < 0 else 'pos-val' }}">
+                    {{ p.metrics.capital_gain | commas(2, sign=True) }} {{ p.currency }}
+                </span>
+                <span class="stat-subvalue">
+                    {{ p.metrics.capital_gain_sgd | commas(2, sign=True) }} SGD ({{ p.metrics.capital_gain_pct | round(2, sign=True) }}%)
+                </span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Total Income</span>
+                <span class="stat-value pos-val">+{{ (p.income | map(attribute='net') | sum) | commas(2) }} {{ p.currency }}</span>
+                <span class="stat-subvalue">Dividends & Interest</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Total Fees</span>
+                <span class="stat-value neg-val">-{{ (p.transactions | map(attribute='fee') | sum) | commas(2) }} {{ p.currency }}</span>
+                <span class="stat-subvalue">Trading transaction costs</span>
+            </div>
+        </div>
+
+        <!-- Col 4: Total Return -->
+        <div class="stat-group">
+            <h4>Outcome</h4>
+            <div class="stat-item">
+                <span class="stat-label">Total Returns</span>
+                <span class="stat-value {{ 'neg-val' if roi < 0 else 'pos-val' }}">
+                    {{ p.metrics.lifetime_profit | commas(2, sign=True) }} {{ p.currency }}
+                </span>
+                <span class="stat-subvalue">{{ p.sgd_metrics.profit_sgd | commas(2, sign=True) }} SGD</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">ROI (Lifetime)</span>
+                <span class="stat-value {{ 'neg-val' if roi < 0 else 'pos-val' }}" style="font-size: 1.5rem;">
+                    {{ roi | roi }}
+                </span>
+            </div>
+            {% if not p.is_closed %}
+            <div class="stat-item">
+                <span class="stat-label">Avg. Annual Returns</span>
+                <span class="stat-value {{ 'neg-val' if p.metrics.avg_returns_per_year < 0 else 'pos-val' }}">
+                    {{ p.metrics.avg_returns_per_year | commas(2, sign=True) }}%
+                </span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Wide Analytics Chart -->
+    <div class="symbol-analytics-full" style="width: 100%;">
+        {{ performance_chart(p.symbol | slugify, p.symbol, none, p.transactions | tojson, p.income | tojson, p.rate) }}
+    </div>
+</div>
+
+<div class="symbol-card-lower" style="width: 100%;">
+<div class="tx-section-header">
+    <h3>Transactions</h3>
+    <button class="txv-trigger-btn"
+            data-symbol="{{ p.symbol }}"
+            data-avg-cost="{{ p.metrics.average_buy_price | default(0) }}"
+            data-currency="{{ p.currency }}"
+            data-txs='{{ p.transactions | tojson | safe }}'
+            title="View price history chart"
+            onclick="openTxVisualizer(this)">
+        📈 Chart
+    </button>
+</div>
+    {% set tx_by_year = p.transactions | groupby_year %}
+    {% for year, txs in tx_by_year.items() | sort(reverse=True) %}
+        {% set n_qty = txs | map_qty %}
+        {% set n_val = txs | map_val %}
+        {% set pid = txs[0].portfolio_id if txs else '' %}
+        <details class="tx-details-wrapper" data-symbol="{{ p.symbol }}" data-year="{{ year }}" data-portfolio-id="{{ pid }}" data-currency="{{ p.currency }}" data-current-price="{{ p.metrics.current_price }}" data-is-closed="{{ 'true' if is_closed else 'false' }}">
+            <summary>{{ year }} ({{ "%+g" | format(n_qty) }}, Net: {{ n_val | commas(2, sign=True) }} {{ p.currency }})</summary>
+            <div class="details-content" style="padding-top: 10px;">
+                <div class="tx-loading-indicator" style="padding: 10px 0; color: var(--text-secondary); font-size: 0.9rem;">
+                    Loading transactions...
+                </div>
+            </div>
+        </details>
+    {% endfor %}
+
+    <h3>Income</h3>
+    {% if p.income %}
+        {% set inc_by_year = p.income | groupby_year %}
+        {% for year, incs in inc_by_year.items() | sort(reverse=True) %}
+            {% set summary = p.yearly_income_summaries[year] %}
+            <details>
+                <summary>{{ year }} (Total: {{ summary.total_net | commas(2) }} {{ p.currency }})</summary>
+                <div class="details-content">
+                    <div class="income-year-summary" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color, rgba(255,255,255,0.08)); border-radius: 6px; padding: 12px; margin-bottom: 15px; font-size: 0.9em; display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px;">
+                        <div>
+                            <span style="color: #888; display: block; font-size: 0.8em; text-transform: uppercase;">Total Income</span>
+                            <span style="font-weight: bold; color: var(--accent-color);">{{ summary.total_net | commas(2) }} {{ p.currency }}</span>
+                        </div>
+                        <div>
+                            <span style="color: #888; display: block; font-size: 0.8em; text-transform: uppercase;">Gross</span>
+                            <span style="font-weight: bold;">{{ summary.total_gross | commas(2) }} {{ p.currency }}</span>
+                        </div>
+                        <div>
+                            <span style="color: #888; display: block; font-size: 0.8em; text-transform: uppercase;">Tax</span>
+                            <span style="font-weight: bold; color: var(--negative-color, #e74c3c);">{{ summary.total_tax | commas(2) }} {{ p.currency }}</span>
+                        </div>
+                        {% if summary.roc_amount > 0 %}
+                        <div>
+                            <span style="color: #888; display: block; font-size: 0.8em; text-transform: uppercase;">ROC</span>
+                            <span style="font-weight: bold; color: var(--positive-color, #2ecc71);">{{ summary.roc_amount | commas(2) }} {{ p.currency }}</span>
+                        </div>
+                        <div>
+                            <span style="color: #888; display: block; font-size: 0.8em; text-transform: uppercase;">ROC %</span>
+                            <span style="font-weight: bold; color: var(--positive-color, #2ecc71);">{{ summary.roc_pct | round(2) }}%</span>
+                        </div>
+                        <div>
+                            <span style="color: #888; display: block; font-size: 0.8em; text-transform: uppercase;">Actual Tax</span>
+                            <span style="font-weight: bold; color: var(--accent-color);">{{ summary.actual_tax_value | commas(2) }} {{ p.currency }} ({{ summary.actual_tax_rate | round(2) }}%)</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <ul style="list-style-type: disc; padding-left: 20px; font-family: monospace; font-size: 0.9rem;">
+                        {% for i in incs | sort(attribute='date', reverse=True) %}
+                            <li><strong>{{ i.date }}</strong>: Net: {{ i.net | commas(2) }} {{ p.currency }} (Gross: {{ i.amt | commas(2) }}, Tax: {{ i.tax | commas(2) }}{% if i.qty and i.qty > 0.0001 %}, Qty: {{ i.qty | format_qty }}, Net/Share: {{ i.net_per_share | commas(4) }} {{ p.currency }}{% endif %}){{ (", " ~ i.note) if i.note else "" }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </details>
+        {% endfor %}
+    {% else %}
+        <p>No income records.</p>
+    {% endif %}
+</div>
+<hr style="margin: 40px 0; border: none; border-top: 1px solid var(--border-color);">

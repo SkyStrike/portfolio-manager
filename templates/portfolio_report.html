@@ -1,0 +1,19 @@
+{% include "summary_active.html" %}
+{% include "dashboard_active.html" %}
+{% include "toc_active.html" %}
+
+<div class="performance-container">
+{% for group in render_groups %}
+    <div class="report-group">
+        {% for u_name, u in group.underlyings.items() %}
+            {% include "underlying_active.html" %}
+        {% endfor %}
+    </div>
+{% endfor %}
+</div>
+
+<script>
+    window.addEventListener('load', () => { 
+        initCharts({{ dashboard | tojson }}); 
+    });
+</script>

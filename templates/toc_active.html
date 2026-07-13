@@ -1,0 +1,150 @@
+<h1 id="detailed-holdings-breakdown">
+    Detailed Holdings Breakdown
+    <a href="#top" class="back-to-toc" title="Return to Top">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="18 15 12 9 6 15"></polyline>
+        </svg>
+    </a>
+</h1>
+
+<div class="toc-controls">
+    <button class="view-btn active" onclick="toggleTOCView('list')" id="btn-list-view">List View</button>
+    <button class="view-btn" onclick="toggleTOCView('table')" id="btn-table-view">Table View</button>
+</div>
+
+<div id="toc-list-view">
+    <ul class="toc">
+        {% for cl_name, cl in sections.items() %}
+            <li>
+                <strong>{% if PORTFOLIO_NAMES and cl_name in PORTFOLIO_NAMES %}💼{% else %}📁{% endif %} {{ cl_name }}</strong>
+                ({{ "%.2f%%" | format(cl.total_pct) }})
+                <ul>
+                {% for u_name, u in cl.underlyings.items() %}
+                    <li>
+                        <a href="#{{ u_name | slugify }}" class="toc-item-link">{{ u_name }}</a>
+                        <span class="toc-item-stats">
+                            Size: <span class="stat">{{ u.alloc_pct | round(2) }}%, <span class="sensitive-value">{{ u.curr | commas(0) }} SGD</span></span> (<span class="{{ 'neg-val' if u.roi < 0 else 'pos-val' }}">{{ u.roi | roi }}</span>)
+                            <br>
+                            Daily: <span class="{{ 'neg-val' if u.daily_val < 0 else 'pos-val' }} sensitive-value">{{ u.daily_val | commas(2, sign=True) }} SGD</span>
+                            (<span class="{{ 'neg-val' if u.daily_pct < 0 else 'pos-val' }}">{{ u.daily_pct | roi }}</span> ) 
+                        </span>
+                        {% if u.symbols | length > 1 %}
+                        <ul class="toc-sublist">
+                            {% for p in u.symbols %}
+                            <li>
+                                <a href="#{{ (u_name ~ '-' ~ p.symbol) | slugify }}" class="toc-sublist-link">{{ p.symbol }}</a>
+                                {% if p.ib_mismatch %}
+                                    <span class="warning-indicator tooltip-trigger" data-tooltip="IBKR Quantity Mismatch! Broker: {{ p.ib_actual_qty | commas(2) }} | DB (IBKR): {{ p.ibkr_calc_qty | commas(2) }}" style="color: #e74c3c; font-weight: bold; cursor: help; margin-left: 2px; font-size: 0.9rem;">⚠</span>
+                                {% endif %}
+                                {% set alloc = (p.sgd_metrics.current_sgd / total_market) * 100 %}
+                                <span class="toc-sublist-val">{{ alloc | round(2) }}% | </span>
+                                <span class="toc-sublist-val {{ 'neg-val' if p.sgd_metrics.daily_val_sgd < 0 else 'pos-val' }}">
+                                    <span class="sensitive-value">{{ p.sgd_metrics.daily_val_sgd | commas(2, sign=True) }} SGD</span> ({{ p.metrics.daily_pct | round(2, sign=True) }}%)
+                                </span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+                </ul>
+            </li>
+        {% endfor %}
+    </ul>
+</div>
+
+<div id="toc-table-view" style="display: none;">
+    <table class="holdings-summary">
+        <thead>
+            <tr>
+                <th>Name / Ticker</th>
+                <th>Share %</th>
+                <th>Shares</th>
+                <th>Cost Basis (SGD)</th>
+                <th>Daily P&L</th>
+                <th>Realized P&L</th>
+                <th>Div Received</th>
+                <th>Capital Gain</th>
+                <th>Total Profit</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cl_name, cl in sections.items() %}
+                <tr class="class-row">
+                    <td>{% if PORTFOLIO_NAMES and cl_name in PORTFOLIO_NAMES %}💼{% else %}📁{% endif %} {{ cl_name }}</td>
+                    <td>{{ cl.total_pct | round(2) }}%</td>
+                    <td></td>
+                    <td class="sensitive-value">{{ cl.inv | commas(2) }}</td>
+                    <td class="{{ 'neg-val' if cl.daily_val < 0 else 'pos-val' }}">
+                        <span class="sensitive-value">{{ cl.daily_val | commas(2, sign=True) }}</span>
+                    </td>
+                    <td class="{{ 'neg-val' if cl.realized_pnl < 0 else 'pos-val' }}">
+                        <span class="sensitive-value">{{ cl.realized_pnl | commas(2, sign=True) }}</span>
+                    </td>
+                    <td class="sensitive-value">{{ cl.inc | commas(2) }}</td>
+                    <td class="{{ 'neg-val' if cl.cap_gain < 0 else 'pos-val' }}">
+                        <span class="sensitive-value">{{ cl.cap_gain | commas(2, sign=True) }}</span>
+                    </td>
+                    <td class="{{ 'neg-val' if cl.gl < 0 else 'pos-val' }}">
+                        <span class="sensitive-value">{{ cl.gl | commas(2, sign=True) }}</span>
+                    </td>
+                </tr>
+                {% for u_name, u in cl.underlyings.items() %}
+                    <tr class="underlying-row">
+                        <td><a href="#{{ u_name | slugify }}">{{ u_name }}</a></td>
+                        <td>{{ u.alloc_pct | round(2) }}%</td>
+                        <td></td>
+                        <td class="sensitive-value">{{ u.inv | commas(2) }}</td>
+                        <td class="{{ 'neg-val' if u.daily_val < 0 else 'pos-val' }}">
+                            <span class="sensitive-value">{{ u.daily_val | commas(2, sign=True) }}</span>
+                            <div class="sub-val">({{ u.daily_pct | roi }})</div>
+                        </td>
+                        <td class="{{ 'neg-val' if u.realized_pnl < 0 else 'pos-val' }}">
+                            <span class="sensitive-value">{{ u.realized_pnl | commas(2, sign=True) }}</span>
+                        </td>
+                        <td class="sensitive-value">{{ u.inc | commas(2) }}</td>
+                        <td class="{{ 'neg-val' if u.cap_gain < 0 else 'pos-val' }}">
+                            <span class="sensitive-value">{{ u.cap_gain | commas(2, sign=True) }}</span>
+                        </td>
+                        <td class="{{ 'neg-val' if u.gl < 0 else 'pos-val' }}">
+                            <span class="sensitive-value">{{ u.gl | commas(2, sign=True) }}</span>
+                            <div class="sub-val">({{ u.roi | roi }})</div>
+                        </td>
+                    </tr>
+                     {% for p in u.symbols %}
+                        <tr class="ticker-row">
+                            <td>
+                                <a href="#{{ (u_name ~ '-' ~ p.symbol) | slugify }}">{{ p.symbol }}</a>
+                                {% if p.ib_mismatch %}
+                                    <span class="warning-indicator tooltip-trigger" data-tooltip="IBKR Quantity Mismatch! Broker: {{ p.ib_actual_qty | commas(2) }} | DB (IBKR): {{ p.ibkr_calc_qty | commas(2) }}" style="color: #e74c3c; font-weight: bold; cursor: help; margin-left: 4px; font-size: 0.9rem;">⚠</span>
+                                {% endif %}
+                            </td>
+                            {% set p_alloc = (p.sgd_metrics.current_sgd / total_market * 100) if total_market > 0 else 0 %}
+                            <td>{{ p_alloc | round(2) }}%</td>
+                            <td>{{ p.metrics.quantity | commas(0) }}</td>
+                            <td>
+                                <span class="top-val sensitive-value">{{ p.sgd_metrics.invested_sgd | commas(2) }}</span>
+                                <span class="sub-val">Avg: <span class="sensitive-value">{{ p.metrics.average_buy_price | commas(4) }} {{ p.currency }}</span></span>
+                            </td>
+                            <td class="{{ 'neg-val' if p.sgd_metrics.daily_val_sgd < 0 else 'pos-val' }}">
+                                <span class="sensitive-value">{{ p.sgd_metrics.daily_val_sgd | commas(2, sign=True) }}</span>
+                                <div class="sub-val">({{ p.metrics.daily_pct | round(2, sign=True) }}%)</div>
+                            </td>
+                            <td class="{{ 'neg-val' if p.sgd_metrics.realized_pnl_sgd < 0 else 'pos-val' }}">
+                                <span class="sensitive-value">{{ p.sgd_metrics.realized_pnl_sgd | commas(2, sign=True) }}</span>
+                            </td>
+                            <td class="sensitive-value">{{ p.sgd_metrics.income_sgd | commas(2) }}</td>
+                            <td class="{{ 'neg-val' if p.metrics.capital_gain_sgd < 0 else 'pos-val' }}">
+                                <span class="sensitive-value">{{ p.metrics.capital_gain_sgd | commas(2, sign=True) }}</span>
+                            </td>
+                            <td class="{{ 'neg-val' if p.sgd_metrics.profit_sgd < 0 else 'pos-val' }}">
+                                <span class="sensitive-value">{{ p.sgd_metrics.profit_sgd | commas(2, sign=True) }}</span>
+                                <div class="sub-val">({{ p.metrics.roi_pct | round(2, sign=True) }}%)</div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% endfor %}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
