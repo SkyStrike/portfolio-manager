@@ -1,6 +1,11 @@
 # Self-Hosted Portfolio Manager
 
-A self-hosted, lightweight investment portfolio manager customized to support grouping of stocks/etfs. Built with a Python (FastAPI + SQLite) backend and mixture of HTML5 + Vanilla CSS + JS frontend.
+A self-hosted, lightweight investment portfolio manager built with a Python (FastAPI + SQLite) backend and a modern HTML5 + Vanilla CSS + JS frontend.
+
+### 🎯 Project Origins & Intention
+This tracker originally started as a simple tool to monitor cash flows and dividend distributions, focusing on custom asset groupings for **thematic plays** or for consolidated tracking of **stocks with multiple tickers** (e.g. mapping single-stock YieldMax ETFs alongside their actual underlying equities and/or ADRs in a single view).
+
+Over time, the project evolved into a full-featured dashboard. The codebase heavily favors **Interactive Brokers (IBKR)** integration because it is my primary brokerage account and supports easy API connectivity using the `ib_insync` library. The system also supports manual entries and CSV sheets for other brokers like **Moomoo**, though full API automation is not implemented for them due to limitations with their official SDKs.
 
 ---
 
