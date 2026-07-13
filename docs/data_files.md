@@ -51,10 +51,37 @@ This document provides a detailed catalog of the various JSON configuration, cac
 }
 ```
 
+### Explanation of Attributes & Usage
+
+#### Core Attributes
+* **`brokers`** (array of strings): Defines the list of active brokers supported in system drop-downs and portfolio configurations (e.g. `["IBKR", "MOOMOO"]`). Adding a broker here registers it across editing interfaces.
+
+#### Finance Parameters
+* **`finance.max_workers`** (integer): Sets the maximum number of concurrent threads/workers utilized by the background `yfinance` price updates. Higher values fetch tickers in parallel faster but can cause rate-limiting issues.
+* **`finance.conversion_rates`** (object): Mapping of conversion rates relative to SGD (e.g., `USD: 1.2754` meaning $1$ USD = $1.2754$ SGD). These act as fallback exchange rates if the dynamic API fetching tool is offline.
+
+#### UI Customization
+* **`ui.page_width`** (CSS string): Declares the desktop container constraint wrapper size.
+* **`ui.chart_height`** (CSS string): Sets the viewport height for the ChartJS rendering frames on the dashboard.
+* **`ui.font_size`** & **`ui.mobile_font_size`** (CSS strings): Scales base HTML REM sizing dynamically for responsive UI displays.
+* **`ui.colors`** (hex codes): Color tags mapping to metric cards:
+  * `invested`: Colors representing original cost capital invested.
+  * `current`: Colors representing current MTM value of holdings.
+  * `returns` & `income`: Accent colors for gains and dividend aggregations.
+  * `positive` & `negative`: Profit (gain) and loss colors used globally.
+
+#### Allowed Documents Map
+* **`allowed_documents`** (key-value object): Maps internal lookup identifiers to actual filesystem storage paths on disk. Used by the upload API (`POST /api/upload`) to validate target file writes (e.g., writing the `ib-data` payload directly to `data/ib_data.json`).
+
+#### External Integrations
+* **`external_services.options_tracker_url`** (string): The HTTP address of the companion options tracker. If configured, activates option lists and cash stress test components. If left empty (`""`), all options components are dynamically hidden from the UI.
+* **`external_services.backtester_url`** (string): The HTTP address of the companion backtesting service. If populated, renders direct link icons (🔗) next to assets pointing to historical backtests.
+
 ---
 
 ### 2. `data/ib_data.json` (IBKR Live Portfolio Positions Cache)
 * **Purpose**: Caches the live inventory data retrieved from IBKR reports, including margin requirements, cash, and open asset lot metrics. Used as fallback data when Yahoo Finance is offline or fetching stock price definitions.
+* **Detailed Guide**: For a complete breakdown of this file's attributes, ingestion parameters, custom extraction scripts, and GUI setup details, see the **[IBKR Data File Guide (ib_data.json)](ib_data_guide.md)**.
 * **Storage Location**: Uploaded or synchronized to `data/ib_data.json`.
 * **Schema & Structure**:
 ```json

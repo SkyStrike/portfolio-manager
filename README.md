@@ -136,32 +136,6 @@ The application integrates with external services configured under the `"externa
 
 ---
 
-## 📡 API Features
-
-### 1. Document Upload Endpoint (`POST /api/upload`)
-Allows secure uploads of data files (e.g. cash reports, options fallbacks).
-* **Payload**: Multipart form-data with `document_type` (matching a key in `allowed_documents`) and `file`.
-* **Validation**: Checks file integrity (e.g., validates JSON syntax for `.json` destinations).
-* **Syncing**: Automatically initiates an asynchronous background rebuild of dashboard views after a successful file write.
-* **Example `curl` Request**:
-  ```bash
-  curl -X POST http://localhost:8080/api/upload \
-    -F "document_type=ib-data" \
-    -F "file=@/path/to/ib_data.json"
-  ```
-  *(Note: Prepend `${BASE_PATH}` to the URL path if a prefix is configured, e.g. `http://localhost:8080/portfolio/api/upload`)*
-
-### 2. Dashboard Rebuild Endpoint (`POST /api/dashboard/rebuild`)
-Triggers a cache-clear and full dashboard views rebuild.
-* **Query Parameters**:
-  * `sync` (bool): If `true`, the operation is run synchronously (useful for scripts/triggers that need confirmation upon completion). Defaults to `false` (async background task).
-  * `ingest_ibkr_cash` (bool): If `true`, the builder parses `ib_data.json` to update or insert the daily cash report metrics for IBKR in the database. Defaults to `false`.
-* **Example `curl` Request**:
-  ```bash
-  curl -X POST "http://localhost:8080/api/dashboard/rebuild?sync=true&ingest_ibkr_cash=true"
-  ```
----
-
 ## 🖩 Interactive Utilities
 
 ### 1. Position Calculator Widget
@@ -226,6 +200,7 @@ Additional step-by-step documentation guides are available in the [docs/](docs/)
 8. **[System Maintenance & Patching Guide](docs/patching.md)**: Exposing database backups, hot-restores, manifest parameter configuration schema, and writing custom Python patch modules.
 9. **[Broker Capital CSV Guide](docs/capital_csv.md)**: Managing and importing capital records for returns tracking.
 10. **[JSON Data Files Reference](docs/data_files.md)**: Catalog and structural JSON schemas for system configurations and IBKR inventory caches.
+11. **[Advanced Scripting & API Guide](docs/advanced_scripting.md)**: Custom automation scripts, programmatic database pre-warming triggers, RESTful schema lookups, and interactive Swagger UI configurations.
 
 ---
 
