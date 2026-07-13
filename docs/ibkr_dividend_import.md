@@ -8,8 +8,8 @@ This guide documents the integration of Interactive Brokers (IBKR) dividend tran
 
 The dividend import processes transaction reports directly from Interactive Brokers in-memory without saving temporary source files to disk.
 1. **Flex Query Extraction**: Official Flex Query reports (XML format) are downloaded from IBKR.
-2. **Direct Import Ingestion**: The raw XML (or JSON) file is uploaded directly to the `/api/dividends/import-ibkr` endpoint using a multipart form request
-3. **In-Memory Parsing**: The backend parses the XML structure or JSON content in-memory, filters dividends within the designated date range, resolves portfolios, and inserts reconciled entries directly into the SQLite database.
+2. **Direct Import Ingestion**: The raw XML file is uploaded directly to the `/api/dividends/import-ibkr` endpoint using a multipart form request. (A custom JSON format is supported by the API for advanced programmatic users, but is not natively selectable in the GUI).
+3. **In-Memory Parsing**: The backend parses the XML structure in-memory, filters dividends within the designated date range, resolves portfolios, and inserts reconciled entries directly into the SQLite database.
 
 > [!NOTE]
 > The automated Flex Query downloader service is currently Work in Progress (WIP). In the meantime, dividends can be added or updated manually via the **Transactions & Dividends** ledger interface or uploaded via CSV inputs.
@@ -25,8 +25,8 @@ The dividend import processes transaction reports directly from Interactive Brok
 > The script attempts to calculate/fetch the quantity/share count based on the settle date. There could be inaccuracies stemmed from purchase of stocks after ex-dividend date and before payment date(settle date). These entries needs to be updated manually. But overall, it does not affect the calculation of the dividends. But it will affect how the dividend per share is reflected for the stock.
 
 When importing entries, the manager resolves the target portfolio for each dividend record using the following priority:
-1. **Existing Ticker Lookup**: The API looks up existing transaction records across all portfolios configured with `broker = 'IBKR'`. If a ticker symbol already exists in one of these portfolios, the dividend is automatically routed to that portfolio first.
-2. **Portfolio Parameter Fallback**: If the ticker is missing from the transaction records, or if there is a conflict/overlap (e.g., the symbol is held in multiple portfolios), the importer falls back to the target portfolio specified in the `portfolio` query parameter.
+1. **Existing Ticker Lookup**: The API looks up existing transaction records across all portfolios configured with `broker = 'IBKR'`. If a ticker symbol already exists in one of these portfolios, the dividend is automatically routed to that portfolio. If the symbol is held across multiple IBKR portfolios, the importer routes it to the portfolio containing the most recent transaction for that symbol.
+2. **Portfolio Parameter Fallback**: If the ticker is missing from transaction records entirely, the importer falls back to the target portfolio specified in the `portfolio` query parameter.
 
 * **Endpoint**: `POST /api/dividends/import-ibkr`
 * **Query Parameters**:
@@ -34,7 +34,7 @@ When importing entries, the manager resolves the target portfolio for each divid
   - `end_date`: Settle date range end (format: `YYYY-MM-DD`).
   - `portfolio`: Fallback target portfolio name (defaults to `"income factory"`).
 * **Payload Parameters**:
-  - `file` (Multipart File): XML or JSON file containing IBKR dividend transactions.
+  - `file` (Multipart File): XML file (or custom JSON file for advanced users) containing IBKR dividend transactions.
 
 ### Example `curl` Command with Direct XML File:
 ```bash

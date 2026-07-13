@@ -1,0 +1,3 @@
+Event,Date,Symbol,Price,Quantity,Currency,FeeTax,Exchange,Note
+BUY,2026-01-15 10:00:00,AAPL,175.00,10,USD,1.00,NASDAQ,Buy initial shares
+DIVIDEND,2026-02-15 00:00:00,O,0.25,50,USD,0.00,NYSE,Monthly dividend payout

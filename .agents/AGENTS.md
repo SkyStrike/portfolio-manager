@@ -4,3 +4,4 @@
 - for database schema changes, use `alembic`
 - for data patching, prepare shell and python patch scripts in `patching/{4 digit running number}` directory so that I can execute these within the running container or via `docker exec` or equivalent. The python script must have a `def patch(params: dict = None):` function that allows the patch to be executed via the maintenance module.
 - for implemented html codes, favor css class over inline styles.
+- the public repo is https://github.com/SkyStrike/portfolio-manager/ if there are any documentations to be linked, use this as the base.

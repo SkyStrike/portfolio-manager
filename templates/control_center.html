@@ -39,6 +39,132 @@
         };
     </script>
     <script src="{{ BASE_PATH }}/static/global-nav.js" defer></script>
+    <style>
+        .import-card-wrapper {
+            max-width: 1200px !important;
+        }
+
+        .import-split-grid {
+            display: grid;
+            grid-template-columns: 1.4fr 1fr;
+            gap: 30px;
+            margin-top: 15px;
+        }
+
+        @media (max-width: 1024px) {
+            .import-split-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .import-form-pane {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .import-info-pane {
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 20px;
+            font-size: 0.85rem;
+            color: var(--text-secondary, #94a3b8);
+        }
+
+        .info-pane-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #38bdf8;
+            margin-top: 0;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .info-pane-section {
+            margin-bottom: 20px;
+        }
+
+        .info-pane-section h5 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary, #f8fafc);
+            margin-top: 0;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-pane-list {
+            margin: 0;
+            padding-left: 18px;
+            line-height: 1.6;
+        }
+
+        .info-pane-list li {
+            margin-bottom: 6px;
+        }
+
+        .schema-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+            font-size: 0.8rem;
+        }
+
+        .schema-table th {
+            color: var(--text-primary, #f8fafc);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+            padding: 6px 4px;
+            text-align: left;
+        }
+
+        .schema-table td {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 6px 4px;
+        }
+
+        .fd-reference-link {
+            font-size: 0.8rem;
+            color: #38bdf8;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .fd-reference-link:hover {
+            text-decoration: underline;
+            color: #7dd3fc;
+        }
+
+        .maintenance-warning-card {
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 6px;
+            padding: 12px 16px;
+            margin: 15px;
+            color: #fca5a5;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .maintenance-warning-icon {
+            font-size: 1.25rem;
+            line-height: 1;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .maintenance-warning-title {
+            font-weight: 600;
+            color: #f87171;
+            margin-bottom: 4px;
+        }
+    </style>
 </head>
 <body>
 
@@ -233,78 +359,196 @@
 
                 <!-- TAB: BASE CAPITAL CSV -->
                 <div id="import-tab-capital-content" class="tab-wrapper-content" style="display: none;">
-                    <div class="table-header-row import-title-margin">
-                        <div class="table-title">Upload Base Capital CSV</div>
+                    <div class="import-split-grid">
+                        <div class="import-form-pane">
+                            <div class="table-header-row import-title-margin">
+                                <div class="table-title">Upload Base Capital CSV</div>
+                            </div>
+                            <form id="capital-upload-form">
+                                <div class="form-group">
+                                    <label for="capital-upload-file">Capital CSV File (capital.csv)</label>
+                                    <input type="file" id="capital-upload-file" accept=".csv" required>
+                                </div>
+                                <div class="margin-top-20">
+                                    <button type="submit" class="btn btn-primary import-submit-btn">Upload Capital Entries</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="import-info-pane">
+                            <h4 class="info-pane-title">
+                                <span>Capital CSV Specs</span>
+                                <a href="{{ BASE_PATH }}/static/templates/capital_template.csv" download="capital_template.csv" class="fd-reference-link">⬇️ Download Template</a>
+                            </h4>
+                            <div class="info-pane-section">
+                                <h5>Required CSV Format</h5>
+                                <table class="schema-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Column</th>
+                                            <th>Type</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>Broker</strong></td>
+                                            <td>String</td>
+                                            <td>Broker name (e.g. IBKR, MOOMOO).</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Date</strong></td>
+                                            <td>Date</td>
+                                            <td>Date in YYYY-MM-DD or YYYY-MMM DD format.</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Remarks</strong></td>
+                                            <td>String</td>
+                                            <td>Transaction description or remarks.</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Amount</strong></td>
+                                            <td>Decimal</td>
+                                            <td>Net capital injection amount.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="info-pane-section">
+                                <h5>Key Rules & Assumptions</h5>
+                                <ul class="info-pane-list">
+                                    <li><strong>Four Columns Required</strong>: The uploaded CSV must contain exactly 4 columns in the order: <code>Broker</code>, <code>Date</code>, <code>Remarks</code>, and <code>Amount</code>.</li>
+                                    <li><strong>Full Overwrite</strong>: Seeding a new capital CSV will <strong>fully overwrite and delete</strong> all existing capital entries in the database.</li>
+                                    <li><strong>Case Insensitive</strong>: Broker names are stored as uppercase (e.g. <code>IBKR</code>, <code>MOOMOO</code>).</li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
-                    <form id="capital-upload-form">
-                        <div class="form-group">
-                            <label for="capital-upload-file">Capital CSV File (capital.csv)</label>
-                            <input type="file" id="capital-upload-file" accept=".csv" required>
-                        </div>
-                        <div class="margin-top-20">
-                            <button type="submit" class="btn btn-primary import-submit-btn">Upload Capital Entries</button>
-                        </div>
-                    </form>
                 </div>
 
                 <!-- TAB: IBKR DIVIDENDS -->
                 <div id="import-tab-ibkr-content" class="tab-wrapper-content">
-                    <div class="table-header-row import-title-margin">
-                        <div class="table-title">Import IBKR Dividends (XML)</div>
+                    <div class="import-split-grid">
+                        <div class="import-form-pane">
+                            <div class="table-header-row import-title-margin">
+                                <div class="table-title">Import IBKR Dividends (XML)</div>
+                            </div>
+                            <form id="ibkr-import-form">
+                                <div class="form-group">
+                                    <label for="ibkr-import-file">Dividends XML File (dividend-ytd.xml)</label>
+                                    <input type="file" id="ibkr-import-file" accept=".xml" required>
+                                </div>
+                                <div class="form-row ibkr-date-row">
+                                    <div class="form-group ibkr-date-group">
+                                        <label for="ibkr-import-start-date">Start Date</label>
+                                        <input type="date" id="ibkr-import-start-date" required>
+                                    </div>
+                                    <div class="form-group ibkr-date-group">
+                                        <label for="ibkr-import-end-date">End Date</label>
+                                        <input type="date" id="ibkr-import-end-date" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="ibkr-import-portfolio">Fallback Target Portfolio</label>
+                                    <select id="ibkr-import-portfolio" required></select>
+                                </div>
+                                <div class="margin-top-20">
+                                    <button type="submit" class="btn btn-primary import-submit-btn">Upload & Run Import</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="import-info-pane">
+                            <h4 class="info-pane-title">IBKR XML Specs</h4>
+                            <div class="info-pane-section">
+                                <h5>Export Documentation</h5>
+                                <ul class="info-pane-list">
+                                    <li>Refer to the <a href="https://github.com/SkyStrike/portfolio-manager/blob/main/docs/ibkr_dividend_import.md" target="_blank" class="fd-reference-link">IBKR Dividend Import Guide</a> for details on the columns expected in the XML which is exported via IBKR Flex Queries.</li>
+                                    <li>JSON import is not natively available via the GUI since it is a customized JSON format of the XML (meant for advanced users anyway). XML is the native format exported by IBKR.</li>
+                                </ul>
+                            </div>
+                            <div class="info-pane-section">
+                                <h5>Expected XML Structure</h5>
+                                <ul class="info-pane-list">
+                                    <li>Must be generated as a <strong>Flex Query Activity Report</strong> from the Interactive Brokers Account Management portal.</li>
+                                    <li>The parser extracts <code>&lt;CashTransaction&gt;</code> tags where the attribute <code>type</code> is set to <code>Dividends</code> or <code>Payment In Lieu Of Dividends</code>.</li>
+                                </ul>
+                            </div>
+                            <div class="info-pane-section">
+                                <h5>Fallback Portfolio Logic</h5>
+                                <ul class="info-pane-list">
+                                    <li><strong>Symbol Mapping</strong>: If the dividend's ticker symbol is already held in an active portfolio, it is automatically routed to that portfolio. If the symbol is held across multiple IBKR portfolios, it is mapped to the portfolio containing the most recent transaction for that symbol.</li>
+                                    <li><strong>Fallback Assignment</strong>: If the ticker is new and has no transaction history in the system, the dividend is assigned to the selected <strong>Fallback Target Portfolio</strong>.</li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
-                    <form id="ibkr-import-form">
-                        <div class="form-group">
-                            <label for="ibkr-import-file">Dividends XML File (dividend-ytd.xml)</label>
-                            <input type="file" id="ibkr-import-file" accept=".xml" required>
-                        </div>
-                        <div class="form-row ibkr-date-row">
-                            <div class="form-group ibkr-date-group">
-                                <label for="ibkr-import-start-date">Start Date</label>
-                                <input type="date" id="ibkr-import-start-date" required>
-                            </div>
-                            <div class="form-group ibkr-date-group">
-                                <label for="ibkr-import-end-date">End Date</label>
-                                <input type="date" id="ibkr-import-end-date" required>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="ibkr-import-portfolio">Fallback Target Portfolio</label>
-                            <select id="ibkr-import-portfolio" required></select>
-                        </div>
-                        <div class="margin-top-20">
-                            <button type="submit" class="btn btn-primary import-submit-btn">Upload & Run Import</button>
-                        </div>
-                    </form>
                 </div>
 
                 <!-- TAB: SNOWBALL CSV -->
                 <div id="import-tab-snowball-content" class="tab-wrapper-content" style="display: none;">
-                    <div class="table-header-row import-title-margin">
-                        <div class="table-title">Snowball Analytics Import Wizard</div>
+                    <div class="import-split-grid">
+                        <div class="import-form-pane">
+                            <div class="table-header-row import-title-margin">
+                                <div class="table-title">Snowball Analytics Import Wizard</div>
+                            </div>
+                            <form id="import-form">
+                                <div class="form-group">
+                                    <label for="import-portfolio-select">Target Portfolio</label>
+                                    <select id="import-portfolio-select">
+                                        <option value="">-- Select or Type Portfolio Name below --</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="import-new-portfolio-name">Create Portfolio Name (if not in dropdown)</label>
+                                    <input type="text" id="import-new-portfolio-name" placeholder="e.g. Income Factory">
+                                </div>
+                                <div class="form-group">
+                                    <label for="import-holdings-file">Holdings CSV File (e.g. snowball-holdings.csv)</label>
+                                    <input type="file" id="import-holdings-file" accept=".csv" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="import-transactions-file">Transactions CSV File (e.g. snowball-transactions.csv)</label>
+                                    <input type="file" id="import-transactions-file" accept=".csv" required>
+                                </div>
+                                <div class="margin-top-20">
+                                    <button type="submit" class="btn btn-primary import-submit-btn">Run Import Wizard</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="import-info-pane">
+                            <h4 class="info-pane-title">
+                                <span>Snowball CSV Specs</span>
+                                <span style="display: flex; gap: 8px;">
+                                    <a href="{{ BASE_PATH }}/static/templates/snowball_holdings_template.csv" download="snowball_holdings_template.csv" class="fd-reference-link" style="font-size: 0.72rem;">⬇️ Holdings</a>
+                                    <a href="{{ BASE_PATH }}/static/templates/snowball_transactions_template.csv" download="snowball_transactions_template.csv" class="fd-reference-link" style="font-size: 0.72rem;">⬇️ Tx</a>
+                                </span>
+                            </h4>
+                            <div class="info-pane-section">
+                                <h5>Export Documentation</h5>
+                                <ul class="info-pane-list">
+                                    <li>These files should be generated directly from the website following the step-by-step instructions in the <a href="https://github.com/SkyStrike/portfolio-manager/blob/main/docs/data_migration.md" target="_blank" class="fd-reference-link">Data Migration Guide</a>.</li>
+                                </ul>
+                            </div>
+                            <div class="info-pane-section">
+                                <h5>Expected Holdings Headers</h5>
+                                <div style="font-size: 0.78rem; line-height: 1.5; color: var(--text-primary);">
+                                    <code>Holding</code>, <code>Holdings' name</code>, <code>Note</code>, <code>Shares</code>, <code>Currency</code>, <code>Share price</code>, <code>Country</code>, and <code>Portfolios</code>
+                                </div>
+                            </div>
+                            <div class="info-pane-section">
+                                <h5>Expected Transactions Headers</h5>
+                                <div style="font-size: 0.78rem; line-height: 1.5; color: var(--text-primary); margin-bottom: 12px;">
+                                    <code>Event</code>, <code>Date</code>, <code>Symbol</code>, <code>Price</code>, <code>Quantity</code>, <code>Currency</code>, <code>FeeTax</code>, <code>Exchange</code>, and <code>Note</code>
+                                </div>
+                            </div>
+                            <div class="info-pane-section">
+                                <h5>Key Rules & Assumptions</h5>
+                                <ul class="info-pane-list">
+                                    <li><strong>Portfolio Filter</strong>: If the <code>Portfolios</code> column in Holdings lists multiple items, the row is skipped unless it matches your targeted portfolio.</li>
+                                    <li><strong>Duplicate Safeguard</strong>: Transactions matching on execution timestamp, price, and ticker symbol are skipped to avoid database duplicates.</li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
-                    <form id="import-form">
-                        <div class="form-group">
-                            <label for="import-portfolio-select">Target Portfolio</label>
-                            <select id="import-portfolio-select">
-                                <option value="">-- Select or Type Portfolio Name below --</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="import-new-portfolio-name">Create Portfolio Name (if not in dropdown)</label>
-                            <input type="text" id="import-new-portfolio-name" placeholder="e.g. Income Factory">
-                        </div>
-                        <div class="form-group">
-                            <label for="import-holdings-file">Holdings CSV File (e.g. snowball-holdings.csv)</label>
-                            <input type="file" id="import-holdings-file" accept=".csv" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="import-transactions-file">Transactions CSV File (e.g. snowball-transactions.csv)</label>
-                            <input type="file" id="import-transactions-file" accept=".csv" required>
-                        </div>
-                        <div class="margin-top-20">
-                            <button type="submit" class="btn btn-primary import-submit-btn">Run Import Wizard</button>
-                        </div>
-                    </form>
                 </div>
             </div>
         </section>
@@ -423,6 +667,15 @@
                 <div class="table-card maintenance-card">
                     <div class="table-header-row maintenance-card-title">
                         <span>💾 Database Backup & Restore</span>
+                    </div>
+
+                    <!-- WARNING BANNER -->
+                    <div class="maintenance-warning-card">
+                        <span class="maintenance-warning-icon">⚠️</span>
+                        <div>
+                            <div class="maintenance-warning-title">High-Risk Operations Area</div>
+                            Restoring a database will <strong>overwrite your current data permanently</strong>. Running database patches can modify schema tables and records. Creating a fresh database backup is <strong>highly recommended</strong> before proceeding with any action.
+                        </div>
                     </div>
                     
                     <!-- Backup DB Form -->
