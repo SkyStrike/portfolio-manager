@@ -2230,3 +2230,6 @@ body.mask-values .sensitive-value::after {
 
 
 
+
+/* Beta nav link highlight */
+.nav-beta-link { color: #f39c12 !important; }

@@ -1,0 +1,189 @@
+    <header id="main-header">
+        <div class="header-inner">
+            <div class="logo-section" onclick="window.location.href='{{ BASE_PATH }}/'">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <defs>
+                        <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#8b5cf6" stop-opacity="1" />
+                            <stop offset="100%" stop-color="#6366f1" stop-opacity="1" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                    <path d="M2 17l10 5 10-5"></path>
+                    <path d="M2 12l10 5 10-5"></path>
+                </svg>
+            </div>
+
+            <!-- Hamburger Menu Button -->
+            <button class="menu-toggle-btn" id="menu-toggle-btn" aria-label="Toggle Navigation Menu">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="3" y1="12" x2="21" y2="12" class="line-mid"></line>
+                    <line x1="3" y1="6" x2="21" y2="6" class="line-top"></line>
+                    <line x1="3" y1="18" x2="21" y2="18" class="line-bot"></line>
+                </svg>
+            </button>
+
+            <div class="header-nav-container" id="header-nav-container">
+                <nav class="header-nav">
+                    <ul>
+                        <li><a href="{{ BASE_PATH }}/" id="nav-active-main">Dashboard</a></li>
+                        <li class="nav-dropdown-container">
+                            <a href="#" id="nav-perf-toggle" class="nav-dropdown-toggle">
+                                Analytics
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </a>
+                            <div class="nav-dropdown-menu" id="nav-perf-dropdown">
+                                <a href="{{ BASE_PATH }}/performance_report.html" id="nav-perf-main">Performance Report</a>
+                                <a href="{{ BASE_PATH }}/charts.html" id="nav-charts-main">Charts</a>
+                                <a href="{{ BASE_PATH }}/closed" id="nav-closed-main">Closed Positions</a>
+                                <a href="{{ BASE_PATH }}/history" id="nav-history-main">Transaction History</a>
+                                <a href="{{ BASE_PATH }}/analytics/fd-comparison" id="nav-fd-comparison">vs Fixed Deposits</a>
+                            </div>
+                        </li>
+                        <li><a href="{{ BASE_PATH }}/dividend-calendar" id="nav-dividend-calendar">Dividend Calendar</a></li>
+                        {% if OPTIONS_TRACKER_URL or BACKTESTER_URL %}
+                        <li class="nav-dropdown-container">
+                            <a href="#" id="nav-services-toggle" class="nav-dropdown-toggle">
+                                Services
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </a>
+                            <div class="nav-dropdown-menu" id="nav-services-dropdown">
+                                {% if OPTIONS_TRACKER_URL %}
+                                <a href="{{ OPTIONS_TRACKER_URL }}" target="_blank" class="service-link">
+                                    Manage Options
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                        <polyline points="15 3 21 3 21 9"></polyline>
+                                        <line x1="10" y1="14" x2="21" y2="3"></line>
+                                    </svg>
+                                </a>
+                                {% endif %}
+                                {% if BACKTESTER_URL %}
+                                <a href="{{ BACKTESTER_URL }}" target="_blank" class="service-link">
+                                    Backtester
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                        <polyline points="15 3 21 3 21 9"></polyline>
+                                        <line x1="10" y1="14" x2="21" y2="3"></line>
+                                    </svg>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </li>
+                        {% endif %}
+                        <li class="nav-dropdown-container">
+                            <a href="#" id="nav-tools-main" class="nav-dropdown-toggle">
+                                Portfolio
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </a>
+                            <div class="nav-dropdown-menu" id="nav-tools-dropdown">
+                                <a href="{{ BASE_PATH }}/trades" id="nav-admin-main">Trades Ledger</a>
+                                <a href="{{ BASE_PATH }}/control-center" id="nav-settings-main">Control Center</a>
+                                <a href="{{ BASE_PATH }}/beta" id="nav-beta-main" class="nav-beta-link">Beta Dashboard</a>
+                            </div>
+                        </li>
+                        <li class="nav-dropdown-container nav-add-container">
+                            <a href="#" id="nav-add-toggle" class="nav-add-toggle">
+                                <span>+</span> Add
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </a>
+                            <div class="nav-dropdown-menu" id="nav-add-dropdown">
+                                <a href="{{ BASE_PATH }}/trades?add=trades" id="nav-add-trade">Add Trade</a>
+                                <a href="{{ BASE_PATH }}/trades?add=incomes" id="nav-add-income">Add Dividend Income</a>
+                                <a href="{{ BASE_PATH }}/control-center?add=capital" id="nav-add-capital">Add Base Capital</a>
+                                <a href="{{ BASE_PATH }}/control-center?add=cash-metrics" id="nav-add-cash-metrics">Record Daily Cash Metrics</a>
+                            </div>
+                        </li>
+                    </ul>
+                </nav>
+
+                <!-- Right-side controls: mask toggle + portfolio/classification dropdown -->
+                <div class="header-controls-group">
+                    {% if USE_CLASSIFICATION_DROPDOWN %}
+                    <!-- Mask Toggle Button (dashboard only) -->
+                    <button id="mask-toggle-btn" class="mask-toggle-btn" title="Toggle Sensitive Info">
+                        <svg id="mask-toggle-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+
+                    <!-- Classification/Portfolio Selector (dashboard) -->
+                    {% if NAV_ITEMS or CAT_NAV or PORT_NAV %}
+                    <div class="portfolio-selector-container">
+                        <button class="portfolio-select-btn" id="classification-select-btn">
+                            <span id="current-classification-display">📂 All</span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </button>
+                        <div class="portfolio-dropdown-menu" id="classification-dropdown-menu">
+                            <div class="portfolio-list-wrapper" id="classification-dropdown-list">
+                                {% for item in NAV_ITEMS %}
+                                <a href="{{ item.url }}" class="portfolio-item" id="{{ item.id }}" data-slug="all">
+                                    <div class="icon">📂</div>
+                                    <span>{{ item.name }}</span>
+                                </a>
+                                {% endfor %}
+                                {% if CAT_NAV %}
+                                <div class="dropdown-section-header">Classifications</div>
+                                {% for item in CAT_NAV %}
+                                <a href="{{ item.url }}" class="portfolio-item" id="{{ item.id }}" data-slug="{{ item.slug }}">
+                                    <div class="icon">📁</div>
+                                    <span>{{ item.name }}</span>
+                                </a>
+                                {% endfor %}
+                                {% endif %}
+                                {% if PORT_NAV %}
+                                <div class="dropdown-section-header border-top">Portfolios</div>
+                                {% for item in PORT_NAV %}
+                                <a href="{{ item.url }}" class="portfolio-item" id="{{ item.id }}" data-slug="{{ item.slug }}">
+                                    <div class="icon">💼</div>
+                                    <div class="portfolio-item-text-wrapper">
+                                        <span>{{ item.name }}</span>
+                                        {% if item.broker %}<small>{{ item.broker }}</small>{% endif %}
+                                    </div>
+                                </a>
+                                {% endfor %}
+                                {% endif %}
+                            </div>
+                            <div class="portfolio-dropdown-footer">
+                                <a href="{{ BASE_PATH }}/trades?action=add_portfolio" id="add-portfolio-trigger-btn">+ Add Portfolio</a>
+                                <a href="{{ BASE_PATH }}/trades?action=manage_portfolios" id="manage-portfolios-trigger-btn">⚙️ My Portfolios</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% else %}
+                    <!-- Simple Portfolio Selector (trades/control-center) — populated by global-nav.js -->
+                    <div class="portfolio-selector-container">
+                        <button class="portfolio-select-btn" id="portfolio-select-btn">
+                            <span id="current-portfolio-display">💰 My Net Worth</span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </button>
+                        <div class="portfolio-dropdown-menu" id="portfolio-dropdown-menu">
+                            <div class="portfolio-list-wrapper" id="portfolio-dropdown-list">
+                                <!-- Portfolios will be rendered dynamically here -->
+                            </div>
+                            <div class="portfolio-dropdown-footer">
+                                <a href="{{ BASE_PATH }}/{{ NAV_PORTFOLIO_BASE }}?action=add_portfolio" id="add-portfolio-trigger-btn">+ Add Portfolio</a>
+                                <a href="{{ BASE_PATH }}/{{ NAV_PORTFOLIO_BASE }}?action=manage_portfolios" id="manage-portfolios-trigger-btn">⚙️ My Portfolios</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </header>
