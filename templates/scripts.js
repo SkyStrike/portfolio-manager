@@ -73,7 +73,9 @@ const commonOptions = {
     fill: { opacity: 1 },
     yaxis: getYAxisConfig('val', false),
     legend: {
-        fontSize: desktopFontSize
+        fontSize: desktopFontSize,
+        height: 35,
+        offsetY: -10
     },
     responsive: getResponsiveConfig('val')
 };
@@ -141,7 +143,9 @@ function renderBarChart(selector, id, title, categories, series, roi) {
                 } 
             },
             legend: { 
-                ...labelOptions
+                ...labelOptions,
+                height: 35,
+                offsetY: -10
             }
         };
         
@@ -175,7 +179,9 @@ function renderPieChart(selector, title, labels, series) {
             }, 
             legend: { 
                 ...labelOptions,
-                position: 'bottom' 
+                position: 'bottom',
+                height: 35,
+                offsetY: -10
             }, 
             tooltip: { 
                 y: { 

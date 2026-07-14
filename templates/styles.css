@@ -387,7 +387,7 @@ li {
     background: var(--card-bg);
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    padding: 20px;
+    padding: 20px 20px 30px 20px;
     margin-bottom: 30px;
     min-height: {{CHART_HEIGHT}};
     /* max-height: {{CHART_HEIGHT}}; */
