@@ -1,11 +1,79 @@
-{% raw %}
 <!-- Load Vue 3 via CDN -->
 <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 
+<style>
+    .action-btn-cash {
+        background: rgba(139, 92, 246, 0.12);
+        border: 1px solid rgba(139, 92, 246, 0.25);
+        color: #c084fc;
+        padding: 5px 12px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-family: var(--font-body);
+    }
+    .action-btn-cash:hover {
+        background: rgba(139, 92, 246, 0.22);
+        border-color: rgba(139, 92, 246, 0.45);
+        box-shadow: 0 0 8px rgba(139, 92, 246, 0.2);
+    }
+    .cash-report-header-group {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .cash-breakdown-wrapper {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out;
+        margin-bottom: 40px;
+    }
+    .cash-breakdown-card {
+        background: rgba(22, 28, 45, 0.4);
+        border: 1px solid var(--card-border);
+        border-radius: 12px;
+        padding: 20px;
+    }
+    .cash-breakdown-title {
+        margin-bottom: 15px;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 0.05em;
+        color: var(--text-secondary);
+    }
+    .cash-breakdown-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+    }
+    .cash-breakdown-table th {
+        padding: 10px;
+        border-bottom: 1px solid var(--card-border);
+    }
+    .cash-breakdown-table td {
+        padding: 12px 10px;
+        border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+    .cash-breakdown-table th.align-right,
+    .cash-breakdown-table td.align-right {
+        text-align: right;
+    }
+    .cash-breakdown-table tr.total-row {
+        background: rgba(255,255,255,0.02);
+        font-weight: bold;
+    }
+    .cash-breakdown-table tr.total-row td {
+        border-bottom: none;
+    }
+</style>
 
+{% raw %}
 <div id="spa-app">
     <!-- Spinner loading state styled identically to application loaders -->
     <div v-if="loading" style="text-align: center; padding: 100px; color: var(--text-secondary);">
+        <div class="spinner" style="margin: 0 auto 20px auto; width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.1); border-top-color: var(--accent-blue); border-radius: 50%; animation: spin 1s linear infinite;"></div>
         <h3 style="margin-bottom: 10px;">Loading SPA Dashboard Data...</h3>
         <p style="font-size: 0.9rem;">Fetching raw metrics asynchronously</p>
     </div>
@@ -19,7 +87,60 @@
 
         <!-- 1. ACTIVE HOLDINGS TAB VIEW -->
         <div v-show="currentView === 'dashboard'">
-            <!-- Summary Stats Grid Header Block -->
+            <!-- Report Info & Sources (Metadata bar) -->
+            <div class="report-info-bar" style="margin-bottom: 20px;">
+                <div v-if="metadata.quotes_last_updated_sgt" class="info-item">
+                    <span class="info-label">Quotes Updated:</span>
+                    <span class="info-value timeago" :data-datetime="metadata.quotes_last_updated_sgt" v-text="metadata.quotes_last_updated_sgt"></span>
+                </div>
+                <div v-if="metadata.ib_report_datetime_sgt" class="info-separator"></div>
+                <div v-if="metadata.ib_report_datetime_sgt" class="info-item">
+                    <span class="info-label">IB Report:</span>
+                    <span class="info-value timeago" :data-datetime="metadata.ib_report_datetime_sgt" v-text="metadata.ib_report_datetime_sgt"></span>
+                </div>
+            </div>
+
+            <!-- Quick Jump Jumper -->
+            <nav class="dashboard-section-jumper" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 25px; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 8px; font-size: 0.9rem;">
+                <span style="font-weight: bold; color: var(--text-secondary); display: flex; align-items: center; margin-right: 5px;">🚀 Quick Jump:</span>
+                <a href="#portfolio-summary" class="jump-pill">📊 Summary</a>
+                <a href="#risk-analysis" class="jump-pill" v-if="summary.options_open_max_loss_sgd">⚠️ Risk Analysis</a>
+                <a href="#cash-report" class="jump-pill" v-if="cashReport">💵 Cash Report</a>
+                <a href="#performance-charts" class="jump-pill">📈 Charts</a>
+                <a href="#recent-transactions" class="jump-pill">🕒 Transactions</a>
+                <a href="#active-options" class="jump-pill" v-if="portfolioData.open_options && portfolioData.open_options.length > 0">🎯 Open Options</a>
+                <a href="#closed-options" class="jump-pill" v-if="portfolioData.recent_closed_options && portfolioData.recent_closed_options.weeks && portfolioData.recent_closed_options.weeks.length > 0">🏁 Closed Options</a>
+                <a href="#detailed-holdings-breakdown" class="jump-pill">💼 Detailed Holdings</a>
+            </nav>
+
+            <!-- Daily Performance & Realized P/L Block -->
+            <div id="portfolio-summary" class="symbol-stats-grid" style="margin-bottom: 20px; grid-template-columns: 1fr;">
+                <div class="stat-group prominent-stat-card">
+                    <h4>Daily Performance & Realized P/L<span v-if="summary.options_open_unrealized_profit_sgd !== null"> & Options Unrealized</span></h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; width: 100%;">
+                        <div class="stat-item" style="border-top: none; padding-top: 0; margin-top: 0;">
+                            <span class="stat-label">Daily P/L (Stocks)</span>
+                            <span class="stat-value" :class="getValClass(summary.total_daily_sgd)" v-text="formatCommas(summary.total_daily_sgd, true) + ' SGD'"></span>
+                            <span class="stat-subvalue" :class="getValClass(summary.total_daily_pct)" v-text="'(' + formatPct(summary.total_daily_pct) + ')'"></span>
+                        </div>
+                        <div class="stat-item" style="border-top: none; padding-top: 0; margin-top: 0; border-left: 1px solid rgba(255,255,255,0.08); padding-left: 20px;">
+                            <span class="stat-label">Daily Realized P/L (Stocks)</span>
+                            <span class="stat-value" :class="getValClass(summary.daily_realized_pl_sgd)" v-text="formatCommas(summary.daily_realized_pl_sgd, true) + ' SGD'"></span>
+                        </div>
+                        <div v-if="summary.options_daily_realized_sgd !== null" class="stat-item" style="border-top: none; padding-top: 0; margin-top: 0; border-left: 1px solid rgba(255,255,255,0.08); padding-left: 20px;">
+                            <span class="stat-label">Daily Realized P/L (Options)</span>
+                            <span class="stat-value" :class="getValClass(summary.options_daily_realized_sgd)" v-text="formatCommas(summary.options_daily_realized_sgd, true) + ' SGD'"></span>
+                        </div>
+                        <div v-if="summary.options_open_unrealized_profit_sgd !== null" class="stat-item" style="border-top: none; padding-top: 0; margin-top: 0; border-left: 1px solid rgba(255,255,255,0.08); padding-left: 20px;">
+                            <span class="stat-label">Open Options Unrealized P/L (Total)</span>
+                            <span class="stat-value" :class="getValClass(summary.options_open_unrealized_profit_sgd)" v-text="formatCommas(summary.options_open_unrealized_profit_sgd, true) + ' SGD'"></span>
+                            <span class="stat-subvalue" v-text="'(' + formatPct(summary.options_open_unrealized_profit_pct) + ')'"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary Stats Ribbon -->
             <div class="symbol-stats-grid" style="margin-bottom: 40px;">
                 <div class="stat-group">
                     <h4>Overview</h4>
@@ -50,50 +171,196 @@
                 </div>
             </div>
 
-            <!-- Performance Charts Grid -->
-            <div id="performance-charts" class="dashboard-grid">
-                <div v-for="(dp, slug) in dashboard.daily_performance" :key="slug" class="chart-container full-width">
-                    <div class="chart-controls">
-                        <div>
-                            <h4 style="text-transform: capitalize;">Daily Performance: {{ slug.replace('-', ' ') }}</h4>
-                            <div class="dashboard-sub-header">
-                                Total Change: 
-                                <span :class="getValClass(dp.summary.val)" class="bold-text">
-                                    {{ formatCommas(dp.summary.val, true) }} SGD ({{ formatPct(dp.summary.pct) }})
+            <!-- Risk & Liquidity Analysis Section -->
+            <template v-if="summary.options_open_max_loss_sgd">
+                <h2 id="risk-analysis" style="margin-top: 40px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <span>Risk & Liquidity Analysis</span>
+                    <span v-if="metadata.options_report_datetime_sgt" style="font-size: 0.75rem; color: var(--text-secondary); font-weight: normal;">
+                        Options Synced: <span class="timeago" :data-datetime="metadata.options_report_datetime_sgt" v-text="metadata.options_report_datetime_sgt"></span>
+                    </span>
+                </h2>
+                <div class="symbol-stats-grid" style="margin-bottom: 40px;">
+                    <div class="stat-group">
+                        <h4>Options Exposure & Risk</h4>
+                        <div class="stat-item">
+                            <span class="stat-label">Open Options Max Loss</span>
+                            <span class="stat-value neg-val" v-text="formatCommas(summary.options_open_max_loss_sgd) + ' SGD'"></span>
+                            <span v-if="summary.total_market_value_sgd" class="stat-subvalue" v-text="'(' + formatPct(summary.options_open_max_loss_sgd / summary.total_market_value_sgd * 100) + ')'"></span>
+                        </div>
+                        <div v-if="summary.options_assignment_risk_sgd" class="stat-item">
+                            <span class="stat-label">Total Assignment Risk</span>
+                            <span class="stat-value neg-val" v-text="formatCommas(summary.options_assignment_risk_sgd) + ' SGD'"></span>
+                        </div>
+                        <div v-if="summary.options_open_potential_return_sgd !== null" class="stat-item">
+                            <span class="stat-label">Total Potential Return (R/R)</span>
+                            <span class="stat-value pos-val" v-text="formatCommas(summary.options_open_potential_return_sgd) + ' SGD'"></span>
+                            <span class="stat-subvalue" v-text="'(' + formatPct(summary.options_open_potential_return_pct) + ')'"></span>
+                        </div>
+                        <div v-if="summary.options_open_unrealized_profit_sgd !== null" class="stat-item">
+                            <span class="stat-label">Total Unrealized Profit</span>
+                            <span class="stat-value" :class="getValClass(summary.options_open_unrealized_profit_sgd)" v-text="formatCommas(summary.options_open_unrealized_profit_sgd, true) + ' SGD'"></span>
+                            <span class="stat-subvalue" v-text="'(' + formatPct(summary.options_open_unrealized_profit_pct) + ')'"></span>
+                        </div>
+                    </div>
+
+                    <!-- Cash Stress Test -->
+                    <div v-if="cashReport" class="stat-group">
+                        <h4>Cash Stress Test</h4>
+                        <div class="stat-item">
+                            <span class="stat-label">Cash on Hand</span>
+                            <span class="stat-value" v-text="formatCommas(cashReport.cash_on_hand) + ' SGD'"></span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Cash Coverage (ML)</span>
+                            <span class="stat-value" v-text="((cashReport.cash_on_hand / summary.options_open_max_loss_sgd * 100).toFixed(1)) + '%'"></span>
+                        </div>
+                        <div v-if="summary.options_assignment_risk_sgd" class="stat-item">
+                            <span class="stat-label">Assignment Coverage</span>
+                            <span class="stat-value" v-text="((cashReport.cash_on_hand / summary.options_assignment_risk_sgd * 100).toFixed(1)) + '%'"></span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Cash Buffer (Net ML)</span>
+                            <span class="stat-value" :class="getValClass(cashReport.cash_on_hand - summary.options_open_max_loss_sgd)" v-text="formatCommas(cashReport.cash_on_hand - summary.options_open_max_loss_sgd, true) + ' SGD'"></span>
+                        </div>
+                    </div>
+
+                    <!-- Portfolio Stress Test -->
+                    <div v-if="cashReport" class="stat-group">
+                        <h4>Portfolio Stress Test</h4>
+                        <div class="stat-item">
+                            <span class="stat-label">Liquidation Value</span>
+                            <span class="stat-value" v-text="formatCommas(cashReport.liquidation_value) + ' SGD'"></span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Liquidation Coverage</span>
+                            <span class="stat-value" v-text="((cashReport.liquidation_value / summary.options_open_max_loss_sgd * 100).toFixed(1)) + '%'"></span>
+                        </div>
+                    </div>
+
+                    <!-- Expiration Profile -->
+                    <div v-if="summary.options_max_loss_by_expiry && summary.options_max_loss_by_expiry.length > 0" class="stat-group">
+                        <h4>Options Expiration Profile</h4>
+                        <div class="stat-item risk-breakdown-container" style="border-top: none; padding-top: 0; margin-top: 0;">
+                            <div class="risk-breakdown-header">
+                                <span class="stat-label">By Expiration (ML / AR)</span>
+                            </div>
+                            <div v-for="item in summary.options_max_loss_by_expiry" :key="item.expiry_date" class="risk-breakdown-item">
+                                <span>{{ item.expiry_date }} ({{ item.dte }}D)</span>
+                                <span class="neg-val" style="font-size: 0.9em;">
+                                    {{ formatCommas(item.max_loss_sgd).replace('.00','') }} / {{ formatCommas(item.assignment_risk_sgd).replace('.00','') }} SGD
                                 </span>
                             </div>
                         </div>
-                        <div>
-                            <button class="toggle-btn" @click="triggerDailyChartToggle(slug, 'val', $event)">Value</button>
-                            <button class="toggle-btn active" @click="triggerDailyChartToggle(slug, 'pct', $event)">Percentage</button>
-                        </div>
                     </div>
-                    <div :id="'chart-daily-perf-' + slug"></div>
                 </div>
-            </div>
+            </template>
 
-            <div class="dashboard-grid" style="margin-top: 20px; margin-bottom: 40px;">
-                <div class="chart-container">
-                    <div class="chart-controls">
-                        <h4>Top Gainers</h4>
-                        <div>
-                            <button class="toggle-btn" @click="triggerTopPerformersToggle('gainers', 'val', $event)">Value</button>
-                            <button class="toggle-btn active" @click="triggerTopPerformersToggle('gainers', 'pct', $event)">Percentage</button>
+            <!-- Cash Report Section -->
+            <template v-if="cashReport">
+                <h2 id="cash-report" style="margin-top: 40px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div class="cash-report-header-group">
+                        <span>Cash Report</span>
+                        <button id="toggle-cash-breakdown-btn" class="action-btn-cash" @click="toggleCashBreakdown">Show Broker Breakdown</button>
+                    </div>
+                    <span v-if="cashReport.last_updated_formatted" style="font-size: 0.75rem; color: var(--text-secondary); font-weight: normal; display: flex; align-items: center; gap: 4px;">
+                        Recorded: <span class="timeago" :data-datetime="cashReport.last_updated_formatted + ' SGT'" v-text="cashReport.last_updated_formatted + ' SGT'"></span>
+                    </span>
+                </h2>
+                <div class="symbol-stats-grid" style="margin-bottom: 25px;">
+                    <div class="stat-group">
+                        <h4>Liquidity</h4>
+                        <div class="stat-item">
+                            <span class="stat-label">Liquidation Value</span>
+                            <span class="stat-value" v-text="formatCommas(cashReport.liquidation_value) + ' SGD'"></span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Cash on hand</span>
+                            <span class="stat-value" v-text="formatCommas(cashReport.cash_on_hand) + ' SGD'"></span>
                         </div>
                     </div>
-                    <div id="chart-top-gainers"></div>
-                </div>
-                <div class="chart-container">
-                    <div class="chart-controls">
-                        <h4>Top Losers</h4>
-                        <div>
-                            <button class="toggle-btn" @click="triggerTopPerformersToggle('losers', 'val', $event)">Value</button>
-                            <button class="toggle-btn active" @click="triggerTopPerformersToggle('losers', 'pct', $event)">Percentage</button>
+                    <div class="stat-group">
+                        <h4>Basis</h4>
+                        <div class="stat-item">
+                            <span class="stat-label">Base Capital</span>
+                            <span class="stat-value" v-text="formatCommas(cashReport.base_capital) + ' SGD'"></span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Total Stock Value</span>
+                            <span class="stat-value" v-text="formatCommas(cashReport.total_stock_value) + ' SGD'"></span>
                         </div>
                     </div>
-                    <div id="chart-top-losers"></div>
+                    <div class="stat-group">
+                        <h4>Performance</h4>
+                        <div class="stat-item">
+                            <span class="stat-label">Base Capital Gains</span>
+                            <span class="stat-value" :class="getValClass(cashReport.base_capital_gains)" v-text="formatCommas(cashReport.base_capital_gains) + ' SGD'"></span>
+                            <span class="stat-subvalue" :class="getValClass(cashReport.base_capital_gains_pct)" v-text="'(' + formatPct(cashReport.base_capital_gains_pct) + ')'"></span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Avg Returns per year</span>
+                            <span class="stat-value" :class="getValClass(cashReport.avg_returns_per_year)" v-text="formatCommas(cashReport.avg_returns_per_year, true) + '%'"></span>
+                        </div>
+                    </div>
+                    <div class="stat-group">
+                        <h4>Metadata</h4>
+                        <div class="stat-item">
+                            <span class="stat-label">Days Tracked</span>
+                            <span class="stat-value" style="font-size: 0.9em;" v-text="cashReport.days_tracked"></span>
+                        </div>
+                    </div>
                 </div>
-            </div>
+
+                <!-- Broker Breakdown Table Wrapper -->
+                <div id="cash-breakdown-wrapper" class="collapsed cash-breakdown-wrapper">
+                    <div class="cash-breakdown-card">
+                        <h4 class="cash-breakdown-title">Broker Breakdown</h4>
+                        <div class="table-wrapper">
+                            <table class="cash-breakdown-table">
+                                <thead>
+                                    <tr>
+                                        <th>Broker</th>
+                                        <th class="align-right">Liquidation Value</th>
+                                        <th class="align-right">Cash on Hand</th>
+                                        <th class="align-right">Base Capital</th>
+                                        <th class="align-right">Stock Value</th>
+                                        <th class="align-right">Capital Gains</th>
+                                        <th class="align-right">Gains %</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-if="cashReport.details && cashReport.details.ibkr">
+                                        <td style="font-weight: 600;">IBKR</td>
+                                        <td class="sensitive-value align-right" v-text="formatCommas(cashReport.details.ibkr.liquidation_value) + ' SGD'"></td>
+                                        <td class="sensitive-value align-right" v-text="formatCommas(cashReport.details.ibkr.cash_on_hand) + ' SGD'"></td>
+                                        <td class="sensitive-value align-right" v-text="formatCommas(cashReport.details.ibkr.base_capital) + ' SGD'"></td>
+                                        <td class="sensitive-value align-right" v-text="formatCommas(cashReport.details.ibkr.total_stock_value) + ' SGD'"></td>
+                                        <td class="sensitive-value align-right" :class="getValClass(cashReport.details.ibkr.base_capital_gains)" v-text="formatCommas(cashReport.details.ibkr.base_capital_gains) + ' SGD'"></td>
+                                        <td class="align-right" :class="getValClass(cashReport.details.ibkr.base_capital_gains_pct)" v-text="formatPct(cashReport.details.ibkr.base_capital_gains_pct)"></td>
+                                    </tr>
+                                    <tr v-if="cashReport.details && cashReport.details.moomoo">
+                                        <td style="font-weight: 600;">MooMoo</td>
+                                        <td class="sensitive-value align-right" v-text="formatCommas(cashReport.details.moomoo.liquidation_value) + ' SGD'"></td>
+                                        <td class="sensitive-value align-right" v-text="formatCommas(cashReport.details.moomoo.cash_on_hand) + ' SGD'"></td>
+                                        <td class="sensitive-value align-right" v-text="formatCommas(cashReport.details.moomoo.base_capital) + ' SGD'"></td>
+                                        <td class="sensitive-value align-right" v-text="formatCommas(cashReport.details.moomoo.total_stock_value) + ' SGD'"></td>
+                                        <td class="sensitive-value align-right" :class="getValClass(cashReport.details.moomoo.base_capital_gains)" v-text="formatCommas(cashReport.details.moomoo.base_capital_gains) + ' SGD'"></td>
+                                        <td class="align-right" :class="getValClass(cashReport.details.moomoo.base_capital_gains_pct)" v-text="formatPct(cashReport.details.moomoo.base_capital_gains_pct)"></td>
+                                    </tr>
+                                    <tr class="total-row">
+                                        <td>Total Combined</td>
+                                        <td class="sensitive-value align-right" v-text="formatCommas(cashReport.liquidation_value) + ' SGD'"></td>
+                                        <td class="sensitive-value align-right" v-text="formatCommas(cashReport.cash_on_hand) + ' SGD'"></td>
+                                        <td class="sensitive-value align-right" v-text="formatCommas(cashReport.base_capital) + ' SGD'"></td>
+                                        <td class="sensitive-value align-right" v-text="formatCommas(cashReport.total_stock_value) + ' SGD'"></td>
+                                        <td class="sensitive-value align-right" :class="getValClass(cashReport.base_capital_gains)" v-text="formatCommas(cashReport.base_capital_gains) + ' SGD'"></td>
+                                        <td class="align-right" :class="getValClass(cashReport.base_capital_gains_pct)" v-text="formatPct(cashReport.base_capital_gains_pct)"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </template>
 
             <!-- Recent Transactions (Past 4 Weeks Accordion) -->
             <div v-if="recentTx" id="recent-transactions" class="recent-transactions-section dashboard-section-spacer" style="margin-bottom: 40px;">
@@ -116,7 +383,7 @@
                 </h2>
                 
                 <div class="weeks-container">
-                    <details v-for="week in recentTx.weeks" :key="week.range" class="week-details week-details-card" open>
+                    <details v-for="(week, index) in recentTx.weeks" :key="week.range" class="week-details week-details-card" :open="index === 0">
                         <summary class="week-details-summary">
                             <span class="week-summary-center">Week: {{ week.range }}</span>
                             <div class="week-summary-right">
@@ -150,38 +417,506 @@
                 </div>
             </div>
 
-            <!-- Holdings Summary Table Grid -->
-            <h2>Detailed Holdings Summary</h2>
-            <table class="holdings-summary">
-                <thead>
-                    <tr>
-                        <th>Name / Ticker</th>
-                        <th>Classification</th>
-                        <th>Subclass</th>
-                        <th>Quantity</th>
-                        <th>Cost Basis (SGD)</th>
-                        <th>Current Value (SGD)</th>
-                        <th>Gains / Profit</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="pos in activePositions" :key="pos.symbol" class="ticker-row">
-                        <td style="font-weight: 600;">
-                            <span v-text="pos.symbol"></span>
-                            <span v-if="pos.is_augmented" class="augmented-badge" style="background: rgba(46, 204, 113, 0.15); color: #2ecc71; font-size: 0.7rem; padding: 2px 4px; border-radius: 4px; margin-left: 6px;">IB Sync</span>
-                        </td>
-                        <td v-text="pos.classification"></td>
-                        <td v-text="pos.subclass"></td>
-                        <td v-text="pos.metrics.quantity"></td>
-                        <td class="sensitive-value" v-text="formatCommas(pos.sgd_metrics.invested_sgd)"></td>
-                        <td class="sensitive-value" v-text="formatCommas(pos.sgd_metrics.current_sgd)"></td>
-                        <td :class="getValClass(pos.sgd_metrics.profit_sgd)">
-                            <span class="sensitive-value" v-text="formatCommas(pos.sgd_metrics.profit_sgd, true)"></span>
-                            <div class="sub-val" v-text="'(' + formatPct(pos.metrics.roi_pct) + ')'"></div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+            <!-- Active Open Options Exposure Table -->
+            <div v-if="portfolioData.open_options && portfolioData.open_options.length > 0" id="active-options" class="active-options-section dashboard-section-spacer" style="margin-bottom: 40px;">
+                <h2>
+                    <span>Active Open Options</span>
+                    <span class="text-sm font-normal text-muted">Potential ROI / Risk Focus</span>
+                </h2>
+                <div class="symbol-stats-grid symbol-stats-grid-single">
+                    <ul class="active-options-list">
+                        <li class="active-options-header">
+                            <span class="col-underlying">Underlying</span>
+                            <span class="col-strategy">Strategy Legs</span>
+                            <span class="col-expiry">Expiry</span>
+                            <span class="col-max-loss">Max Loss / AR</span>
+                            <span class="col-return">Potential Return</span>
+                        </li>
+                        <li v-for="group in portfolioData.open_options" :key="group.group_id" class="active-options-item">
+                            <span class="col-underlying" v-text="group.symbol"></span>
+                            <span class="col-strategy">
+                                <div v-for="leg in group.legs" :key="leg.contract_name">
+                                    <span :class="leg.initial_type === 'STO' ? 'sto' : 'bto'">[{{ leg.initial_type }}]</span>
+                                    <a :href="'/options-tracker/details?group_id=' + group.group_id" target="_blank" class="accent-link" v-text="leg.contract_name"></a>
+                                    <span class="col-leg-dates">[{{ leg.date_opened.substring(0, 10) }}]</span>
+                                </div>
+                            </span>
+                            <span class="col-expiry">
+                                {{ group.expiry_date }}
+                                <span v-if="group.dte !== null" class="text-xs text-muted display-block">({{ group.dte }}d)</span>
+                            </span>
+                            <span class="col-max-loss">
+                                <div class="neg-val">{{ formatCommas(group.max_loss_sgd) }} SGD</div>
+                                <div v-if="group.assignment_risk_sgd > 0" class="col-assignment-risk">
+                                    {{ formatCommas(group.assignment_risk_sgd).replace('.00','') }} SGD
+                                </div>
+                            </span>
+                            <span class="col-return">
+                                <div class="pos-val bold-text">
+                                    {{ formatCommas(group.total_cost_sgd) }} SGD ({{ group.potential_return_pct.toFixed(2) }}%)
+                                </div>
+                                <div v-if="group.unrealized_profit_sgd !== null" class="text-xs" :class="getValClass(group.unrealized_profit_sgd)" style="margin-top: 4px;">
+                                    P/L: {{ formatCommas(group.unrealized_profit_sgd, true) }} SGD ({{ formatPct(group.unrealized_profit_pct) }})
+                                </div>
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Recently Closed Options Table -->
+            <div v-if="portfolioData.recent_closed_options && portfolioData.recent_closed_options.weeks && portfolioData.recent_closed_options.weeks.length > 0" id="closed-options" class="recent-options-section dashboard-section-spacer" style="margin-bottom: 40px;">
+                <h2>
+                    <span>Recently Closed Options</span>
+                    <span class="text-sm font-normal text-muted">Realized Profit / Cash Flow Focus</span>
+                </h2>
+                <div class="weeks-container">
+                    <details v-for="(week, index) in portfolioData.recent_closed_options.weeks" :key="week.range" class="week-details week-details-card" :open="index === 0">
+                        <summary class="week-details-summary">
+                            <span>Week: {{ week.range }}</span>
+                            <span class="text-sm">
+                                Realized P/L: <span :class="getValClass(week.closed_pnl)">{{ formatCommas(week.closed_pnl, true) }} SGD</span>
+                            </span>
+                        </summary>
+                        <div class="week-details-content-large">
+                            <ul class="tx-list tx-list-clean">
+                                <li class="tx-item tx-header-row">
+                                    <span class="flex-1">Underlying</span>
+                                    <span class="flex-3">Strategy Legs</span>
+                                    <span class="flex-1 text-center">Hold Time</span>
+                                    <span class="flex-2 text-right">Realized P/L</span>
+                                </li>
+                                <li v-for="group in week.closed" :key="group.group_id" class="tx-item tx-item-row-large">
+                                    <span class="flex-1 bold-text" v-text="group.symbol"></span>
+                                    <span class="flex-3 flex-col-gap-4">
+                                        <div v-for="leg in group.legs" :key="leg.contract_name">
+                                            <span :class="leg.action.toLowerCase()">[{{ leg.action }}]</span>
+                                            <a :href="'/options-tracker/details?group_id=' + group.group_id" target="_blank" class="accent-link" v-text="leg.contract_name"></a>
+                                            <span class="col-leg-dates">({{ leg.date_opened.substring(0, 10) }} to {{ group.date_closed }})</span>
+                                        </div>
+                                    </span>
+                                    <span class="flex-1 text-center text-muted" v-text="group.max_hold_days + 'd'"></span>
+                                    <span class="flex-2 text-right bold-text" :class="getValClass(group.realized_pnl_sgd)" v-text="formatCommas(group.realized_pnl_sgd, true) + ' SGD'"></span>
+                                </li>
+                            </ul>
+                        </div>
+                    </details>
+                </div>
+            </div>
+
+            <!-- Table of Contents (TOC) View Switcher -->
+            <h1 id="detailed-holdings-breakdown">
+                Detailed Holdings Breakdown
+            </h1>
+            <div class="toc-controls" style="margin-bottom: 20px;">
+                <button class="view-btn" :class="{ active: tocView === 'list' }" @click="tocView = 'list'">List View</button>
+                <button class="view-btn" :class="{ active: tocView === 'table' }" @click="tocView = 'table'">Table View</button>
+            </div>
+
+            <!-- TOC List View -->
+            <div v-show="tocView === 'list'" id="toc-list-view">
+                <ul class="toc">
+                    <li v-for="cl in activeReport.body_groups" :key="cl.title">
+                        <strong>📂 {{ cl.title }}</strong> ({{ formatPct(cl.total_pct) }})
+                        <ul>
+                            <li v-for="u in cl.underlyings" :key="u.title">
+                                <a :href="'#' + slugify(u.title)" class="toc-item-link" v-text="u.title"></a>
+                                <span class="toc-item-stats">
+                                    Size: <span class="stat">{{ formatPct(u.alloc_pct) }}, {{ formatCommas(u.curr) }} SGD</span> 
+                                    (<span :class="getValClass(u.gl)">{{ formatPct(u.roi) }}</span>)
+                                    <br>
+                                    Daily: <span :class="getValClass(u.daily_val)">{{ formatCommas(u.daily_val, true) }} SGD</span>
+                                    (<span :class="getValClass(u.daily_pct)">{{ formatPct(u.daily_pct) }}</span>)
+                                </span>
+                                <!-- Tickers sublist if symbols length > 1 (matching legacy) -->
+                                <ul v-if="u.symbols.length > 1" class="toc-sublist">
+                                    <li v-for="p in u.symbols" :key="p.symbol">
+                                        <a :href="'#' + slugify(u.title + '-' + p.symbol)" class="toc-sublist-link" v-text="p.symbol"></a>
+                                        <span v-if="p.ib_mismatch" class="warning-indicator tooltip-trigger" style="color: #e74c3c; font-weight: bold; cursor: help; margin-left: 2px; font-size: 0.9rem;">⚠</span>
+                                        <span class="toc-sublist-val">{{ formatPct(p.sgd_metrics.current_sgd / summary.total_market_value_sgd * 100) }} | </span>
+                                        <span class="toc-sublist-val" :class="getValClass(p.sgd_metrics.daily_val_sgd)">
+                                            <span class="sensitive-value">{{ formatCommas(p.sgd_metrics.daily_val_sgd, true) }} SGD</span> ({{ formatPct(p.metrics.daily_pct) }})
+                                        </span>
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- TOC Table View -->
+            <div v-show="tocView === 'table'" id="toc-table-view">
+                <table class="holdings-summary">
+                    <thead>
+                        <tr>
+                            <th>Name / Ticker</th>
+                            <th>Share %</th>
+                            <th>Cost Basis (SGD)</th>
+                            <th>Daily P&L</th>
+                            <th>Realized P&L</th>
+                            <th>Div Received</th>
+                            <th>Capital Gain</th>
+                            <th>Total Profit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template v-for="cl in activeReport.body_groups">
+                            <tr class="class-row">
+                                <td>📂 {{ cl.title }}</td>
+                                <td v-text="formatPct(cl.total_pct)"></td>
+                                <td v-text="formatCommas(cl.inv)"></td>
+                                <td :class="getValClass(cl.daily_val)" v-text="formatCommas(cl.daily_val, true)"></td>
+                                <td :class="getValClass(cl.realized_pnl)" v-text="formatCommas(cl.realized_pnl, true)"></td>
+                                <td v-text="formatCommas(cl.inc)"></td>
+                                <td :class="getValClass(cl.cap_gain)" v-text="formatCommas(cl.cap_gain, true)"></td>
+                                <td :class="getValClass(cl.gl)" v-text="formatCommas(cl.gl, true)"></td>
+                            </tr>
+                            <template v-for="u in cl.underlyings">
+                                <tr class="underlying-row">
+                                    <td><a :href="'#' + slugify(u.title)" v-text="u.title"></a></td>
+                                    <td v-text="formatPct(u.alloc_pct)"></td>
+                                    <td v-text="formatCommas(u.inv)"></td>
+                                    <td :class="getValClass(u.daily_val)">
+                                        {{ formatCommas(u.daily_val, true) }}
+                                        <div class="sub-val" v-text="'(' + formatPct(u.daily_pct) + ')'"></div>
+                                    </td>
+                                    <td :class="getValClass(u.realized_pnl)" v-text="formatCommas(u.realized_pnl, true)"></td>
+                                    <td v-text="formatCommas(u.inc)"></td>
+                                    <td :class="getValClass(u.cap_gain)" v-text="formatCommas(u.cap_gain, true)"></td>
+                                    <td :class="getValClass(u.gl)">
+                                        {{ formatCommas(u.gl, true) }}
+                                        <div class="sub-val" v-text="'(' + formatPct(u.roi) + ')'"></div>
+                                    </td>
+                                </tr>
+                                <tr v-for="p in u.symbols" :key="p.symbol" class="ticker-row">
+                                    <td style="padding-left: 30px;">
+                                        <a :href="'#' + slugify(u.title + '-' + p.symbol)" v-text="p.symbol"></a>
+                                    </td>
+                                    <td v-text="formatPct(p.sgd_metrics.current_sgd / summary.total_market_value_sgd * 100)"></td>
+                                    <td>
+                                        <span class="top-val" v-text="formatCommas(p.sgd_metrics.invested_sgd)"></span>
+                                        <span class="sub-val" v-text="'Avg: ' + formatCommas(p.metrics.average_buy_price) + ' ' + p.currency"></span>
+                                    </td>
+                                    <td :class="getValClass(p.sgd_metrics.daily_val_sgd)">
+                                        {{ formatCommas(p.sgd_metrics.daily_val_sgd, true) }}
+                                        <div class="sub-val" v-text="'(' + formatPct(p.metrics.daily_pct) + ')'"></div>
+                                    </td>
+                                    <td :class="getValClass(p.sgd_metrics.realized_pnl_sgd)" v-text="formatCommas(p.sgd_metrics.realized_pnl_sgd, true)"></td>
+                                    <td v-text="formatCommas(p.sgd_metrics.income_sgd)"></td>
+                                    <td :class="getValClass(p.metrics.capital_gain_sgd)" v-text="formatCommas(p.metrics.capital_gain_sgd, true)"></td>
+                                    <td :class="getValClass(p.sgd_metrics.profit_sgd)">
+                                        {{ formatCommas(p.sgd_metrics.profit_sgd, true) }}
+                                        <div class="sub-val" v-text="'(' + formatPct(p.metrics.roi_pct) + ')'"></div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Detailed Holdings Underlyings & Tickers Cards -->
+            <div class="performance-container" style="margin-top: 40px;">
+                <div v-for="cl in activeReport.body_groups" :key="cl.title">
+                    <div v-for="u in cl.underlyings" :key="u.title" class="report-group" style="margin-bottom: 50px;">
+                        <!-- Underlying Header -->
+                        <h1 :id="slugify(u.title)" class="report-header-multiline">
+                            <div class="header-content">
+                                <div class="title">
+                                    <span v-text="u.title"></span>
+                                    <a v-if="u.backtest_url" :href="u.backtest_url" target="_blank" class="backtest-link" title="Backtest underlying assets" style="margin-left: 12px; font-size: 0.85rem; font-weight: normal;">
+                                        <span class="backtest-icon">📊</span> Backtest
+                                    </a>
+                                </div>
+                                <div class="subtitle">
+                                    Allocation: {{ formatPct(u.alloc_pct) }}, {{ formatCommas(u.curr) }} SGD
+                                </div>
+                                <div class="highlight">
+                                    Daily P/L: 
+                                    <span :class="getValClass(u.daily_val)">
+                                        {{ formatCommas(u.daily_val, true) }} SGD ({{ formatPct(u.daily_pct) }})
+                                    </span>
+                                </div>
+                            </div>
+                            <a href="#detailed-holdings-breakdown" class="back-to-toc" title="Return to Detailed Holdings Breakdown">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="18 15 12 9 6 15"></polyline>
+                                </svg>
+                            </a>
+                        </h1>
+
+                        <!-- Underlying Summary Grid & Chart -->
+                        <div class="summary-wrapper" style="margin-bottom: 30px; display: flex; gap: 20px; flex-wrap: wrap;">
+                            <div class="summary-stats" style="flex: 1; min-width: 250px;">
+                                <h2>Summary</h2>
+                                <ul>
+                                    <li><strong>Total Invested:</strong> {{ formatCommas(u.inv) }} SGD ({{ formatPct(u.invested_pct) }})</li>
+                                    <li><strong>Current Value:</strong> {{ formatCommas(u.curr) }} SGD ({{ formatPct(u.alloc_pct) }})</li>
+                                    <li>
+                                        <strong>Daily Change:</strong> 
+                                        <span :class="getValClass(u.daily_val)">
+                                            {{ formatCommas(u.daily_val, true) }} SGD ({{ formatPct(u.daily_pct) }})
+                                        </span>
+                                    </li>
+                                    <li><strong>Total Income:</strong> {{ formatCommas(u.inc) }} SGD</li>
+                                    <li><strong>Total Fees:</strong> {{ formatCommas(u.fees) }} SGD</li>
+                                    <li>
+                                        <strong>Total Profit:</strong> 
+                                        <span :class="getValClass(u.gl)">
+                                            {{ formatCommas(u.gl, true) }} SGD ({{ formatPct(u.roi) }})
+                                        </span>
+                                    </li>
+                                </ul>
+                            </div>
+                             <div class="summary-chart" style="flex: 1.5; min-width: 350px;">
+                                 <div class="performance-analytics-box-wrapper">
+                                     <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                         <h3 style="margin: 0; font-size: 0.95rem;">📊 Performance Analytics (SGD)</h3>
+                                         <div class="chart-controls" style="margin: 0;">
+                                             <button class="toggle-btn active" @click="triggerChartModeToggle('und-' + slugify(u.title), 'val', $event)">Performance (Val)</button>
+                                             <button class="toggle-btn" @click="triggerChartModeToggle('und-' + slugify(u.title), 'pct', $event)">Performance (%)</button>
+                                             <button class="toggle-btn" @click="triggerUnderlyingChartToggle(slugify(u.title), 'flow', 'month', $event)">Flow (Mo)</button>
+                                             <button class="toggle-btn" @click="triggerUnderlyingChartToggle(slugify(u.title), 'flow', 'year', $event)">Flow (Yr)</button>
+                                             <button class="toggle-btn" @click="triggerUnderlyingChartToggle(slugify(u.title), 'income', 'month', $event)">Inc (Mo)</button>
+                                             <button class="toggle-btn" @click="triggerUnderlyingChartToggle(slugify(u.title), 'income', 'year', $event)">Inc (Yr)</button>
+                                         </div>
+                                     </div>
+                                     <div :id="'chart-und-' + slugify(u.title)" 
+                                          class="chart-container underlying-chart-container" 
+                                          :data-symbols-data="JSON.stringify(u.symbols)"
+                                          style="min-height: 350px;">
+                                     </div>
+                                 </div>
+                             </div>
+                        </div>
+
+                        <!-- Ticker Symbol Cards -->
+                        <div v-for="p in u.symbols" :key="p.symbol" style="margin-bottom: 45px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 30px;">
+                            <h2 :id="slugify(u.title + '-' + p.symbol)" class="symbol-card-header">
+                                <div class="header-content">
+                                    <div class="title" style="display: flex; align-items: center; gap: 8px;">
+                                        <span v-text="p.symbol"></span>
+                                        <span v-if="p.is_augmented" class="augmented-badge" style="background: rgba(46, 204, 113, 0.15); color: #2ecc71; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; font-weight: normal;">IB Sync</span>
+                                        <span v-if="p.ib_mismatch" class="warning-badge" style="background: rgba(231, 76, 60, 0.15); color: #e74c3c; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; font-weight: normal;">IB Mismatch</span>
+                                        
+                                        <!-- Ticker Utilities Calculator Dropdown -->
+                                        <div class="ticker-menu-container" style="position: relative; display: inline-block;">
+                                            <button class="ticker-menu-btn" @click.stop="toggleMenuDisplay(p.symbol, $event)">⋮</button>
+                                            <div :id="'ticker-menu-' + p.symbol" class="ticker-menu-dropdown" v-show="activeMenu === p.symbol">
+                                                <a href="javascript:void(0)" @click="triggerCalculator(p, u.title, $event)">🖩 Calculator</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="subtitle">
+                                        Allocation: {{ formatPct(p.sgd_metrics.current_sgd / summary.total_market_value_sgd * 100) }}, {{ formatCommas(p.sgd_metrics.current_sgd) }} SGD
+                                    </div>
+                                    <div class="highlight">
+                                        Daily P/L: 
+                                        <span :class="getValClass(p.sgd_metrics.daily_val_sgd)">
+                                            {{ formatCommas(p.sgd_metrics.daily_val_sgd, true) }} SGD ({{ formatPct(p.metrics.daily_pct) }})
+                                        </span>
+                                    </div>
+                                </div>
+                                <a href="#detailed-holdings-breakdown" class="back-to-toc" title="Return to Detailed Holdings Breakdown">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="18 15 12 9 6 15"></polyline>
+                                    </svg>
+                                </a>
+                            </h2>
+
+                            <!-- 4-Column Stat Matrix -->
+                            <div class="symbol-card-upper" style="margin-top: 20px; margin-bottom: 25px;">
+                                <div class="symbol-stats-grid">
+                                    <!-- Position Column -->
+                                    <div class="stat-group">
+                                        <h4>Position</h4>
+                                        <div class="stat-item">
+                                            <span class="stat-label">Total Quantity</span>
+                                            <span class="stat-value" v-text="p.metrics.quantity"></span>
+                                            <span class="stat-subvalue" style="text-transform: capitalize;">{{ p.subclass }} subclass</span>
+                                        </div>
+                                        <div class="stat-item">
+                                            <span class="stat-label">Allocation (Underlying)</span>
+                                            <span class="stat-value" v-text="formatPct(p.sgd_metrics.current_sgd / u.curr * 100)"></span>
+                                        </div>
+                                        <div class="stat-item">
+                                            <span class="stat-label">Days Held</span>
+                                            <span class="stat-value" v-text="p.metrics.days_since_first_tx + ' days'"></span>
+                                        </div>
+                                    </div>
+                                    <!-- Valuation Column -->
+                                    <div class="stat-group">
+                                        <h4>Valuation</h4>
+                                        <div class="stat-item">
+                                            <span class="stat-label">Invested Basis</span>
+                                            <span class="stat-value" v-text="formatCommas(p.metrics.cost_basis) + ' ' + p.currency"></span>
+                                            <span class="stat-subvalue" v-text="formatCommas(p.sgd_metrics.invested_sgd) + ' SGD (' + formatPct(p.sgd_metrics.invested_sgd / summary.total_invested_active_sgd * 100) + ')'"></span>
+                                        </div>
+                                        <div class="stat-item">
+                                            <span class="stat-label">Market Value</span>
+                                            <span class="stat-value" v-text="formatCommas(p.metrics.market_value) + ' ' + p.currency"></span>
+                                            <span class="stat-subvalue" v-text="formatCommas(p.sgd_metrics.current_sgd) + ' SGD'"></span>
+                                        </div>
+                                        <div class="stat-item">
+                                            <span class="stat-label">Average Buy Price</span>
+                                            <span class="stat-value" v-text="formatCommas(p.metrics.average_buy_price) + ' ' + p.currency"></span>
+                                            <span class="stat-subvalue" v-text="'Current: ' + formatCommas(p.metrics.current_price) + ' ' + p.currency"></span>
+                                        </div>
+                                    </div>
+                                    <!-- Performance Column -->
+                                    <div class="stat-group">
+                                        <h4>Performance</h4>
+                                        <div class="stat-item">
+                                            <span class="stat-label">Daily P/L</span>
+                                            <span class="stat-value" :class="getValClass(p.metrics.daily_val)" v-text="formatCommas(p.metrics.daily_val, true) + ' ' + p.currency"></span>
+                                            <span class="stat-subvalue" :class="getValClass(p.sgd_metrics.daily_val_sgd)" v-text="formatCommas(p.sgd_metrics.daily_val_sgd, true) + ' SGD (' + formatPct(p.metrics.daily_pct) + ')'"></span>
+                                        </div>
+                                        <div class="stat-item">
+                                            <span class="stat-label">Capital Gain/Loss</span>
+                                            <span class="stat-value" :class="getValClass(p.metrics.capital_gain)" v-text="formatCommas(p.metrics.capital_gain, true) + ' ' + p.currency"></span>
+                                            <span class="stat-subvalue" :class="getValClass(p.metrics.capital_gain_sgd)" v-text="formatCommas(p.metrics.capital_gain_sgd, true) + ' SGD (' + formatPct(p.metrics.capital_gain_pct) + ')'"></span>
+                                        </div>
+                                        <div class="stat-item">
+                                            <span class="stat-label">Total Income</span>
+                                            <span class="stat-value pos-val" v-text="'+' + formatCommas(p.sgd_metrics.income_sgd) + ' SGD'"></span>
+                                        </div>
+                                    </div>
+                                    <!-- Outcome Column -->
+                                    <div class="stat-group">
+                                        <h4>Outcome</h4>
+                                        <div class="stat-item">
+                                            <span class="stat-label">Total Returns</span>
+                                            <span class="stat-value" :class="getValClass(p.metrics.lifetime_profit)" v-text="formatCommas(p.metrics.lifetime_profit, true) + ' ' + p.currency"></span>
+                                            <span class="stat-subvalue" v-text="formatCommas(p.sgd_metrics.profit_sgd) + ' SGD'"></span>
+                                        </div>
+                                        <div class="stat-item">
+                                            <span class="stat-label">ROI (Lifetime)</span>
+                                            <span class="stat-value" :class="getValClass(p.metrics.roi_pct)" style="font-size: 1.5rem;" v-text="formatPct(p.metrics.roi_pct)"></span>
+                                        </div>
+                                        <div class="stat-item">
+                                            <span class="stat-label">Avg. Annual Returns</span>
+                                            <span class="stat-value" :class="getValClass(p.metrics.avg_returns_per_year)" v-text="formatPct(p.metrics.avg_returns_per_year)"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Individual Ticker Performance Analytics Chart -->
+                            <div class="symbol-analytics-full" style="width: 100%; margin-bottom: 25px;">
+                                <div class="performance-analytics-box-wrapper">
+                                    <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                        <h3 style="margin: 0; font-size: 0.95rem;">📊 Performance Analytics (SGD)</h3>
+                                        <div class="chart-controls" style="margin: 0;">
+                                            <button class="toggle-btn active" @click="triggerSymbolChartToggle(p.symbol, 'flow', 'month', $event)">Flow (Mo)</button>
+                                            <button class="toggle-btn" @click="triggerSymbolChartToggle(p.symbol, 'flow', 'year', $event)">Flow (Yr)</button>
+                                            <button class="toggle-btn" @click="triggerSymbolChartToggle(p.symbol, 'income', 'month', $event)">Inc (Mo)</button>
+                                            <button class="toggle-btn" @click="triggerSymbolChartToggle(p.symbol, 'income', 'year', $event)">Inc (Yr)</button>
+                                        </div>
+                                    </div>
+                                    <div :id="'chart-' + slugify(p.symbol)" 
+                                         class="chart-container symbol-chart-container" 
+                                         :data-symbol="p.symbol"
+                                         :data-txs="JSON.stringify(p.transactions)"
+                                         :data-income="JSON.stringify(p.income)"
+                                         :data-rate="p.rate || 1.0"
+                                         style="min-height: 350px;">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Expandable history dropdown lists (Transactions & Income) -->
+                            <div class="symbol-card-lower" style="margin-top: 15px;">
+                                <div class="tx-section-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 6px;">
+                                    <h3 style="margin: 0; font-size: 1rem;">Ledger History</h3>
+                                    <!-- Transaction Visualizer Button -->
+                                    <button class="txv-trigger-btn"
+                                            :data-symbol="p.symbol"
+                                            :data-avg-cost="p.metrics?.average_buy_price || 0"
+                                            :data-currency="p.currency"
+                                            :data-txs="JSON.stringify(p.transactions)"
+                                            title="View price history chart"
+                                            @click="triggerTxVisualizer($event)">
+                                        📈 Chart
+                                    </button>
+                                </div>
+                                
+                                <!-- Transactions dropdown grouped by year -->
+                                <details v-for="grp in getGroupedTransactions(p.transactions)" :key="grp.year" class="tx-details-wrapper" style="margin-top: 10px;">
+                                    <summary>{{ grp.year }} ({{ grp.qty > 0 ? '+' : '' }}{{ grp.qty }}, Net: {{ formatCommas(grp.net, true) }} {{ p.currency }})</summary>
+                                    <div class="details-content" style="padding-top: 10px;">
+                                        <ul class="tx-list tx-list-clean">
+                                            <li v-for="t in grp.list" :key="t.date" class="tx-item tx-item-row" :data-action="t.action.toLowerCase()">
+                                                <span :class="t.action.toLowerCase() === 'buy' ? 'pos-val' : 'neg-val'">[{{ t.action.toUpperCase() }}]</span>
+                                                [{{ t.date }}]
+                                                {{ t.qty }} @ {{ formatCommas(t.price) }} {{ p.currency }}, 
+                                                Fees: {{ formatCommas(t.fee) }} 
+                                                ({{ formatCommas(t.qty * t.price + (t.action === 'Buy' ? t.fee : -t.fee)) }} {{ p.currency }})
+                                                
+                                                <span v-if="t.action === 'Buy'" class="metadata text-muted text-xs">
+                                                    (Current Value: {{ formatCommas(t.qty * p.metrics.current_price) }} {{ p.currency }},
+                                                    <span :class="getValClass((t.qty * p.metrics.current_price) - (t.qty * t.price + t.fee))">
+                                                        {{ formatPct((((t.qty * p.metrics.current_price) - (t.qty * t.price + t.fee)) / (t.qty * t.price + t.fee) * 100)) }},
+                                                        {{ formatCommas((t.qty * p.metrics.current_price) - (t.qty * t.price + t.fee), true) }} {{ p.currency }}
+                                                    </span>)
+                                                </span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </details>
+
+                                <!-- Income / Dividends section grouped by year -->
+                                <div style="margin-top: 20px;">
+                                    <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;">Income</h4>
+                                    <p v-if="!p.income || p.income.length === 0" style="color: var(--text-secondary); font-size: 0.85rem;">No income records.</p>
+                                    <template v-else>
+                                        <details v-for="grp in getGroupedIncome(p.income, p.yearly_income_summaries)" :key="grp.year" style="margin-top: 8px;">
+                                            <summary>{{ grp.year }} (Total: {{ formatCommas(grp.summary.total_net) }} {{ p.currency }})</summary>
+                                            <div class="details-content" style="padding-top: 10px;">
+                                                <div class="income-year-summary" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 12px; margin-bottom: 15px; font-size: 0.9em; display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px;">
+                                                    <div>
+                                                        <span style="color: #888; display: block; font-size: 0.8em; text-transform: uppercase;">Total Income</span>
+                                                        <span style="font-weight: bold; color: var(--accent-blue);" v-text="formatCommas(grp.summary.total_net) + ' ' + p.currency"></span>
+                                                    </div>
+                                                    <div>
+                                                        <span style="color: #888; display: block; font-size: 0.8em; text-transform: uppercase;">Gross</span>
+                                                        <span style="font-weight: bold;" v-text="formatCommas(grp.summary.total_gross) + ' ' + p.currency"></span>
+                                                    </div>
+                                                    <div>
+                                                        <span style="color: #888; display: block; font-size: 0.8em; text-transform: uppercase;">Tax</span>
+                                                        <span style="font-weight: bold; color: #ef4444;" v-text="formatCommas(grp.summary.total_tax) + ' ' + p.currency"></span>
+                                                    </div>
+                                                    <!-- Render ROC stats only if ROC exists -->
+                                                    <template v-if="grp.summary.roc_amount > 0">
+                                                        <div>
+                                                            <span style="color: #888; display: block; font-size: 0.8em; text-transform: uppercase;">ROC</span>
+                                                            <span style="font-weight: bold; color: #10b981;" v-text="formatCommas(grp.summary.roc_amount) + ' ' + p.currency"></span>
+                                                        </div>
+                                                        <div>
+                                                            <span style="color: #888; display: block; font-size: 0.8em; text-transform: uppercase;">ROC %</span>
+                                                            <span style="font-weight: bold; color: #10b981;" v-text="grp.summary.roc_pct.toFixed(2) + '%'"></span>
+                                                        </div>
+                                                        <div>
+                                                            <span style="color: #888; display: block; font-size: 0.8em; text-transform: uppercase;">Actual Tax</span>
+                                                            <span style="font-weight: bold; color: var(--accent-blue);" v-text="formatCommas(grp.summary.actual_tax_value) + ' ' + p.currency + ' (' + grp.summary.actual_tax_rate.toFixed(2) + '%)'"></span>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                                <ul style="list-style-type: disc; padding-left: 20px; font-family: monospace; font-size: 0.9rem; line-height: 1.6;">
+                                                    <li v-for="inc in grp.list" :key="inc.date">
+                                                        <strong>{{ inc.date }}</strong>: Net: {{ formatCommas(inc.net) }} {{ p.currency }} 
+                                                        (Gross: {{ formatCommas(inc.amt) }}, Tax: {{ formatCommas(inc.tax) }}<span v-if="inc.qty && inc.qty > 0.0001">, Qty: {{ inc.qty }}, Net/Share: {{ formatCommas(inc.net_per_share, false, 4) }} {{ p.currency }}</span>)<span v-if="inc.note" v-text="', ' + inc.note"></span>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </details>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- 2. TRANSACTIONS TAB VIEW -->
@@ -205,7 +940,7 @@
                             <td v-text="tx.date"></td>
                             <td style="font-weight: 600;" v-text="pos.symbol"></td>
                             <td>
-                                <span :class="tx.action === 'Buy' ? 'neg-val' : 'pos-val'" v-text="tx.action"></span>
+                                <span :class="tx.action.toLowerCase() === 'buy' ? 'pos-val' : 'neg-val'" v-text="tx.action"></span>
                             </td>
                             <td v-text="tx.qty"></td>
                             <td v-text="formatCommas(tx.price) + ' ' + tx.currency"></td>
@@ -229,19 +964,24 @@
                 currentView: 'dashboard',
                 priceMode: 'intraday',
                 txFilter: 'both',
-                portfolioData: null
+                tocView: 'list',
+                activeMenu: null,
+                portfolioData: null,
+                vueObserver: null
             }
         },
         computed: {
+            metadata() {
+                return this.portfolioData?.metadata || {};
+            },
             summary() {
                 return this.portfolioData?.metadata?.summary || {};
             },
             dashboard() {
                 return this.portfolioData?.dashboard || {};
             },
-            activePositions() {
-                if (!this.portfolioData?.positions) return [];
-                return this.portfolioData.positions.filter(p => !p.is_closed);
+            cashReport() {
+                return this.portfolioData?.cash_report || null;
             },
             recentTx() {
                 if (!this.portfolioData?.positions) return null;
@@ -337,12 +1077,133 @@
                     month_flow: totalMonthFlow,
                     weeks: sortedWeeks
                 };
+            },
+            activeReport() {
+                if (!this.portfolioData?.positions) return { sections: {}, body_groups: [] };
+                
+                const positions = this.portfolioData.positions;
+                const totalMarket = this.summary.total_market_value_sgd || 0;
+                const totalInvested = this.summary.total_invested_active_sgd || 0;
+                const backtesterBase = this.metadata.config?.external_services?.backtester_url || '';
+                
+                const hierarchy = {};
+                positions.forEach(p => {
+                    if (!p.is_closed) {
+                        const cl = p.classification || "Other";
+                        const und = p.underlying || p.symbol;
+                        if (!hierarchy[cl]) hierarchy[cl] = {};
+                        if (!hierarchy[cl][und]) hierarchy[cl][und] = [];
+                        hierarchy[cl][und].push(p);
+                    }
+                });
+                
+                const priority = this.metadata.config?.sorting?.classification_priority || [];
+                const sortedClasses = Object.keys(hierarchy).sort((a, b) => {
+                    const idxA = priority.indexOf(a);
+                    const idxB = priority.indexOf(b);
+                    const valA = idxA === -1 ? 999 : idxA;
+                    const valB = idxB === -1 ? 999 : idxB;
+                    
+                    if (valA !== valB) return valA - valB;
+                    
+                    const totalValA = Object.values(hierarchy[a]).reduce((sum, sList) => sum + sList.reduce((sSum, p) => sSum + (p.sgd_metrics?.current_sgd || 0), 0), 0);
+                    const totalValB = Object.values(hierarchy[b]).reduce((sum, sList) => sum + sList.reduce((sSum, p) => sSum + (p.sgd_metrics?.current_sgd || 0), 0), 0);
+                    return totalValB - totalValA;
+                });
+                
+                const sections = {};
+                const body_groups = [];
+                
+                sortedClasses.forEach(cl => {
+                    const undMap = hierarchy[cl];
+                    const processedUnds = {};
+                    
+                    const sortedUndKeys = Object.keys(undMap).sort((a, b) => {
+                        const totalA = undMap[a].reduce((sum, p) => sum + (p.sgd_metrics?.current_sgd || 0), 0);
+                        const totalB = undMap[b].reduce((sum, p) => sum + (p.sgd_metrics?.current_sgd || 0), 0);
+                        return totalB - totalA;
+                    });
+                    
+                    sortedUndKeys.forEach(und => {
+                        const symbols = undMap[und];
+                        
+                        const inv = symbols.reduce((sum, p) => sum + (p.sgd_metrics?.invested_sgd || 0), 0);
+                        const curr = symbols.reduce((sum, p) => sum + (p.sgd_metrics?.current_sgd || 0), 0);
+                        const inc = symbols.reduce((sum, p) => sum + (p.sgd_metrics?.income_sgd || 0), 0);
+                        const cap_gain = curr - inv;
+                        const realized_pnl = symbols.reduce((sum, p) => sum + (p.sgd_metrics?.realized_pnl_sgd || 0), 0);
+                        const daily_val = symbols.reduce((sum, p) => sum + (p.sgd_metrics?.daily_val_sgd || 0), 0);
+                        const gl = symbols.reduce((sum, p) => sum + (p.sgd_metrics?.profit_sgd || 0), 0);
+                        const fees = symbols.reduce((sum, p) => sum + (p.sgd_metrics?.fees_sgd || 0), 0);
+                        
+                        const maxDays = Math.max(...symbols.map(p => p.metrics?.days_since_first_tx || 0), 0);
+                        
+                        let backtestUrl = null;
+                        if (backtesterBase) {
+                            const yfTickers = symbols.map(p => this.getYFinanceSymbol(p.symbol, p.exchange));
+                            const uniqueYFTickers = [...new Set(yfTickers)].sort();
+                            const tickersParam = uniqueYFTickers.join(",");
+                            
+                            const allTxDates = [];
+                            symbols.forEach(p => p.transactions?.forEach(tx => { if(tx.date) allTxDates.push(tx.date); }));
+                            const earliestDate = allTxDates.length > 0 ? allTxDates.reduce((min, d) => d < min ? d : min, allTxDates[0]) : "2025-01-01";
+                            
+                            const todayStr = new Date().toISOString().split('T')[0];
+                            const baseSlash = backtesterBase.endsWith("/") ? backtesterBase : backtesterBase + "/";
+                            backtestUrl = `${baseSlash}?tickers=${tickersParam}&startDate=${earliestDate}&endDate=${todayStr}`;
+                        }
+                        
+                        processedUnds[und] = {
+                            title: und,
+                            inv,
+                            curr,
+                            inc,
+                            cap_gain,
+                            realized_pnl,
+                            daily_val,
+                            daily_pct: (daily_val / (curr - daily_val) * 100) || 0,
+                            gl,
+                            fees,
+                            backtest_url: backtestUrl,
+                            alloc_pct: (curr / totalMarket * 100) || 0,
+                            invested_pct: (inv / totalInvested * 100) || 0,
+                            roi: (gl / inv * 100) || 0,
+                            days: maxDays,
+                            symbols: symbols.sort((a, b) => b.sgd_metrics.current_sgd - a.sgd_metrics.current_sgd)
+                        };
+                    });
+                    
+                    const cl_val = Object.values(processedUnds).reduce((sum, u) => sum + u.curr, 0);
+                    const cl_inv = Object.values(processedUnds).reduce((sum, u) => sum + u.inv, 0);
+                    const cl_inc = Object.values(processedUnds).reduce((sum, u) => sum + u.inc, 0);
+                    const cl_cap_gain = Object.values(processedUnds).reduce((sum, u) => sum + u.cap_gain, 0);
+                    const cl_realized_pnl = Object.values(processedUnds).reduce((sum, u) => sum + u.realized_pnl, 0);
+                    const cl_daily_val = Object.values(processedUnds).reduce((sum, u) => sum + u.daily_val, 0);
+                    const cl_gl = Object.values(processedUnds).reduce((sum, u) => sum + u.gl, 0);
+                    
+                    const section_data = {
+                        title: cl,
+                        total_pct: (cl_val / totalMarket * 100) || 0,
+                        curr: cl_val,
+                        inv: cl_inv,
+                        inc: cl_inc,
+                        cap_gain: cl_cap_gain,
+                        realized_pnl: cl_realized_pnl,
+                        daily_val: cl_daily_val,
+                        gl: cl_gl,
+                        underlyings: processedUnds
+                    };
+                    
+                    sections[cl] = section_data;
+                    body_groups.push(section_data);
+                });
+                
+                return { sections, body_groups };
             }
         },
         methods: {
             async fetchPortfolioData() {
                 try {
-                    // Detect current price mode from base layout selector
                     const headerSelector = document.querySelector(".price-btn.active");
                     if (headerSelector) {
                         this.priceMode = headerSelector.innerText.trim().toLowerCase();
@@ -351,13 +1212,13 @@
                     if (!res.ok) throw new Error("API failed");
                     this.portfolioData = await res.json();
                 } catch (error) {
-                    console.error("Error loading portfolio metrics:", error);
+                    console.error("Error loading portfolio data:", error);
                 }
             },
-            formatCommas(val, includeSign = false) {
+            formatCommas(val, includeSign = false, prec = 2) {
                 if (val === null || val === undefined) return '0.00';
                 const num = parseFloat(val);
-                const formatted = num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const formatted = num.toLocaleString(undefined, { minimumFractionDigits: prec, maximumFractionDigits: prec });
                 const sign = includeSign && num > 0 ? '+' : '';
                 return `${sign}${formatted}`;
             },
@@ -371,6 +1232,86 @@
                 if (!val) return '';
                 return parseFloat(val) >= 0 ? 'pos-val' : 'neg-val';
             },
+            slugify(text) {
+                if (!text) return "";
+                return text.replace(/[^\w\s-]/g, '').trim().toLowerCase().replace(/[-\s]+/g, '-');
+            },
+            getYFinanceSymbol(symbol, exchange) {
+                const sym = (symbol || '').trim();
+                const ex = (exchange || '').trim().toUpperCase();
+                if (ex === 'SG') return `${sym}.SI`;
+                if (ex === 'TO' || ex === 'TSE') return `${sym}.TO`;
+                if (ex === 'V') return `${sym}.V`;
+                if (ex === 'NE' || ex === 'NEO') return `${sym}.NE`;
+                return sym;
+            },
+            toggleMenuDisplay(symbol, event) {
+                this.activeMenu = this.activeMenu === symbol ? null : symbol;
+            },
+            triggerCalculator(p, uTitle, event) {
+                if (window.addTickerToCalculator) {
+                    window.addTickerToCalculator({
+                        symbol: p.symbol,
+                        currency: p.currency,
+                        price: p.metrics?.current_price || 0.0,
+                        qty: p.metrics?.quantity || 0.0,
+                        rate: p.rate || 1.0,
+                        totalMarket: this.summary.total_market_value_sgd || 0.0,
+                        exchange: p.exchange || ""
+                    }, event);
+                }
+                this.activeMenu = null;
+            },
+            getGroupedTransactions(txs) {
+                if (!txs) return [];
+                const grouped = {};
+                txs.forEach(tx => {
+                    const year = tx.date.substring(0, 4);
+                    if (!grouped[year]) grouped[year] = [];
+                    grouped[year].push(tx);
+                });
+                return Object.keys(grouped).sort().reverse().map(year => {
+                    const list = grouped[year];
+                    const totalQty = list.reduce((sum, t) => sum + (t.action === 'Buy' ? t.qty : -t.qty), 0);
+                    const netVal = list.reduce((sum, t) => sum + (t.qty * t.price + (t.action === 'Buy' ? t.fee : -t.fee)) * (t.action === 'Buy' ? 1 : -1), 0);
+                    return {
+                        year,
+                        qty: totalQty,
+                        net: netVal,
+                        list: list.sort((a, b) => b.date.localeCompare(a.date))
+                    };
+                });
+            },
+            getGroupedIncome(incs, yearlySummaries) {
+                if (!incs) return [];
+                const grouped = {};
+                incs.forEach(inc => {
+                    const year = inc.date.substring(0, 4);
+                    if (!grouped[year]) grouped[year] = [];
+                    grouped[year].push(inc);
+                });
+                return Object.keys(grouped).sort().reverse().map(year => {
+                    return {
+                        year,
+                        summary: yearlySummaries[year] || { total_net: 0, total_gross: 0, total_tax: 0, roc_amount: 0, roc_pct: 0, actual_tax_value: 0, actual_tax_rate: 0 },
+                        list: grouped[year].sort((a, b) => b.date.localeCompare(a.date))
+                    };
+                });
+            },
+            toggleCashBreakdown() {
+                const wrapper = document.getElementById("cash-breakdown-wrapper");
+                const btn = document.getElementById("toggle-cash-breakdown-btn");
+                if (!wrapper || !btn) return;
+                if (wrapper.classList.contains("collapsed")) {
+                    wrapper.classList.remove("collapsed");
+                    wrapper.style.maxHeight = wrapper.scrollHeight + "px";
+                    btn.textContent = "Hide Broker Breakdown";
+                } else {
+                    wrapper.classList.add("collapsed");
+                    wrapper.style.maxHeight = "0";
+                    btn.textContent = "Show Broker Breakdown";
+                }
+            },
             triggerDailyChartToggle(slug, type, event) {
                 if (window.toggleDailyChart) {
                     window.toggleDailyChart(slug, type, event.target);
@@ -381,14 +1322,33 @@
                     window.toggleTopPerformers(type, valOrPct, event.target);
                 }
             },
+            triggerSymbolChartToggle(symbol, type, grouping, event) {
+                if (window.updateSymbolChart) {
+                    window.updateSymbolChart(symbol, type, grouping, event.target);
+                }
+            },
+            triggerChartModeToggle(id, mode, event) {
+                if (window.toggleChartMode) {
+                    window.toggleChartMode(id, mode, event.target);
+                }
+            },
+            triggerUnderlyingChartToggle(slug, type, grouping, event) {
+                if (window.updateUnderlyingChart) {
+                    window.updateUnderlyingChart(slug, type, grouping, event.target);
+                }
+            },
+            triggerTxVisualizer(event) {
+                if (window.openTxVisualizer) {
+                    window.openTxVisualizer(event.target);
+                }
+            },
             async initializeDashboardCharts() {
                 this.loading = true;
                 await this.fetchPortfolioData();
                 this.loading = false;
                 
-                // Wait for the DOM elements to render before initializing ApexCharts
                 this.$nextTick(() => {
-                    // Destroy any previous instances to prevent duplicates
+                    // Destroy any previous instances
                     if (window.chartInstances) {
                         Object.keys(window.chartInstances).forEach(key => {
                             try {
@@ -397,8 +1357,45 @@
                             } catch (e) {}
                         });
                     }
+                    
+                    // 1. Re-render dashboard level performance, gainers/losers, and underlying stats charts
                     if (window.initCharts && this.dashboard) {
                         window.initCharts(this.dashboard);
+                    }
+                    
+                    // 2. Set up memory-efficient observer for individual symbol charts
+                    if (this.vueObserver) {
+                        this.vueObserver.disconnect();
+                    }
+                    
+                    this.vueObserver = new IntersectionObserver((entries) => {
+                        entries.forEach(entry => {
+                            const container = entry.target;
+                            const sym = container.getAttribute('data-symbol');
+                            const slug = this.slugify(sym);
+                            if (entry.isIntersecting) {
+                                if (window.updateSymbolChart && (!window.symbolCharts || !window.symbolCharts[slug])) {
+                                    setTimeout(() => {
+                                        if (entry.isIntersecting) {
+                                            window.updateSymbolChart(sym, 'flow', 'month');
+                                        }
+                                    }, 100);
+                                }
+                            } else {
+                                if (window.symbolCharts && window.symbolCharts[slug]) {
+                                    window.symbolCharts[slug].destroy();
+                                    delete window.symbolCharts[slug];
+                                    container.style.minHeight = '350px';
+                                }
+                            }
+                        });
+                    }, { rootMargin: '200px 0px', threshold: 0.01 });
+
+                    document.querySelectorAll('.symbol-chart-container').forEach(el => this.vueObserver.observe(el));
+                    
+                    // 4. Trigger timeago element processing
+                    if (window.updateTimeAgos) {
+                        window.updateTimeAgos();
                     }
                 });
             }
@@ -409,11 +1406,15 @@
             // Listen for top header price mode selector changes
             document.querySelectorAll(".price-btn").forEach(btn => {
                 btn.addEventListener("click", async () => {
-                    // Give class changes a split second to apply
                     setTimeout(async () => {
                         await this.initializeDashboardCharts();
                     }, 50);
                 });
+            });
+            
+            // Close context calculator dropdowns on window clicks
+            window.addEventListener("click", () => {
+                this.activeMenu = null;
             });
         }
     }).mount('#spa-app');
