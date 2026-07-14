@@ -67,6 +67,223 @@
     .cash-breakdown-table tr.total-row td {
         border-bottom: none;
     }
+
+    /* --- Dividend Calendar CSS Styles --- */
+    .cal-summary-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .cal-list-thead-row {
+        text-align: left;
+        border-bottom: 1px solid var(--card-border);
+    }
+    .cal-list-th {
+        padding: 10px;
+        color: var(--text-secondary);
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+    .cal-list-th-right {
+        padding: 10px;
+        color: var(--text-secondary);
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-align: right;
+    }
+    .cal-div-modal-box {
+        background: #111827;
+        border: 1px solid var(--card-border);
+        border-radius: 1rem;
+        width: 580px;
+        max-width: 95%;
+        padding: 1.75rem;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+        display: flex;
+        flex-direction: column;
+    }
+    .cal-div-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+    .cal-div-modal-title {
+        margin: 0;
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.45rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+    .cal-div-status-badge {
+        font-size: 0.75rem;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-weight: 600;
+    }
+    .cal-div-status-badge.paid {
+        background: rgba(16, 185, 129, 0.15);
+        color: #34d399;
+    }
+    .cal-div-status-badge.declared {
+        background: rgba(59, 130, 246, 0.15);
+        color: #60a5fa;
+    }
+    .cal-div-status-badge.estimated {
+        background: rgba(245, 158, 11, 0.15);
+        color: #fbbf24;
+    }
+    .cal-div-modal-fields {
+        display: flex;
+        flex-direction: column;
+        gap: 0.85rem;
+        margin-bottom: 1.75rem;
+    }
+    .cal-modal-val-name {
+        text-align: right;
+        max-width: 320px;
+        word-break: break-word;
+    }
+    .cal-div-gross-col {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+    }
+    .cal-div-derivation {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        margin-top: 1px;
+    }
+    .cal-div-net-sgd {
+        font-weight: 700;
+        color: #10b981;
+        font-size: 1.2rem;
+    }
+    .cal-div-modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+    }
+    .cal-btn-close {
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid var(--card-border);
+        color: var(--text-primary);
+        padding: 0.5rem 1.5rem;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+    .text-danger { color: #f43f5e; }
+    .text-accent  { color: #38bdf8; }
+
+    /* View Toggle switch styling */
+    .view-toggle-btn {
+        padding: 0.4rem 0.9rem;
+        border-radius: 0.4rem;
+        border: none;
+        background: transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.85rem;
+        transition: all 0.2s;
+    }
+    .view-toggle-btn.active {
+        background: #8b5cf6 !important;
+        color: white !important;
+    }
+    
+    /* Calendar Cell layout & styling */
+    .calendar-cell {
+        min-height: 115px;
+        background: rgba(22, 28, 45, 0.45);
+        border: 1px solid var(--card-border);
+        border-radius: 0.6rem;
+        padding: 0.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        position: relative;
+        transition: all 0.2s ease-in-out;
+    }
+    .calendar-cell:hover {
+        background: rgba(30, 41, 59, 0.65);
+        border-color: #8b5cf6;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+    }
+    .calendar-cell.other-month {
+        opacity: 0.2;
+        pointer-events: none;
+    }
+    .calendar-cell.today {
+        border: 2px solid #8b5cf6;
+        background: rgba(139, 92, 246, 0.08);
+    }
+    .calendar-cell-date {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        font-family: 'Outfit', sans-serif;
+    }
+    .calendar-cell.today .calendar-cell-date {
+        color: #c084fc;
+    }
+    .calendar-cell-sum {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #10b981;
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        font-family: 'Outfit', sans-serif;
+    }
+    .calendar-badge-list {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        overflow-y: auto;
+        flex-grow: 1;
+        margin-top: 2px;
+        scrollbar-width: none;
+    }
+    .calendar-badge-list::-webkit-scrollbar {
+        display: none;
+    }
+    .calendar-badge {
+        font-size: 0.7rem;
+        padding: 3px 6px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 2px;
+        transition: all 0.15s ease;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .calendar-badge:hover {
+        transform: scale(1.02);
+        filter: brightness(1.15);
+    }
+    .calendar-badge.paid {
+        background: rgba(16, 185, 129, 0.15);
+        border: 1px solid rgba(16, 185, 129, 0.4);
+        color: #34d399;
+    }
+    .calendar-badge.declared {
+        background: rgba(59, 130, 246, 0.15);
+        border: 1px solid rgba(59, 130, 246, 0.4);
+        color: #60a5fa;
+    }
+    .calendar-badge.estimated {
+        background: rgba(245, 158, 11, 0.12);
+        border: 1px solid rgba(245, 158, 11, 0.3);
+        color: #fbbf24;
+    }
 </style>
 
 {% raw %}
@@ -83,10 +300,35 @@
         <div class="toc-controls" style="margin-bottom: 25px;">
             <button class="view-btn" :class="{ active: currentView === 'dashboard' }" @click="currentView = 'dashboard'">Active Holdings</button>
             <button class="view-btn" :class="{ active: currentView === 'transactions' }" @click="currentView = 'transactions'">Transactions Log</button>
+            <button class="view-btn" :class="{ active: currentView === 'calendar' }" @click="currentView = 'calendar'">Dividend Calendar</button>
         </div>
 
         <!-- 1. ACTIVE HOLDINGS TAB VIEW -->
         <div v-show="currentView === 'dashboard'">
+            <!-- Title, Price Mode selection dropdown, and action buttons -->
+            <h1 id="top" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
+                <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                    <span>Beta Dashboard Summary</span>
+                    
+                    <!-- Price Mode Selection & Force Refresh / Rebuild -->
+                    <div class="price-mode-container" style="display: inline-flex; align-items: center; gap: 8px; margin-left: 15px;">
+                        <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">Price Mode:</span>
+                        <select id="price-mode-select" v-model="priceMode" @change="handlePriceModeChange" style="background: rgba(30, 41, 59, 0.6); color: var(--text-primary); border: 1px solid var(--card-border); padding: 0.4rem 0.75rem; border-radius: 0.75rem; font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 0.85rem; cursor: pointer; outline: none; transition: all 0.2s; border-color: rgba(255, 255, 255, 0.07);">
+                            <option value="intraday">⚡ Live Intraday</option>
+                            <option value="closing">🕒 Latest Close</option>
+                        </select>
+                        <button id="force-refresh-btn" @click="handleForceRefresh" title="Force Refresh Live Prices" style="background: rgba(30, 41, 59, 0.6); border: 1px solid var(--card-border); color: var(--text-primary); padding: 0.4rem 0.65rem; border-radius: 0.75rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; border-color: rgba(255, 255, 255, 0.07);">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" id="refresh-icon">
+                                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                            </svg>
+                        </button>
+                        <button id="rebuild-btn" @click="handleRebuild" title="Rebuild Dashboard (Cached Prices)" style="background: rgba(30, 41, 59, 0.6); border: 1px solid var(--card-border); color: var(--text-primary); padding: 0.4rem 0.65rem; border-radius: 0.75rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; border-color: rgba(255, 255, 255, 0.07);">
+                            <span id="rebuild-icon" style="display: inline-block; font-size: 0.85rem;">🔨</span>
+                        </button>
+                    </div>
+                </div>
+            </h1>
+
             <!-- Report Info & Sources (Metadata bar) -->
             <div class="report-info-bar" style="margin-bottom: 20px;">
                 <div v-if="metadata.quotes_last_updated_sgt" class="info-item">
@@ -951,6 +1193,192 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- 3. DIVIDEND CALENDAR TAB VIEW -->
+        <div v-show="currentView === 'calendar'">
+            <!-- Stats Summary Cards Grid -->
+            <div v-if="calendarData && calendarData.summary" class="div-metrics-grid" style="margin-bottom: 25px;">
+                <div class="cal-metric-stat">
+                    <div class="cal-metric-title">Expected Annual Income</div>
+                    <div class="cal-metric-value text-gain">SG$ {{ formatCommas(calendarData.summary.annual_income_sgd) }}</div>
+                </div>
+                <div class="cal-metric-stat">
+                    <div class="cal-metric-title">Expected Monthly Average</div>
+                    <div class="cal-metric-value">SG$ {{ formatCommas(calendarData.summary.monthly_average_sgd) }}</div>
+                </div>
+                <div class="cal-metric-stat">
+                    <div class="cal-metric-title">Expected Daily Average</div>
+                    <div class="cal-metric-value">SG$ {{ formatCommas(calendarData.summary.daily_average_sgd) }}</div>
+                </div>
+                <div class="cal-metric-stat">
+                    <div class="cal-metric-title">Portfolio Dividend Yield</div>
+                    <div class="cal-metric-value text-info" style="color: #38bdf8;">{{ formatCommas(calendarData.summary.portfolio_yield_pct) }}%</div>
+                </div>
+                <div class="cal-metric-stat">
+                    <div class="cal-metric-title">Yet to Receive (Forward)</div>
+                    <div class="cal-metric-value text-warning" style="color: #fbbf24;">SG$ {{ formatCommas(calendarData.summary.yet_to_receive_sgd) }}</div>
+                </div>
+            </div>
+            
+            <!-- Forward Monthly Income Bar Chart Card -->
+            <div class="dashboard-grid symbol-stats-grid-single dashboard-section-spacer" style="margin-bottom: 30px;">
+                <div class="chart-card" style="background: rgba(22, 28, 45, 0.4); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px;">
+                    <h4 class="chart-card-header" style="margin-top: 0; margin-bottom: 15px; font-size: 0.95rem; font-weight: 600; color: var(--text-secondary);">Expected Dividends (Next 12 Months)</h4>
+                    <div id="dividend-chart" class="chart-container" style="min-height: 320px;"></div>
+                </div>
+            </div>
+
+            <!-- Calendar Navigation Header -->
+            <div class="calendar-header-bar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px;">
+                <div class="calendar-controls-left" style="display: flex; align-items: center; gap: 15px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <button class="btn calendar-nav-btn" @click="changeMonth(-1)" style="background: rgba(255,255,255,0.06); border: 1px solid var(--card-border); color: var(--text-primary); padding: 5px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">&lsaquo;</button>
+                        <h3 class="calendar-month-title" style="margin: 0; min-width: 140px; text-align: center; font-size: 1.15rem; font-family: 'Outfit', sans-serif;">{{ calMonths[calMonth] }} {{ calYear }}</h3>
+                        <button class="btn calendar-nav-btn" @click="changeMonth(1)" style="background: rgba(255,255,255,0.06); border: 1px solid var(--card-border); color: var(--text-primary); padding: 5px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">&rsaquo;</button>
+                    </div>
+                    <span class="calendar-month-total" style="font-weight: 700; color: #10b981; font-size: 1.1rem; font-family: 'Outfit', sans-serif;">+SG$ {{ formatCommas(calMonthlyTotalSgd) }}</span>
+                    <button class="btn calendar-today-btn" @click="jumpToToday" style="padding: 5px 12px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; background: rgba(255,255,255,0.08); border: 1px solid var(--card-border); color: var(--text-primary); font-weight: 600;">Today</button>
+                </div>
+                
+                <div class="calendar-controls-right" style="display: flex; align-items: center; gap: 15px;">
+                    <div class="calendar-view-toggle" style="background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); border-radius: 6px; padding: 2px;">
+                        <button class="view-toggle-btn" :class="{ active: calViewMode === 'grid' }" @click="calViewMode = 'grid'">Grid View</button>
+                        <button class="view-toggle-btn" :class="{ active: calViewMode === 'list' }" @click="calViewMode = 'list'">List View</button>
+                    </div>
+                    
+                    <button id="sync-dividends-btn-spa" @click="handleSyncDividends" class="btn calendar-sync-btn" style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(139, 92, 246, 0.12); border: 1px solid rgba(139, 92, 246, 0.25); color: #c084fc; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer;">
+                        <svg id="sync-dividends-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                        </svg>
+                        Sync Dividends
+                    </button>
+                </div>
+            </div>
+
+            <!-- Grid View -->
+            <div v-show="calViewMode === 'grid'" id="calendar-grid-wrapper">
+                <div class="cal-grid-header-row" style="display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: 600; margin-bottom: 8px; color: var(--text-secondary); font-size: 0.85rem;">
+                    <div class="cal-grid-header">Mon</div>
+                    <div class="cal-grid-header">Tue</div>
+                    <div class="cal-grid-header">Wed</div>
+                    <div class="cal-grid-header">Thu</div>
+                    <div class="cal-grid-header">Fri</div>
+                    <div class="cal-grid-header">Sat</div>
+                    <div class="cal-grid-header">Sun</div>
+                </div>
+                <div class="calendar-days-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px;">
+                    <div v-for="(cell, index) in calendarWeeks" :key="index" 
+                         class="calendar-cell" 
+                         :class="{ 'other-month': !cell.isCurrentMonth, 'today': cell.isToday }">
+                        <span class="calendar-cell-date">{{ cell.day }}</span>
+                        <span v-if="cell.totalSgd > 0" class="calendar-cell-sum">+SG${{ formatCommas(cell.totalSgd) }}</span>
+                        
+                        <div v-if="cell.payouts.length > 0" class="calendar-badge-list">
+                            <div v-for="p in cell.payouts" :key="p.id" 
+                                 class="calendar-badge" 
+                                 :class="p.status.toLowerCase()"
+                                 @click.stop="openDividendDetail(p)">
+                                <span><span v-if="p.status === 'Paid'">✓ </span>{{ p.ticker }}</span>
+                                <span>${{ formatCommas(p.net_amount_foreign) }} <span style="font-size: 0.55rem; opacity: 0.8;">{{ p.currency }}</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- List View -->
+            <div v-show="calViewMode === 'list'" id="calendar-list-wrapper" class="calendar-list-wrapper">
+                <div class="calendar-list-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px;">
+                    <input type="text" v-model="calListSearch" placeholder="Search by ticker, portfolio or status..." class="calendar-list-search" style="background: rgba(22, 28, 45, 0.45); border: 1px solid var(--card-border); padding: 6px 12px; border-radius: 6px; color: var(--text-primary); font-size: 0.85rem; width: 300px; max-width: 100%; outline: none; transition: border-color 0.2s;">
+                    <div class="calendar-list-count" style="color: var(--text-secondary); font-size: 0.85rem;">{{ filteredCalList.length }} payouts found for this month</div>
+                </div>
+                
+                <table class="summary-table cal-summary-table">
+                    <thead>
+                        <tr class="cal-list-thead-row">
+                            <th class="cal-list-th">Date</th>
+                            <th class="cal-list-th">Portfolio</th>
+                            <th class="cal-list-th">Ticker</th>
+                            <th class="cal-list-th">Status</th>
+                            <th class="cal-list-th-right" style="text-align: right;">Gross Amount</th>
+                            <th class="cal-list-th-right" style="text-align: right;">Net (Foreign)</th>
+                            <th class="cal-list-th-right" style="text-align: right;">Net (SGD)</th>
+                            <th class="cal-list-th-right" style="text-align: right;">Yield</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="p in filteredCalList" :key="p.id" class="ticker-row" @click="openDividendDetail(p)" style="cursor: pointer;">
+                            <td v-text="p.date"></td>
+                            <td v-text="p.portfolio_name"></td>
+                            <td style="font-weight: 600;" v-text="p.ticker"></td>
+                            <td>
+                                <span class="cal-div-status-badge" :class="p.status.toLowerCase()" v-text="p.status"></span>
+                            </td>
+                            <td style="text-align: right;" v-text="formatCommas(p.gross_amount) + ' ' + p.currency"></td>
+                            <td style="text-align: right;" v-text="formatCommas(p.net_amount_foreign) + ' ' + p.currency"></td>
+                            <td style="text-align: right; color: #10b981; font-weight: 600;" v-text="formatCommas(p.net_amount_sgd) + ' SGD'"></td>
+                            <td style="text-align: right; color: #38bdf8;" v-text="(p.yield_pct ? p.yield_pct.toFixed(2) + '%' : '-')"></td>
+                        </tr>
+                        <tr v-if="filteredCalList.length === 0">
+                            <td colspan="8" style="text-align: center; color: var(--text-secondary); padding: 30px;">No dividend payouts for this period matching search filters.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Dynamic Dividend Detail Modal Popup -->
+        <div v-if="activeDividend" class="modal-overlay cal-div-modal-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+            <div class="cal-div-modal-box">
+                <div class="cal-div-modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h4 class="cal-div-modal-title" style="margin: 0; font-size: 1.3rem; font-family: 'Outfit', sans-serif;">{{ activeDividend.ticker }}</h4>
+                    <span class="cal-div-status-badge" :class="activeDividend.status.toLowerCase()">{{ activeDividend.status }}</span>
+                </div>
+                
+                <div class="cal-div-modal-fields" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 25px;">
+                    <div class="cal-modal-row" style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+                        <span class="cal-modal-label" style="color: var(--text-secondary); font-size: 0.85rem;">Company/Asset Name</span>
+                        <span class="cal-modal-val cal-modal-val-name">{{ activeDividend.friendly_name || activeDividend.ticker }}</span>
+                    </div>
+                    <div class="cal-modal-row" style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+                        <span class="cal-modal-label" style="color: var(--text-secondary); font-size: 0.85rem;">Payment Date</span>
+                        <span class="cal-modal-val">{{ activeDividend.date }}</span>
+                    </div>
+                    <div class="cal-modal-row" style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+                        <span class="cal-modal-label" style="color: var(--text-secondary); font-size: 0.85rem;">Portfolio</span>
+                        <span class="cal-modal-val">{{ activeDividend.portfolio_name }}</span>
+                    </div>
+                    <div class="cal-modal-row" style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+                        <span class="cal-modal-label" style="color: var(--text-secondary); font-size: 0.85rem;">Gross Dividend</span>
+                        <div class="cal-div-gross-col" style="text-align: right; display: flex; flex-direction: column; align-items: flex-end;">
+                            <span class="cal-modal-val">{{ formatCommas(activeDividend.gross_amount) }} {{ activeDividend.currency }}</span>
+                            <span class="cal-div-derivation" style="color: var(--text-secondary); font-size: 0.75rem;">{{ formatCommas(activeDividend.shares) }} shares x ${{ formatCommas(activeDividend.amount_per_share, false, 4) }}</span>
+                        </div>
+                    </div>
+                    <div class="cal-modal-row" style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+                        <span class="cal-modal-label" style="color: var(--text-secondary); font-size: 0.85rem;">Withholding Tax</span>
+                        <span class="cal-modal-val text-danger">{{ formatCommas(activeDividend.gross_amount - activeDividend.net_amount_foreign) }} {{ activeDividend.currency }}</span>
+                    </div>
+                    <div class="cal-modal-row" style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+                        <span class="cal-modal-label" style="color: var(--text-secondary); font-size: 0.85rem;">Expected Net</span>
+                        <span class="cal-modal-val">{{ formatCommas(activeDividend.net_amount_foreign) }} {{ activeDividend.currency }}</span>
+                    </div>
+                    <div class="cal-modal-row" style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px; align-items: center;">
+                        <span class="cal-modal-label" style="color: var(--text-secondary); font-size: 0.85rem;">Expected Net (SGD)</span>
+                        <span class="cal-div-net-sgd" style="font-weight: 700; color: #10b981; font-size: 1.15rem;">+SG${{ formatCommas(activeDividend.net_amount_sgd) }}</span>
+                    </div>
+                    <div class="cal-modal-row" style="display: flex; justify-content: space-between; padding-bottom: 8px;">
+                        <span class="cal-modal-label" style="color: var(--text-secondary); font-size: 0.85rem;">Estimated Yield on Cost</span>
+                        <span class="cal-modal-val text-accent" style="color: #38bdf8;">{{ activeDividend.yield_pct ? activeDividend.yield_pct.toFixed(2) + '%' : '-' }}</span>
+                    </div>
+                </div>
+                
+                <div class="cal-div-modal-footer" style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button v-if="activeDividend.status !== 'Paid'" class="btn cal-btn-received" @click="openMarkAsReceivedModal(activeDividend)" style="background: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); color: white; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-weight: 600;">Mark as received</button>
+                    <button class="btn cal-btn-close" @click="activeDividend = null" style="background: rgba(255,255,255,0.08); border: 1px solid var(--card-border); color: var(--text-primary); padding: 8px 20px; border-radius: 6px; cursor: pointer; font-weight: 600;">Close</button>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -959,6 +1387,7 @@
 
     createApp({
         data() {
+            const today = new Date();
             return {
                 loading: true,
                 currentView: 'dashboard',
@@ -967,7 +1396,19 @@
                 tocView: 'list',
                 activeMenu: null,
                 portfolioData: null,
-                vueObserver: null
+                vueObserver: null,
+                
+                // Dividend Calendar fields
+                calendarData: null,
+                calYear: today.getFullYear(),
+                calMonth: today.getMonth(), // 0-indexed (Jan is 0)
+                calViewMode: 'grid',
+                calListSearch: '',
+                activeDividend: null,
+                calMonths: [
+                    "January", "February", "March", "April", "May", "June",
+                    "July", "August", "September", "October", "November", "December"
+                ]
             }
         },
         computed: {
@@ -1199,6 +1640,106 @@
                 });
                 
                 return { sections, body_groups };
+            },
+            calendarWeeks() {
+                if (!this.calendarData || !this.calendarData.items) return [];
+                
+                const year = this.calYear;
+                const month = this.calMonth;
+                const items = this.calendarData.items;
+                
+                const firstDayDate = new Date(year, month, 1);
+                let startDayIdx = firstDayDate.getDay() - 1;
+                if (startDayIdx < 0) startDayIdx = 6;
+                
+                const totalDays = new Date(year, month + 1, 0).getDate();
+                const prevMonthTotalDays = new Date(year, month, 0).getDate();
+                
+                const cells = [];
+                
+                for (let i = startDayIdx - 1; i >= 0; i--) {
+                    cells.push({
+                        day: prevMonthTotalDays - i,
+                        isCurrentMonth: false,
+                        isToday: false,
+                        payouts: [],
+                        totalSgd: 0,
+                        dateStr: ""
+                    });
+                }
+                
+                const dToday = new Date();
+                const isThisYearMonth = dToday.getFullYear() === year && dToday.getMonth() === month;
+                const todayDay = dToday.getDate();
+                
+                for (let d = 1; d <= totalDays; d++) {
+                    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                    const dayPayouts = items.filter(item => item.date === dateStr);
+                    const sumSgd = dayPayouts.reduce((acc, curr) => acc + curr.net_amount_sgd, 0);
+                    
+                    cells.push({
+                        day: d,
+                        isCurrentMonth: true,
+                        isToday: isThisYearMonth && todayDay === d,
+                        payouts: dayPayouts,
+                        totalSgd: sumSgd,
+                        dateStr: dateStr
+                    });
+                }
+                
+                const totalCellsFilled = cells.length;
+                const padTo = totalCellsFilled <= 35 ? 35 : 42;
+                const padCount = padTo - totalCellsFilled;
+                
+                for (let d = 1; d <= padCount; d++) {
+                    cells.push({
+                        day: d,
+                        isCurrentMonth: false,
+                        isToday: false,
+                        payouts: [],
+                        totalSgd: 0,
+                        dateStr: ""
+                    });
+                }
+                
+                return cells;
+            },
+            calMonthlyTotalSgd() {
+                if (!this.calendarData || !this.calendarData.items) return 0;
+                const year = this.calYear;
+                const month = this.calMonth;
+                const filterYearMonth = `${year}-${String(month + 1).padStart(2, '0')}`;
+                const monthlyItems = this.calendarData.items.filter(item => item.date.startsWith(filterYearMonth));
+                return monthlyItems.reduce((acc, curr) => acc + curr.net_amount_sgd, 0);
+            },
+            filteredCalList() {
+                if (!this.calendarData || !this.calendarData.items) return [];
+                const year = this.calYear;
+                const month = this.calMonth;
+                const filterYearMonth = `${year}-${String(month + 1).padStart(2, '0')}`;
+                
+                let list = this.calendarData.items.filter(item => item.date.startsWith(filterYearMonth));
+                
+                if (this.calListSearch.trim()) {
+                    const q = this.calListSearch.toLowerCase().trim();
+                    list = list.filter(item => {
+                        return (item.ticker && item.ticker.toLowerCase().includes(q)) ||
+                               (item.portfolio_name && item.portfolio_name.toLowerCase().includes(q)) ||
+                               (item.status && item.status.toLowerCase().includes(q)) ||
+                               (item.friendly_name && item.friendly_name.toLowerCase().includes(q));
+                    });
+                }
+                
+                return list.sort((a, b) => a.date.localeCompare(b.date));
+            }
+        },
+        watch: {
+            currentView(newView) {
+                if (newView === 'calendar') {
+                    this.$nextTick(() => {
+                        this.initCalendarChart();
+                    });
+                }
             }
         },
         methods: {
@@ -1213,6 +1754,143 @@
                     this.portfolioData = await res.json();
                 } catch (error) {
                     console.error("Error loading portfolio data:", error);
+                }
+            },
+            async fetchCalendarData() {
+                try {
+                    const res = await fetch('src/dividend_calendar_data.json');
+                    if (!res.ok) throw new Error("Calendar API failed");
+                    this.calendarData = await res.json();
+                } catch (error) {
+                    console.error("Error loading calendar data:", error);
+                }
+            },
+            changeMonth(dir) {
+                let month = this.calMonth + dir;
+                let year = this.calYear;
+                if (month < 0) {
+                    month = 11;
+                    year--;
+                } else if (month > 11) {
+                    month = 0;
+                    year++;
+                }
+                this.calMonth = month;
+                this.calYear = year;
+            },
+            jumpToToday() {
+                const today = new Date();
+                this.calYear = today.getFullYear();
+                this.calMonth = today.getMonth();
+            },
+            openDividendDetail(div) {
+                this.activeDividend = div;
+            },
+            openMarkAsReceivedModal(p) {
+                // 1. Hide trades and expenses tabs to keep focus on incomes
+                document.querySelectorAll("#transaction-modal .modal-tab-btn").forEach(btn => {
+                    if (btn.dataset.tab !== "incomes") {
+                        btn.style.display = "none";
+                    } else {
+                        btn.style.display = "block";
+                        btn.classList.add("active");
+                    }
+                });
+
+                // 2. Select Incomes wrapper and hide others
+                const tabInput = document.getElementById("tx-tab");
+                if (tabInput) tabInput.value = "incomes";
+                
+                const wTrades = document.getElementById("wrapper-trades");
+                if (wTrades) wTrades.style.display = "none";
+                
+                const wExpenses = document.getElementById("wrapper-expenses");
+                if (wExpenses) wExpenses.style.display = "none";
+                
+                const wIncomes = document.getElementById("wrapper-incomes");
+                if (wIncomes) wIncomes.style.display = "block";
+
+                // 3. Hide Save and add more button
+                const btnSaveAddMore = document.getElementById("btn-save-add-more-transaction");
+                if (btnSaveAddMore) btnSaveAddMore.style.display = "none";
+
+                // 4. Prepopulate fields
+                const txId = document.getElementById("tx-id");
+                if (txId) txId.value = "";
+                
+                const txPort = document.getElementById("tx-portfolio");
+                if (txPort && p.portfolio_id) txPort.value = p.portfolio_id;
+                
+                const divTicker = document.getElementById("div-ticker");
+                if (divTicker) divTicker.value = p.ticker;
+                
+                const divCurr = document.getElementById("div-currency");
+                if (divCurr) divCurr.value = p.currency;
+                
+                const divDate = document.getElementById("div-date");
+                if (divDate) divDate.value = p.date;
+                
+                const divQty = document.getElementById("div-qty");
+                if (divQty) divQty.value = p.shares || "";
+                
+                const divAmount = document.getElementById("div-amount");
+                if (divAmount) divAmount.value = p.gross_amount.toFixed(2);
+                
+                const divTax = document.getElementById("div-tax");
+                if (divTax) divTax.value = (p.gross_amount - p.net_amount_foreign).toFixed(2);
+                
+                const txNotes = document.getElementById("tx-notes");
+                if (txNotes) txNotes.value = "";
+
+                // Trigger input event to run auto-calculations inside transaction modal
+                const qtyInput = document.getElementById("div-qty");
+                if (qtyInput) {
+                    qtyInput.dispatchEvent(new Event("input"));
+                }
+
+                // 5. Open Modal
+                if (window.openModal) {
+                    window.openModal("transaction-modal");
+                } else {
+                    const m = document.getElementById("transaction-modal");
+                    if (m) m.classList.add("show");
+                }
+                
+                // Hide the details popup modal
+                this.activeDividend = null;
+            },
+            async handleSyncDividends() {
+                const syncBtn = document.getElementById("sync-dividends-btn-spa");
+                const syncIcon = document.getElementById("sync-dividends-icon");
+                if (syncBtn) {
+                    syncBtn.disabled = true;
+                    syncBtn.style.opacity = "0.7";
+                }
+                if (syncIcon) {
+                    syncIcon.classList.add("spin");
+                }
+                try {
+                    const res = await fetch("/api/dividends/sync-upcoming?force=true&sync=true", { method: "POST" });
+                    if (res.ok) {
+                        // Re-fetch calendar payload
+                        await this.fetchCalendarData();
+                        // Re-fetch portfolio data to reflect yield changes
+                        await this.fetchPortfolioData();
+                    } else {
+                        const data = await res.json();
+                        alert("Failed to sync dividends: " + (data.detail || "Unknown error"));
+                    }
+                } catch (err) {
+                    console.error("Sync failed:", err);
+                    alert("Error syncing dividends. Check network connection.");
+                } finally {
+                    if (syncBtn) {
+                        syncBtn.disabled = false;
+                        syncBtn.style.opacity = "1";
+                    }
+                    if (syncIcon) {
+                        syncIcon.classList.remove("spin");
+                    }
                 }
             },
             formatCommas(val, includeSign = false, prec = 2) {
@@ -1312,6 +1990,66 @@
                     btn.textContent = "Show Broker Breakdown";
                 }
             },
+            handlePriceModeChange() {
+                localStorage.setItem("price_mode", this.priceMode);
+                this.initializeDashboardCharts();
+            },
+            async handleForceRefresh() {
+                const refreshIcon = document.getElementById("refresh-icon");
+                const forceRefreshBtn = document.getElementById("force-refresh-btn");
+                if (refreshIcon) refreshIcon.style.animation = "spin 1s linear infinite";
+                if (forceRefreshBtn) {
+                    forceRefreshBtn.disabled = true;
+                    forceRefreshBtn.style.opacity = "0.6";
+                }
+                document.body.style.cursor = "wait";
+                try {
+                    const res = await fetch("/api/prices/refresh?force=true", { method: "POST" });
+                    if (res.ok) {
+                        await this.initializeDashboardCharts();
+                    } else {
+                        alert("Failed to refresh prices. Cooldown may be active.");
+                    }
+                } catch (err) {
+                    console.error("Refresh failed:", err);
+                    alert("Error connecting to server.");
+                } finally {
+                    if (forceRefreshBtn) {
+                        forceRefreshBtn.disabled = false;
+                        forceRefreshBtn.style.opacity = "1";
+                    }
+                    if (refreshIcon) refreshIcon.style.animation = "";
+                    document.body.style.cursor = "default";
+                }
+            },
+            async handleRebuild() {
+                const rebuildIcon = document.getElementById("rebuild-icon");
+                const rebuildBtn = document.getElementById("rebuild-btn");
+                if (rebuildIcon) rebuildIcon.style.animation = "spin 1s linear infinite";
+                if (rebuildBtn) {
+                    rebuildBtn.disabled = true;
+                    rebuildBtn.style.opacity = "0.6";
+                }
+                document.body.style.cursor = "wait";
+                try {
+                    const res = await fetch("/api/dashboard/rebuild?sync=true", { method: "POST" });
+                    if (res.ok) {
+                        await this.initializeDashboardCharts();
+                    } else {
+                        alert("Failed to rebuild dashboard.");
+                    }
+                } catch (err) {
+                    console.error("Rebuild failed:", err);
+                    alert("Error connecting to server.");
+                } finally {
+                    if (rebuildBtn) {
+                        rebuildBtn.disabled = false;
+                        rebuildBtn.style.opacity = "1";
+                    }
+                    if (rebuildIcon) rebuildIcon.style.animation = "";
+                    document.body.style.cursor = "default";
+                }
+            },
             triggerDailyChartToggle(slug, type, event) {
                 if (window.toggleDailyChart) {
                     window.toggleDailyChart(slug, type, event.target);
@@ -1345,6 +2083,7 @@
             async initializeDashboardCharts() {
                 this.loading = true;
                 await this.fetchPortfolioData();
+                await this.fetchCalendarData();
                 this.loading = false;
                 
                 this.$nextTick(() => {
@@ -1398,10 +2137,114 @@
                         window.updateTimeAgos();
                     }
                 });
+            },
+            initCalendarChart() {
+                if (!this.calendarData || !this.calendarData.chart) return;
+                const chartData = this.calendarData.chart;
+                const container = document.querySelector("#dividend-chart");
+                if (!container) return;
+                
+                // Clear any existing chart inside the container first
+                container.innerHTML = "";
+                
+                const options = {
+                    series: [
+                        {
+                            name: 'Paid',
+                            data: chartData.paid,
+                            color: '#10b981' // emerald green
+                        },
+                        {
+                            name: 'Declared',
+                            data: chartData.declared,
+                            color: '#3b82f6' // royal blue
+                        },
+                        {
+                            name: 'Estimated',
+                            data: chartData.estimated,
+                            color: '#f59e0b' // amber orange
+                        }
+                    ],
+                    chart: {
+                        type: 'bar',
+                        height: 320,
+                        stacked: true,
+                        toolbar: { show: false },
+                        background: 'transparent'
+                    },
+                    theme: { mode: 'dark' },
+                    plotOptions: {
+                        bar: {
+                            horizontal: false,
+                            columnWidth: '50%',
+                            borderRadius: 4
+                        },
+                    },
+                    dataLabels: { enabled: false },
+                    stroke: { show: true, width: 2, colors: ['transparent'] },
+                    xaxis: {
+                        categories: chartData.labels,
+                        labels: {
+                            style: { colors: '#94a3b8', fontFamily: 'Inter' }
+                        },
+                        axisBorder: { show: false },
+                        axisTicks: { show: false }
+                    },
+                    yaxis: {
+                        title: {
+                            text: 'SG$ Amount',
+                            style: { color: '#94a3b8', fontFamily: 'Inter', fontWeight: 600 }
+                        },
+                        labels: {
+                            formatter: function (val) {
+                                return val.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                            },
+                            style: { colors: '#94a3b8', fontFamily: 'Inter' }
+                        }
+                    },
+                    fill: { opacity: [1.0, 1.0, 0.75] },
+                    tooltip: {
+                        y: {
+                            formatter: function (val) {
+                                return "SG$ " + val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                            }
+                        }
+                    },
+                    grid: {
+                        borderColor: 'rgba(255, 255, 255, 0.05)',
+                        strokeDashArray: 4
+                    },
+                    legend: {
+                        fontFamily: 'Inter',
+                        labels: { colors: '#cbd5e1' },
+                        position: 'top',
+                        horizontalAlign: 'right'
+                    }
+                };
+
+                const chart = new ApexCharts(container, options);
+                chart.render();
+                
+                if (!window.chartInstances) window.chartInstances = {};
+                window.chartInstances["dividend-chart"] = chart;
             }
         },
         async mounted() {
             await this.initializeDashboardCharts();
+            
+            // Populate #tx-portfolio dropdown select for transaction modal
+            try {
+                const res = await fetch("api/portfolios");
+                if (res.ok) {
+                    const list = await res.json();
+                    const selectTxs = document.getElementById("tx-portfolio");
+                    if (selectTxs) {
+                        selectTxs.innerHTML = list.map(p => `<option value="${p.id}">${p.name}</option>`).join("");
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to populate portfolios select:", err);
+            }
             
             // Listen for top header price mode selector changes
             document.querySelectorAll(".price-btn").forEach(btn => {

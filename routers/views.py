@@ -119,7 +119,7 @@ def get_beta_dashboard():
         portfolio_nav = []
         try:
             cursor = conn.cursor()
-            cursor.execute("SELECT DISTINCT classification FROM tickers WHERE classification IS NOT NULL AND classification != ''")
+            cursor.execute("SELECT DISTINCT classification FROM portfolios WHERE classification IS NOT NULL AND classification != ''")
             classifications = [row['classification'] for row in cursor.fetchall()]
             
             config = load_config()
