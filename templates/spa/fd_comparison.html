@@ -1,6 +1,6 @@
 {% raw %}
         <div v-show="currentView === 'fdComparison'">
-            <div class="header-action-container" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 25px;">
+ <div class="header-action-container spa-fd-header" >
                 <h1>vs Fixed Deposits (Alternative Cash Analysis)</h1>
             </div>
 
@@ -58,7 +58,7 @@
                                     <span v-text="fdFileName || 'Choose CSV File...'"></span>
                                 </div>
                             </div>
-                            <div class="fd-upload-status" style="display: block;" v-if="fdFileUploaded">File uploaded successfully in-memory.</div>
+ <div class="fd-upload-status spa-d-block" v-if="fdFileUploaded">File uploaded successfully in-memory.</div>
                         </div>
                     </div>
 
@@ -77,15 +77,15 @@
                 </div>
 
                 <!-- Comparison Table Card -->
-                <div class="fd-table-container" style="overflow-x: auto; margin-top: 20px;">
-                    <h4 class="fd-card-title" style="margin-bottom: 15px; border-bottom: none; padding-bottom: 0;">Month-By-Month Comparison Table</h4>
+ <div class="fd-table-container spa-fd-table-scroll" >
+ <h4 class="fd-card-title spa-fd-table-title" >Month-By-Month Comparison Table</h4>
                     <table class="fd-table">
                         <thead>
                             <tr>
                                 <th>Date</th>
                                 <th class="spa-ta-right">Injected This Month</th>
                                 <th class="spa-ta-right">Total Principal Injected</th>
-                                <th style="text-align: center;">Effective FD Rate</th>
+                                <th class="spa-ta-center">Effective FD Rate</th>
                                 <th class="spa-ta-right">Interest Earned (Month)</th>
                                 <th class="spa-ta-right">Accum. Interest Received</th>
                                 <th class="spa-ta-right">Current FD Value</th>
@@ -95,13 +95,13 @@
                         </thead>
                         <tbody>
                             <tr v-if="!fdData">
-                                <td colspan="9" style="text-align: center; padding: 30px; color: var(--text-secondary);">Loading simulation data...</td>
+                                <td colspan="9" class="spa-table-loading">Loading simulation data...</td>
                             </tr>
                             <tr v-else v-for="row in fdData.rows" :key="row.date">
                                 <td><strong>{{ row.date }}</strong></td>
                                 <td class="spa-ta-right">{{ row.capital_injected > 0 ? formatFdCurrency(row.capital_injected) : '-' }}</td>
                                 <td class="spa-ta-right">{{ formatFdCurrency(row.total_capital_injected) }}</td>
-                                <td style="text-align: center;">{{ (row.effective_rate * 100).toFixed(2) }}%</td>
+                                <td class="spa-ta-center">{{ (row.effective_rate * 100).toFixed(2) }}%</td>
                                 <td class="spa-ta-right">{{ row.interest_earned > 0 ? formatFdCurrency(row.interest_earned) : '-' }}</td>
                                 <td class="spa-ta-right">{{ row.accum_interest > 0 ? formatFdCurrency(row.accum_interest) : '-' }}</td>
                                 <td class="spa-ta-right">{{ formatFdCurrency(row.fd_value) }}</td>

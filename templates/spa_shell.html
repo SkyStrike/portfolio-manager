@@ -402,6 +402,77 @@
     .spa-modal-footer { display: flex; justify-content: flex-end; gap: 10px; }
     .spa-modal-btn-success { background: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); color: white; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; }
     .spa-modal-btn-close { background: rgba(255,255,255,0.08); border: 1px solid var(--card-border); color: var(--text-primary); padding: 8px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+
+    /* --- Additional SPA Layout Classes (pass 2) --- */
+    .spa-summary-grid { margin-bottom: 20px; grid-template-columns: 1fr; }
+    .spa-tx-filter-links { display: flex; gap: 10px; font-size: 0.8rem; margin-left: 10px; align-items: center; }
+    .spa-divider-text { color: rgba(255,255,255,0.15); }
+    .spa-mt-4 { margin-top: 4px; }
+    .spa-warning-indicator { color: #e74c3c; font-weight: bold; cursor: help; margin-left: 2px; font-size: 0.9rem; }
+    .spa-symbol-block { margin-bottom: 45px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 30px; }
+    .spa-badge-augmented { background: rgba(46, 204, 113, 0.15); color: #2ecc71; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; font-weight: normal; }
+    .spa-badge-mismatch { background: rgba(231, 76, 60, 0.15); color: #e74c3c; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; font-weight: normal; }
+    .spa-capitalize { text-transform: capitalize; }
+    .spa-subtitle-small { font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px; }
+    .spa-analytics-full { width: 100%; margin-top: 15px; margin-bottom: 15px; }
+    .spa-card-lower { width: 100%; margin-top: 15px; }
+    .spa-section-title { margin: 0; font-size: 0.95rem; font-family: 'Outfit', sans-serif; }
+    .spa-flex-col-gap8-mb25 { display: flex; flex-direction: column; gap: 8px; margin-bottom: 25px; }
+    .spa-flex-col-gap8 { display: flex; flex-direction: column; gap: 8px; }
+    .spa-year-summary-toggle { font-size: 0.85rem; font-weight: 600; cursor: pointer; padding: 4px 0; outline: none; user-select: none; }
+    .spa-color-success { color: #10b981; }
+    .spa-pt10-pb10 { padding: 10px 0; }
+    .spa-income-mini-card { background: rgba(255,255,255,0.02); padding: 12px; border-radius: 6px; margin-bottom: 12px; display: flex; gap: 20px; }
+    .spa-value-danger-bold { font-weight: bold; color: #f43f5e; }
+    .spa-currency-badge { font-size: 0.55rem; opacity: 0.8; }
+    .spa-list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px; }
+    .spa-modal-row-last { display: flex; justify-content: space-between; padding-bottom: 8px; }
+    .spa-fd-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 25px; }
+    .spa-fd-table-scroll { overflow-x: auto; margin-top: 20px; }
+    .spa-fd-table-title { margin-bottom: 15px; border-bottom: none; padding-bottom: 0; }
+    .spa-ta-center { text-align: center; }
+    .spa-table-loading { text-align: center; padding: 30px; color: var(--text-secondary); }
+    .spa-perf-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 25px; border-bottom: 1px solid var(--card-border); padding-bottom: 15px; }
+    .spa-year-nav { display: flex; gap: 8px; align-items: center; margin-bottom: 20px; margin-top: 30px; }
+    .spa-perf-heading { font-size: 1.15rem; font-family: 'Outfit', sans-serif; margin-bottom: 15px; }
+    .spa-report-container { display: flex; gap: 25px; flex-wrap: wrap; }
+    .spa-tx-heading { font-size: 1.15rem; margin-top: 0; margin-bottom: 20px; font-family: 'Outfit', sans-serif; }
+    .spa-tx-summary-grid { grid-template-columns: 1fr; padding: 15px; margin-bottom: 20px; }
+    .spa-tx-summary-heading { margin-top: 0; font-size: 1.05rem; color: var(--accent-blue); border: none; font-family: 'Outfit', sans-serif; }
+    .spa-flex-col-gap12 { display: flex; flex-direction: column; gap: 12px; }
+    .spa-stat-label-sm { font-size: 0.8rem; color: var(--text-secondary); }
+    .spa-value-outflow { font-size: 1.15rem; font-weight: bold; color: #f43f5e; }
+    .spa-value-inflow { font-size: 1.15rem; font-weight: bold; color: #10b981; }
+    .spa-value-lg-bold { font-size: 1.15rem; font-weight: bold; }
+    .spa-tx-search-input { background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); padding: 8px 12px; border-radius: 6px; color: var(--text-primary); width: 100%; outline: none; font-size: 0.85rem; }
+    .spa-toc-heading { font-size: 0.95rem; font-family: 'Outfit', sans-serif; margin-bottom: 10px; }
+    .spa-toc-list { column-count: 1; padding: 20px; }
+    .spa-tx-controls { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin-bottom: 25px; }
+    .spa-btn-chart { background: #27ae60; margin: 0; padding: 8px 16px; border: none; border-radius: 6px; color: white; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .spa-vertical-divider { height: 30px; width: 1px; background: rgba(255,255,255,0.08); }
+    .spa-control-group { display: flex; align-items: center; gap: 6px; }
+    .spa-control-label { font-size: 0.85rem; color: var(--text-secondary); }
+    .spa-chart-panel { background: rgba(22, 28, 45, 0.4); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px; margin-bottom: 25px; }
+    .spa-min-h-450 { min-height: 450px; }
+    .spa-d-block { display: block; }
+
+    /* --- Additional SPA Layout Classes (pass 3) --- */
+    .spa-mb-40 { margin-bottom: 40px; }
+    .spa-chart-section-title { margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--text-secondary); }
+    .spa-closed-sidebar { flex: 1 1 300px; max-width: 400px; min-width: 280px; background: rgba(22, 28, 45, 0.45); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px; }
+    .spa-toc-year { font-weight: 700; font-size: 0.95rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; margin-bottom: 8px; display: flex; justify-content: space-between; }
+    .spa-toc-month-group { margin-bottom: 10px; margin-left: 10px; }
+    .spa-toc-month { font-weight: 600; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 6px; display: flex; justify-content: space-between; cursor: pointer; }
+    .spa-toc-symbols { list-style: none; padding-left: 10px; margin: 0; }
+    .spa-toc-symbol-item { margin-bottom: 6px; font-size: 0.8rem; }
+    .spa-toc-link { text-decoration: none; display: flex; justify-content: space-between; color: var(--text-primary); }
+    .spa-closed-main { flex: 2 1 600px; min-width: 320px; }
+    .spa-mb-45 { margin-bottom: 45px; }
+    .spa-group-heading { background: rgba(22, 28, 45, 0.65); padding: 12px 20px; border-radius: 8px; border-left: 5px solid #8b5cf6; display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; font-family: 'Outfit', sans-serif; }
+    .spa-val-lg-bold { font-size: 1.1rem; font-weight: 700; }
+    .spa-symbol-card { margin-bottom: 45px; background: rgba(22, 28, 45, 0.15); border: 1px solid var(--card-border); border-radius: 12px; padding: 25px; }
+    .spa-symbol-ticker { font-size: 1.4rem; font-family: 'Outfit', sans-serif; font-weight: bold; color: var(--text-primary); }
+    .spa-badge-closed { background: rgba(142, 68, 173, 0.12); color: #9b59b6; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; }
 </style>
 
 {% raw %}

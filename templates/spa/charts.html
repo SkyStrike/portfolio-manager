@@ -55,7 +55,7 @@
             <div class="dashboard-grid spa-mb-25">
                 <div class="chart-container full-width spa-summary-card-container">
                     <div class="chart-controls spa-chart-header">
-                        <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--text-secondary);">Portfolio Passive Income</h4>
+                        <h4 class="spa-chart-section-title">Portfolio Passive Income</h4>
                         <div>
                             <button class="toggle-btn active" onclick="toggleIncomeView('monthly', this)">Monthly</button>
                             <button class="toggle-btn" onclick="toggleIncomeView('yearly', this)">Yearly</button>
@@ -69,7 +69,7 @@
             <div class="dashboard-grid spa-mb-25">
                 <div class="chart-container full-width spa-summary-card-container">
                     <div class="chart-controls spa-chart-header">
-                        <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--text-secondary);">Global Category Overview</h4>
+                        <h4 class="spa-chart-section-title">Global Category Overview</h4>
                         <div>
                             <button class="toggle-btn active" onclick="toggleChartMode('category', 'val', this)">Value</button>
                             <button class="toggle-btn" onclick="toggleChartMode('category', 'pct', this)">% ROI</button>
@@ -84,7 +84,7 @@
             <div class="dashboard-grid spa-mb-25">
                 <div class="chart-container full-width spa-summary-card-container">
                     <div class="chart-controls spa-chart-header">
-                        <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--text-secondary);">Growth Strategy Assets</h4>
+                        <h4 class="spa-chart-section-title">Growth Strategy Assets</h4>
                         <div>
                             <button class="toggle-btn active" onclick="toggleChartMode('growth-strat', 'val', this)">Value</button>
                             <button class="toggle-btn" onclick="toggleChartMode('growth-strat', 'pct', this)">% ROI</button>
@@ -96,7 +96,7 @@
             <div class="dashboard-grid spa-mb-25">
                 <div class="chart-container full-width spa-summary-card-container">
                     <div class="chart-controls spa-chart-header">
-                        <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--text-secondary);">Income Strategy Assets</h4>
+                        <h4 class="spa-chart-section-title">Income Strategy Assets</h4>
                         <div>
                             <button class="toggle-btn active" onclick="toggleChartMode('income-strat', 'val', this)">Value</button>
                             <button class="toggle-btn" onclick="toggleChartMode('income-strat', 'pct', this)">% ROI</button>
@@ -113,7 +113,7 @@
                     <div class="dashboard-grid spa-charts-grid-single">
                         <div v-if="c.show_summary" class="chart-container full-width spa-summary-card-container">
                             <div class="chart-controls spa-chart-header">
-                                <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--text-secondary);">Summary</h4>
+                                <h4 class="spa-chart-section-title">Summary</h4>
                                 <div>
                                     <button class="toggle-btn active" :onclick="'toggleChartMode(\'sum-' + c.slug + '\', \'val\', this)'">Value</button>
                                     <button class="toggle-btn" :onclick="'toggleChartMode(\'sum-' + c.slug + '\', \'pct\', this)'">% ROI</button>
@@ -123,7 +123,7 @@
                         </div>
                         <div class="chart-container full-width spa-summary-card-container">
                             <div class="chart-controls spa-chart-header">
-                                <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--text-secondary);">Underlyings</h4>
+                                <h4 class="spa-chart-section-title">Underlyings</h4>
                                 <div>
                                     <button class="toggle-btn active" :onclick="'toggleChartMode(\'und-' + c.slug + '\', \'val\', this)'">Value</button>
                                     <button class="toggle-btn" :onclick="'toggleChartMode(\'und-' + c.slug + '\', \'pct\', this)'">% ROI</button>

@@ -83,7 +83,7 @@
                                  :class="p.status.toLowerCase()"
                                  @click.stop="openDividendDetail(p)">
                                 <span><span v-if="p.status === 'Paid'">✓ </span>{{ p.ticker }}</span>
-                                <span>${{ formatCommas(p.net_amount_foreign) }} <span style="font-size: 0.55rem; opacity: 0.8;">{{ p.currency }}</span></span>
+                                <span>${{ formatCommas(p.net_amount_foreign) }} <span class="spa-currency-badge">{{ p.currency }}</span></span>
                             </div>
                         </div>
                     </div>
@@ -92,7 +92,7 @@
 
             <!-- List View -->
             <div v-show="calViewMode === 'list'" id="calendar-list-wrapper" class="calendar-list-wrapper">
-                <div class="calendar-list-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px;">
+ <div class="calendar-list-header spa-list-header" >
                     <input type="text" v-model="calListSearch" placeholder="Search by ticker, portfolio or status..." class="calendar-list-search spa-calendar-search">
                     <div class="calendar-list-count spa-modal-label">{{ filteredCalList.length }} payouts found for this month</div>
                 </div>
@@ -171,7 +171,7 @@
                         <span class="cal-modal-label spa-modal-label">Expected Net (SGD)</span>
                         <span class="cal-div-net-sgd spa-modal-net-sgd">+SG${{ formatCommas(activeDividend.net_amount_sgd) }}</span>
                     </div>
-                    <div class="cal-modal-row" style="display: flex; justify-content: space-between; padding-bottom: 8px;">
+ <div class="cal-modal-row spa-modal-row-last" >
                         <span class="cal-modal-label spa-modal-label">Estimated Yield on Cost</span>
                         <span class="cal-modal-val text-accent spa-color-blue">{{ activeDividend.yield_pct ? activeDividend.yield_pct.toFixed(2) + '%' : '-' }}</span>
                     </div>

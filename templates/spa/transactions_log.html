@@ -1,38 +1,38 @@
 {% raw %}
         <!-- 2. TRANSACTIONS TAB VIEW -->
         <div v-show="currentView === 'transactions'">
-            <div class="report-container" style="display: flex; gap: 25px; flex-wrap: wrap;">
+ <div class="report-container spa-report-container" >
                 <!-- Sidebar Flat TOC -->
                 <div class="sidebar">
-                    <h1 id="table-of-contents" style="font-size: 1.15rem; margin-top: 0; margin-bottom: 20px; font-family: 'Outfit', sans-serif;">Transaction History</h1>
+                    <h1 id="table-of-contents" class="spa-tx-heading">Transaction History</h1>
                     
                     <!-- Global Lifetime Summary -->
-                    <div class="symbol-stats-grid" style="grid-template-columns: 1fr; padding: 15px; margin-bottom: 20px;">
-                        <h2 style="margin-top: 0; font-size: 1.05rem; color: var(--accent-blue); border: none; font-family: 'Outfit', sans-serif;">Lifetime Summary</h2>
-                        <div class="stat-group" style="display: flex; flex-direction: column; gap: 12px;">
+ <div class="symbol-stats-grid spa-tx-summary-grid" >
+                        <h2 class="spa-tx-summary-heading">Lifetime Summary</h2>
+ <div class="stat-group spa-flex-col-gap12" >
                             <div class="stat-item">
-                                <span class="stat-label" style="font-size: 0.8rem; color: var(--text-secondary);">Total Outflow</span>
-                                <span class="stat-value pos-flow" style="font-size: 1.15rem; font-weight: bold; color: #f43f5e;" v-text="formatCommas(txHistoryReport.global_summary.expense) + ' SGD'"></span>
+ <span class="stat-label spa-stat-label-sm" >Total Outflow</span>
+ <span class="stat-value pos-flow spa-value-outflow" v-text="formatCommas(txHistoryReport.global_summary.expense) + ' SGD'"></span>
                             </div>
                             <div class="stat-item">
-                                <span class="stat-label" style="font-size: 0.8rem; color: var(--text-secondary);">Total Inflow</span>
-                                <span class="stat-value neg-flow" style="font-size: 1.15rem; font-weight: bold; color: #10b981;" v-text="formatCommas(txHistoryReport.global_summary.income) + ' SGD'"></span>
+ <span class="stat-label spa-stat-label-sm" >Total Inflow</span>
+ <span class="stat-value neg-flow spa-value-inflow" v-text="formatCommas(txHistoryReport.global_summary.income) + ' SGD'"></span>
                             </div>
                             <div class="stat-item">
-                                <span class="stat-label" style="font-size: 0.8rem; color: var(--text-secondary);">Net Flow</span>
-                                <span class="stat-value" :class="getValClass(txHistoryReport.global_summary.net)" style="font-size: 1.15rem; font-weight: bold;" v-text="formatCommas(txHistoryReport.global_summary.net, true) + ' SGD'"></span>
+ <span class="stat-label spa-stat-label-sm" >Net Flow</span>
+ <span class="stat-value spa-value-lg-bold" :class="getValClass(txHistoryReport.global_summary.net)" v-text="formatCommas(txHistoryReport.global_summary.net, true) + ' SGD'"></span>
                             </div>
                         </div>
                     </div>
 
                     <div class="sidebar-controls spa-mb-20">
                         <div class="search-wrapper">
-                            <input type="text" v-model="txSearch" placeholder="Filter by Symbol (e.g. AAPL)..." style="background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); padding: 8px 12px; border-radius: 6px; color: var(--text-primary); width: 100%; outline: none; font-size: 0.85rem;">
+                            <input type="text" v-model="txSearch" placeholder="Filter by Symbol (e.g. AAPL)..." class="spa-tx-search-input">
                         </div>
                     </div>
 
-                    <h2 style="font-size: 0.95rem; font-family: 'Outfit', sans-serif; margin-bottom: 10px;">Table of Contents</h2>
-                    <ul class="toc" style="column-count: 1; padding: 20px;">
+                    <h2 class="spa-toc-heading">Table of Contents</h2>
+ <ul class="toc spa-toc-list" >
                         <li v-for="yrNode in txHistoryReport.tree" :key="yrNode.year">
                             <a :href="'#tx-year-' + yrNode.year"><strong>{{ yrNode.year }}</strong></a>
                             <ul>
@@ -46,34 +46,34 @@
 
                 <!-- Main Content -->
                 <div class="main-content">
-                    <div class="controls" style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin-bottom: 25px;">
-                        <button @click="toggleTxChart()" id="chart-btn" style="background: #27ae60; margin: 0; padding: 8px 16px; border: none; border-radius: 6px; color: white; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+ <div class="controls spa-tx-controls" >
+                        <button @click="toggleTxChart()" id="chart-btn" class="spa-btn-chart">
                             📊 {{ showTxChart ? 'Hide Filtered Chart' : 'Show Filtered Chart' }}
                         </button>
                         
-                        <div style="height: 30px; width: 1px; background: rgba(255,255,255,0.08);"></div>
+                        <div class="spa-vertical-divider"></div>
 
-                        <div class="control-group" style="display: flex; align-items: center; gap: 6px;">
-                            <span style="font-size: 0.85rem; color: var(--text-secondary);">Years:</span>
+ <div class="control-group spa-control-group" >
+                            <span class="spa-control-label">Years:</span>
                             <button class="small-btn" @click="toggleLevel(1, true)">+</button>
                             <button class="small-btn" @click="toggleLevel(1, false)">-</button>
                         </div>
 
-                        <div class="control-group" style="display: flex; align-items: center; gap: 6px;">
-                            <span style="font-size: 0.85rem; color: var(--text-secondary);">Months:</span>
+ <div class="control-group spa-control-group" >
+                            <span class="spa-control-label">Months:</span>
                             <button class="small-btn" @click="toggleLevel(2, true)">+</button>
                             <button class="small-btn" @click="toggleLevel(2, false)">-</button>
                         </div>
 
-                        <div class="control-group" style="display: flex; align-items: center; gap: 6px;">
-                            <span style="font-size: 0.85rem; color: var(--text-secondary);">Tickers:</span>
+ <div class="control-group spa-control-group" >
+                            <span class="spa-control-label">Tickers:</span>
                             <button class="small-btn" @click="toggleLevel(3, true)">+</button>
                             <button class="small-btn" @click="toggleLevel(3, false)">-</button>
                         </div>
                     </div>
 
-                    <div v-if="showTxChart" id="chart-wrapper" style="background: rgba(22, 28, 45, 0.4); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px; margin-bottom: 25px;">
-                        <div id="filtered-chart" style="min-height: 450px;"></div>
+                    <div v-if="showTxChart" id="chart-wrapper" class="spa-chart-panel">
+                        <div id="filtered-chart" class="spa-min-h-450"></div>
                     </div>
 
                     <details v-for="(yrNode, yrIndex) in txHistoryReport.tree" :key="yrNode.year" :id="'tx-year-' + yrNode.year" :open="yrIndex === 0">

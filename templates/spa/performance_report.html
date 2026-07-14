@@ -11,7 +11,7 @@
                 </h1>
                 
                 <!-- Performance Tabs Navigation -->
-                <div class="perf-tabs-container" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 25px; border-bottom: 1px solid var(--card-border); padding-bottom: 15px;">
+ <div class="perf-tabs-container spa-perf-tabs" >
                     <button class="view-btn" :class="{ active: perfActiveTab === 'cash' }" @click="perfActiveTab = 'cash'">💰 Combined Net Worth</button>
                     
                     <button v-for="br in Object.keys(perfData.broker_cash_ytd || {})" 
@@ -141,7 +141,7 @@
                         </div>
                     </div>
                     
-                    <div class="year-nav-container" style="display: flex; gap: 8px; align-items: center; margin-bottom: 20px; margin-top: 30px;">
+ <div class="year-nav-container spa-year-nav" >
                         <span class="year-nav-label">Select Year:</span>
                         <button v-for="year in [...perfData.years].reverse()" 
                                 :key="year" 
@@ -151,7 +151,7 @@
                     </div>
                     
                     <div v-if="perfSelectedYear">
-                        <h2 style="font-size: 1.15rem; font-family: 'Outfit', sans-serif; margin-bottom: 15px;">{{ getActiveYtdData().label }} Summary - Year {{ perfSelectedYear }}</h2>
+                        <h2 class="spa-perf-heading">{{ getActiveYtdData().label }} Summary - Year {{ perfSelectedYear }}</h2>
                         <div class="monthly-table-scroll-wrapper spa-monthly-table-wrapper">
                             <table class="summary-table spa-monthly-table">
                                 <thead>
@@ -308,7 +308,7 @@
                         </div>
                     </div>
                     
-                    <div class="year-nav-container" style="display: flex; gap: 8px; align-items: center; margin-bottom: 20px; margin-top: 30px;">
+ <div class="year-nav-container spa-year-nav" >
                         <span class="year-nav-label">Select Year:</span>
                         <button v-for="year in [...perfData.years].reverse()" 
                                 :key="year" 
@@ -318,7 +318,7 @@
                     </div>
                     
                     <div v-if="perfSelectedClassification && perfSelectedYear">
-                        <h2 style="font-size: 1.15rem; font-family: 'Outfit', sans-serif; margin-bottom: 15px;">{{ perfSelectedClassification }} Performance - Year {{ perfSelectedYear }}</h2>
+                        <h2 class="spa-perf-heading">{{ perfSelectedClassification }} Performance - Year {{ perfSelectedYear }}</h2>
                         <div class="monthly-table-scroll-wrapper spa-monthly-table-wrapper">
                             <table class="summary-table spa-monthly-table">
                                 <thead>

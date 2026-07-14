@@ -57,7 +57,7 @@
             </nav>
 
             <!-- Daily Performance & Realized P/L Block -->
-            <div id="portfolio-summary" class="symbol-stats-grid" style="margin-bottom: 20px; grid-template-columns: 1fr;">
+            <div id="portfolio-summary" class="symbol-stats-grid spa-summary-grid">
                 <div class="stat-group prominent-stat-card">
                     <h4>Daily Performance & Realized P/L<span v-if="summary.options_open_unrealized_profit_sgd !== null"> & Options Unrealized</span></h4>
                     <div class="spa-grid-stats">
@@ -111,7 +111,7 @@
                         <span class="stat-value" :class="getValClass(summary.options_profit_sgd)" v-text="formatCommas(summary.options_profit_sgd, true) + ' SGD'"></span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label tooltip-trigger" data-tooltip="Total gains including dividends, sale of stock, and closed options. Varies against actual due to floating rates calculation.">Total Returns (Lifetime) <span class="spa-valign-middle">📊</span></span>
+ <span class="stat-label tooltip-trigger spa-valign-middle" data-tooltip="Total gains including dividends, sale of stock, and closed options. Varies against actual due to floating rates calculation.">Total Returns (Lifetime) <span >📊</span></span>
                         <span class="stat-value" :class="getValClass(summary.lifetime_profit_sgd)" v-text="formatCommas(summary.lifetime_profit_sgd, true) + ' SGD'"></span>
                         <span class="stat-subvalue" :class="getValClass(summary.lifetime_profit_sgd)" v-text="'(' + formatPct((summary.lifetime_profit_sgd / summary.total_invested_active_sgd * 100), true) + ')'"></span>
                     </div>
@@ -314,17 +314,17 @@
                 <h2 class="flex-between-center">
                     <div class="spa-flex-wrap-center">
                         <span>Recent Transactions: {{ recentTx.month_name }}</span>
-                        <div class="tx-filter-links" style="display: flex; gap: 10px; font-size: 0.8rem; margin-left: 10px; align-items: center;">
+                        <div class="tx-filter-links spa-tx-filter-links">
                             Show (
                             <a href="javascript:void(0)" class="tx-filter-link" :class="{ active: txFilter === 'both' }" @click="txFilter = 'both'">Both</a>
-                            <span style="color: rgba(255,255,255,0.15)">|</span>
+                            <span class="spa-divider-text">|</span>
                             <a href="javascript:void(0)" class="tx-filter-link" :class="{ active: txFilter === 'buy' }" @click="txFilter = 'buy'">Buy</a>
-                            <span style="color: rgba(255,255,255,0.15)">|</span>
+                            <span class="spa-divider-text">|</span>
                             <a href="javascript:void(0)" class="tx-filter-link" :class="{ active: txFilter === 'sell' }" @click="txFilter = 'sell'">Sell</a>
                             ) Tx
                         </div>
                     </div>
-                    <span :class="getValClass(recentTx.month_flow)" class="text-lg bold-text">
+                    <span class="text-lg bold-text" :class="getValClass(recentTx.month_flow)">
                         4W Net Flow: {{ formatCommas(recentTx.month_flow, true) }} SGD
                     </span>
                 </h2>
@@ -334,9 +334,9 @@
                         <summary class="week-details-summary">
                             <span class="week-summary-center">Week: {{ week.range }}</span>
                             <div class="week-summary-right">
-                                <span class="week-col-net">Net: <span :class="getValClass(week.flow)" class="bold-text">{{ formatCommas(week.flow, true) }}</span></span>
-                                <span class="week-col-buy">Buys: <span class="neg-val">{{ formatCommas(week.buy_flow) }}</span></span>
-                                <span class="week-col-sell">Sells: <span class="pos-val">{{ formatCommas(Math.abs(week.sell_flow)) }}</span></span>
+ <span class="week-col-net bold-text" >Net: <span :class="getValClass(week.flow)">{{ formatCommas(week.flow, true) }}</span></span>
+ <span class="week-col-buy neg-val" >Buys: <span >{{ formatCommas(week.buy_flow) }}</span></span>
+ <span class="week-col-sell pos-val" >Sells: <span >{{ formatCommas(Math.abs(week.sell_flow)) }}</span></span>
                             </div>
                         </summary>
                         <div class="week-details-content">
@@ -365,7 +365,7 @@
             </div>
 
             <!-- Active Open Options Exposure Table -->
-            <div v-if="portfolioData.open_options && portfolioData.open_options.length > 0" id="active-options" class="active-options-section dashboard-section-spacer" style="margin-bottom: 40px;">
+            <div v-if="portfolioData.open_options && portfolioData.open_options.length > 0" id="active-options" class="active-options-section dashboard-section-spacer spa-mb-40">
                 <h2>
                     <span>Active Open Options</span>
                     <span class="text-sm font-normal text-muted">Potential ROI / Risk Focus</span>
@@ -402,7 +402,7 @@
                                 <div class="pos-val bold-text">
                                     {{ formatCommas(group.total_cost_sgd) }} SGD ({{ group.potential_return_pct.toFixed(2) }}%)
                                 </div>
-                                <div v-if="group.unrealized_profit_sgd !== null" class="text-xs" :class="getValClass(group.unrealized_profit_sgd)" style="margin-top: 4px;">
+                                <div v-if="group.unrealized_profit_sgd !== null" class="text-xs spa-mt-4" :class="getValClass(group.unrealized_profit_sgd)">
                                     P/L: {{ formatCommas(group.unrealized_profit_sgd, true) }} SGD ({{ formatPct(group.unrealized_profit_pct) }})
                                 </div>
                             </span>
@@ -412,7 +412,7 @@
             </div>
 
             <!-- Recently Closed Options Table -->
-            <div v-if="portfolioData.recent_closed_options && portfolioData.recent_closed_options.weeks && portfolioData.recent_closed_options.weeks.length > 0" id="closed-options" class="recent-options-section dashboard-section-spacer" style="margin-bottom: 40px;">
+            <div v-if="portfolioData.recent_closed_options && portfolioData.recent_closed_options.weeks && portfolioData.recent_closed_options.weeks.length > 0" id="closed-options" class="recent-options-section dashboard-section-spacer spa-mb-40">
                 <h2>
                     <span>Recently Closed Options</span>
                     <span class="text-sm font-normal text-muted">Realized Profit / Cash Flow Focus</span>
@@ -484,7 +484,7 @@
                                 <ul v-if="u.symbols.length > 1" class="toc-sublist">
                                     <li v-for="p in u.symbols" :key="p.symbol">
                                         <a :href="'#' + slugify(u.title + '-' + p.symbol)" class="toc-sublist-link" v-text="p.symbol"></a>
-                                        <span v-if="p.ib_mismatch" class="warning-indicator tooltip-trigger" style="color: #e74c3c; font-weight: bold; cursor: help; margin-left: 2px; font-size: 0.9rem;">⚠</span>
+                                        <span v-if="p.ib_mismatch" class="warning-indicator tooltip-trigger spa-warning-indicator">⚠</span>
                                         <span class="toc-sublist-val">{{ formatPct(p.sgd_metrics.current_sgd / summary.total_market_value_sgd * 100) }} | </span>
                                         <span class="toc-sublist-val" :class="getValClass(p.sgd_metrics.daily_val_sgd)">
                                             <span class="sensitive-value">{{ formatCommas(p.sgd_metrics.daily_val_sgd, true) }} SGD</span> ({{ formatPct(p.metrics.daily_pct) }})
@@ -643,13 +643,13 @@
                         </div>
 
                         <!-- Ticker Symbol Cards -->
-                        <div v-for="p in u.symbols" :key="p.symbol" style="margin-bottom: 45px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 30px;">
+                        <div v-for="p in u.symbols" :key="p.symbol" class="spa-symbol-block">
                             <h2 :id="slugify(u.title + '-' + p.symbol)" class="symbol-card-header">
                                 <div class="header-content">
                                     <div class="title spa-flex-center-gap-8">
                                         <span v-text="p.symbol"></span>
-                                        <span v-if="p.is_augmented" class="augmented-badge" style="background: rgba(46, 204, 113, 0.15); color: #2ecc71; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; font-weight: normal;">IB Sync</span>
-                                        <span v-if="p.ib_mismatch" class="warning-badge" style="background: rgba(231, 76, 60, 0.15); color: #e74c3c; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; font-weight: normal;">IB Mismatch</span>
+                                        <span v-if="p.is_augmented" class="augmented-badge spa-badge-augmented">IB Sync</span>
+                                        <span v-if="p.ib_mismatch" class="warning-badge spa-badge-mismatch">IB Mismatch</span>
                                         
                                         <!-- Ticker Utilities Calculator Dropdown -->
                                         <div class="ticker-menu-container spa-relative-inline">
@@ -685,7 +685,7 @@
                                         <div class="stat-item">
                                             <span class="stat-label">Total Quantity</span>
                                             <span class="stat-value" v-text="p.metrics.quantity"></span>
-                                            <span class="stat-subvalue" style="text-transform: capitalize;">{{ p.subclass }} subclass</span>
+                                            <span class="stat-subvalue spa-capitalize">{{ p.subclass }} subclass</span>
                                         </div>
                                         <div class="stat-item">
                                             <span class="stat-label">Allocation (Underlying)</span>
