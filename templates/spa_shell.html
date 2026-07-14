@@ -1175,37 +1175,121 @@
 
         <!-- 2. TRANSACTIONS TAB VIEW -->
         <div v-show="currentView === 'transactions'">
-            <h2>Transaction Log History</h2>
-            <table class="holdings-summary">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Symbol</th>
-                        <th>Action</th>
-                        <th>Quantity</th>
-                        <th>Price</th>
-                        <th>Fees</th>
-                        <th>Total Cost</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <template v-for="pos in portfolioData.positions">
-                        <tr v-for="tx in pos.transactions" :key="tx.id" class="ticker-row">
-                            <td v-text="tx.date"></td>
-                            <td style="font-weight: 600;" v-text="pos.symbol"></td>
-                            <td>
-                                <span :class="tx.action.toLowerCase() === 'buy' ? 'pos-val' : 'neg-val'" v-text="tx.action"></span>
-                            </td>
-                            <td v-text="tx.qty"></td>
-                            <td v-text="formatCommas(tx.price) + ' ' + tx.currency"></td>
-                            <td v-text="formatCommas(tx.fee) + ' ' + tx.currency"></td>
-                            <td v-text="formatCommas(tx.qty * tx.price + tx.fee) + ' ' + tx.currency"></td>
-                        </tr>
-                    </template>
-                </tbody>
-            </table>
-        </div>
+            <div class="report-container" style="display: flex; gap: 25px; flex-wrap: wrap;">
+                <!-- Sidebar Flat TOC -->
+                <div class="sidebar">
+                    <h1 id="table-of-contents" style="font-size: 1.15rem; margin-top: 0; margin-bottom: 20px; font-family: 'Outfit', sans-serif;">Transaction History</h1>
+                    
+                    <!-- Global Lifetime Summary -->
+                    <div class="symbol-stats-grid" style="grid-template-columns: 1fr; padding: 15px; margin-bottom: 20px;">
+                        <h2 style="margin-top: 0; font-size: 1.05rem; color: var(--accent-blue); border: none; font-family: 'Outfit', sans-serif;">Lifetime Summary</h2>
+                        <div class="stat-group" style="display: flex; flex-direction: column; gap: 12px;">
+                            <div class="stat-item">
+                                <span class="stat-label" style="font-size: 0.8rem; color: var(--text-secondary);">Total Outflow</span>
+                                <span class="stat-value pos-flow" style="font-size: 1.15rem; font-weight: bold; color: #f43f5e;" v-text="formatCommas(txHistoryReport.global_summary.expense) + ' SGD'"></span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label" style="font-size: 0.8rem; color: var(--text-secondary);">Total Inflow</span>
+                                <span class="stat-value neg-flow" style="font-size: 1.15rem; font-weight: bold; color: #10b981;" v-text="formatCommas(txHistoryReport.global_summary.income) + ' SGD'"></span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label" style="font-size: 0.8rem; color: var(--text-secondary);">Net Flow</span>
+                                <span class="stat-value" :class="getValClass(txHistoryReport.global_summary.net)" style="font-size: 1.15rem; font-weight: bold;" v-text="formatCommas(txHistoryReport.global_summary.net, true) + ' SGD'"></span>
+                            </div>
+                        </div>
+                    </div>
 
+                    <div class="sidebar-controls" style="margin-bottom: 20px;">
+                        <div class="search-wrapper">
+                            <input type="text" v-model="txSearch" placeholder="Filter by Symbol (e.g. AAPL)..." style="background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); padding: 8px 12px; border-radius: 6px; color: var(--text-primary); width: 100%; outline: none; font-size: 0.85rem;">
+                        </div>
+                    </div>
+
+                    <h2 style="font-size: 0.95rem; font-family: 'Outfit', sans-serif; margin-bottom: 10px;">Table of Contents</h2>
+                    <ul class="toc" style="column-count: 1; padding: 20px;">
+                        <li v-for="yrNode in txHistoryReport.tree" :key="yrNode.year">
+                            <a :href="'#tx-year-' + yrNode.year"><strong>{{ yrNode.year }}</strong></a>
+                            <ul>
+                                <li v-for="moNode in yrNode.months" :key="moNode.name">
+                                    <a :href="'#tx-month-' + yrNode.year + '-' + moNode.name">{{ moNode.name }}</a>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Main Content -->
+                <div class="main-content">
+                    <div class="controls" style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin-bottom: 25px;">
+                        <button @click="toggleTxChart()" id="chart-btn" style="background: #27ae60; margin: 0; padding: 8px 16px; border: none; border-radius: 6px; color: white; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                            📊 {{ showTxChart ? 'Hide Filtered Chart' : 'Show Filtered Chart' }}
+                        </button>
+                        
+                        <div style="height: 30px; width: 1px; background: rgba(255,255,255,0.08);"></div>
+
+                        <div class="control-group" style="display: flex; align-items: center; gap: 6px;">
+                            <span style="font-size: 0.85rem; color: var(--text-secondary);">Years:</span>
+                            <button class="small-btn" @click="toggleLevel(1, true)">+</button>
+                            <button class="small-btn" @click="toggleLevel(1, false)">-</button>
+                        </div>
+
+                        <div class="control-group" style="display: flex; align-items: center; gap: 6px;">
+                            <span style="font-size: 0.85rem; color: var(--text-secondary);">Months:</span>
+                            <button class="small-btn" @click="toggleLevel(2, true)">+</button>
+                            <button class="small-btn" @click="toggleLevel(2, false)">-</button>
+                        </div>
+
+                        <div class="control-group" style="display: flex; align-items: center; gap: 6px;">
+                            <span style="font-size: 0.85rem; color: var(--text-secondary);">Tickers:</span>
+                            <button class="small-btn" @click="toggleLevel(3, true)">+</button>
+                            <button class="small-btn" @click="toggleLevel(3, false)">-</button>
+                        </div>
+                    </div>
+
+                    <div v-if="showTxChart" id="chart-wrapper" style="background: rgba(22, 28, 45, 0.4); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px; margin-bottom: 25px;">
+                        <div id="filtered-chart" style="min-height: 450px;"></div>
+                    </div>
+
+                    <details v-for="(yrNode, yrIndex) in txHistoryReport.tree" :key="yrNode.year" :id="'tx-year-' + yrNode.year" :open="yrIndex === 0">
+                        <summary>
+                            Year: {{ yrNode.year }}
+                            (Net Flow: <span class="dynamic-total year-total" :class="getValClass(yrNode.net_flow)">{{ formatCommas(yrNode.net_flow, true) }} SGD</span>)
+                        </summary>
+                        
+                        <details v-for="(moNode, moIndex) in yrNode.months" :key="moNode.name" :id="'tx-month-' + yrNode.year + '-' + moNode.name" :open="yrIndex === 0 && moIndex === 0">
+                            <summary>
+                                {{ moNode.name }}
+                                (Net Flow: <span class="dynamic-total month-total" :class="getValClass(moNode.net_flow)">{{ formatCommas(moNode.net_flow, true) }} SGD</span>)
+                            </summary>
+                            
+                            <details v-for="tNode in moNode.tickers" :key="tNode.symbol">
+                                <summary>
+                                    {{ tNode.symbol }}
+                                    (Net Flow: <span class="dynamic-total underlying-total" :class="getValClass(tNode.net_flow)">{{ formatCommas(tNode.net_flow, true) }} SGD</span>)
+                                </summary>
+                                
+                                <ul class="tx-list">
+                                    <li v-for="tx in tNode.transactions" :key="tx.id" class="tx-item" :id="tx.id" :data-flow="tx.sgd_impact" :data-month="tx.date.substring(0, 7)">
+                                        [{{ tx.symbol }}] 
+                                        <span :class="tx.action.toLowerCase()">[{{ tx.action.toUpperCase() }}]</span>
+                                        [{{ tx.date }}] 
+                                        {{ tx.qty }} @ {{ formatCommas(tx.price, false, 4) }} {{ tx.currency }}, 
+                                        Fees: {{ formatCommas(tx.fee) }} 
+                                        ({{ formatCommas(tx.total_net) }} {{ tx.currency }})
+                                        
+                                        <span v-if="tx.action === 'Buy' && !tx.is_closed" class="metadata">
+                                            (Current Value: {{ formatCommas(tx.current_val) }} {{ tx.currency }}, 
+                                            <span :class="getValClass(tx.current_val - tx.total_net)">
+                                                {{ formatPct(tx.gain_pct) }}, {{ formatCommas(tx.current_val - tx.total_net, true) }} {{ tx.currency }}
+                                            </span>)
+                                        </span>
+                                    </li>
+                                </ul>
+                            </details>
+                        </details>
+                    </details>
+                </div>
+            </div>
         </div>
 
         <!-- 4. CLOSED HOLDINGS TAB VIEW -->
@@ -1796,7 +1880,11 @@
                 ],
                 
                 // Closed holdings fields
-                closedSearch: ''
+                closedSearch: '',
+                
+                // Transactions History fields
+                showTxChart: false,
+                txSearch: ''
             }
         },
         computed: {
@@ -2195,6 +2283,116 @@
                 });
                 
                 return { toc: tocList, body };
+            },
+            txHistoryReport() {
+                if (!this.portfolioData || !this.portfolioData.positions) return { tree: [], global_summary: { expense: 0, income: 0, net: 0 } };
+                
+                let expense = 0;
+                let income = 0;
+                const tree = {};
+                const searchVal = this.txSearch.trim().toLowerCase();
+                
+                this.portfolioData.positions.forEach(pos => {
+                    if (searchVal && !pos.symbol.toLowerCase().includes(searchVal)) return;
+                    
+                    const rate = pos.rate || 1.0;
+                    if (!pos.transactions) return;
+                    
+                    pos.transactions.forEach(tx => {
+                        const dateStr = tx.date; // YYYY-MM-DD
+                        const d = new Date(dateStr);
+                        const year = d.getFullYear();
+                        const monthName = d.toLocaleString('en-US', { month: 'long' });
+                        
+                        // Calculate SGD impact
+                        const valRaw = tx.qty * tx.price;
+                        let totalNet = 0;
+                        let sgdImpact = 0;
+                        if (tx.action === 'Buy') {
+                            totalNet = valRaw + tx.fee;
+                            sgdImpact = totalNet * rate;
+                            expense += sgdImpact;
+                        } else {
+                            totalNet = valRaw - tx.fee;
+                            sgdImpact = -totalNet * rate;
+                            income += Math.abs(sgdImpact);
+                        }
+                        
+                        // Add fields for rendering
+                        const formattedTx = {
+                            ...tx,
+                            symbol: pos.symbol,
+                            currency: pos.currency,
+                            rate: rate,
+                            total_net: totalNet,
+                            sgd_impact: sgdImpact,
+                            current_val: tx.action === 'Buy' ? tx.qty * (pos.metrics?.current_price || 0) : 0,
+                            gain_pct: tx.action === 'Buy' ? (((tx.qty * (pos.metrics?.current_price || 0)) - totalNet) / totalNet * 100) : 0
+                        };
+                        
+                        if (!tree[year]) tree[year] = {};
+                        if (!tree[year][monthName]) tree[year][monthName] = {};
+                        const groupKey = pos.underlying || pos.symbol;
+                        if (!tree[year][monthName][groupKey]) tree[year][monthName][groupKey] = [];
+                        
+                        tree[year][monthName][groupKey].push(formattedTx);
+                    });
+                });
+                
+                // Calculate totals and sort
+                const sortedYears = Object.keys(tree).sort().reverse();
+                const treeList = [];
+                
+                sortedYears.forEach(yr => {
+                    const months = Object.keys(tree[yr]).sort((a, b) => {
+                        const mA = new Date(`${a} 1, 2000`).getMonth();
+                        const mB = new Date(`${b} 1, 2000`).getMonth();
+                        return mB - mA;
+                    });
+                    
+                    let yrNetFlow = 0;
+                    const monthsList = [];
+                    
+                    months.forEach(mo => {
+                        let moNetFlow = 0;
+                        const tickersList = [];
+                        const tickers = Object.keys(tree[yr][mo]).sort();
+                        
+                        tickers.forEach(underlying => {
+                            const txs = tree[yr][mo][underlying].sort((a, b) => b.date.localeCompare(a.date));
+                            const undNetFlow = txs.reduce((sum, tx) => sum + tx.sgd_impact, 0);
+                            moNetFlow += undNetFlow;
+                            
+                            tickersList.push({
+                                symbol: underlying,
+                                net_flow: undNetFlow,
+                                transactions: txs
+                            });
+                        });
+                        
+                        yrNetFlow += moNetFlow;
+                        monthsList.push({
+                            name: mo,
+                            net_flow: moNetFlow,
+                            tickers: tickersList
+                        });
+                    });
+                    
+                    treeList.push({
+                        year: yr,
+                        net_flow: yrNetFlow,
+                        months: monthsList
+                    });
+                });
+                
+                return {
+                    tree: treeList,
+                    global_summary: {
+                        expense: expense,
+                        income: income,
+                        net: expense - income
+                    }
+                };
             }
         },
         watch: {
@@ -2206,6 +2404,13 @@
                 } else if (newView === 'charts') {
                     this.$nextTick(() => {
                         this.initGlobalCharts();
+                    });
+                }
+            },
+            txSearch() {
+                if (this.showTxChart) {
+                    this.$nextTick(() => {
+                        this.renderTxChart();
                     });
                 }
             }
@@ -2804,6 +3009,89 @@
                 
                 if (!window.chartInstances) window.chartInstances = {};
                 window.chartInstances["dividend-chart"] = chart;
+            },
+            toggleLevel(level, open) {
+                let selector = '';
+                if (level === 1) {
+                    selector = '.main-content > details';
+                } else if (level === 2) {
+                    selector = '.main-content > details > details';
+                } else if (level === 3) {
+                    selector = '.main-content > details > details > details';
+                }
+                if (selector) {
+                    document.querySelectorAll(selector).forEach(d => d.open = open);
+                }
+            },
+            toggleTxChart() {
+                this.showTxChart = !this.showTxChart;
+                if (this.showTxChart) {
+                    this.$nextTick(() => {
+                        this.renderTxChart();
+                    });
+                }
+            },
+            renderTxChart() {
+                const monthlyData = {};
+                this.txHistoryReport.tree.forEach(yrNode => {
+                    yrNode.months.forEach(moNode => {
+                        const yr = yrNode.year;
+                        const monthIndex = this.calMonths.indexOf(moNode.name) + 1;
+                        const monthStr = monthIndex < 10 ? '0' + monthIndex : '' + monthIndex;
+                        const labelKey = `${yr}-${monthStr}`;
+                        monthlyData[labelKey] = moNode.net_flow;
+                    });
+                });
+                
+                const sortedKeys = Object.keys(monthlyData).sort();
+                let lastYear = "";
+                const displayLabels = sortedKeys.map(key => {
+                    const [year, month] = key.split('-');
+                    const monthName = this.calMonths[parseInt(month) - 1];
+                    if (year !== lastYear) { lastYear = year; return `${monthName} ${year}`; }
+                    return monthName;
+                });
+                const values = sortedKeys.map(k => Math.round(monthlyData[k]));
+                
+                const container = document.getElementById("filtered-chart");
+                if (!container) return;
+                
+                container.innerHTML = "";
+                
+                const options = {
+                    chart: { type: 'bar', height: 450, theme: 'dark', background: 'transparent', toolbar: { show: false } },
+                    theme: { mode: 'dark' },
+                    series: [{ name: 'Net Flow (SGD)', data: values }],
+                    xaxis: { categories: displayLabels, labels: { style: { colors: '#888' }, rotate: -45, rotateAlways: false } },
+                    yaxis: {
+                        labels: {
+                            formatter: (val) => '$' + Math.round(val).toLocaleString()
+                        }
+                    },
+                    dataLabels: { enabled: true, formatter: (val) => '$' + Math.round(val).toLocaleString(), offsetY: -20 },
+                    title: { text: 'Monthly Net Flow (Filtered) (SGD)', align: 'left', style: { color: '#e0e0e0' } },
+                    colors: ['#3498db'],
+                    plotOptions: { 
+                        bar: { 
+                            dataLabels: { position: 'top' }, 
+                            colors: { 
+                                ranges: [
+                                    { from: -9999999, to: -0.01, color: '#e74c3c' }, 
+                                    { from: 0, to: 9999999, color: '#2ecc71' }
+                                ] 
+                            } 
+                        } 
+                    }
+                };
+                
+                const chart = new ApexCharts(container, options);
+                chart.render();
+                
+                if (!window.chartInstances) window.chartInstances = {};
+                if (window.chartInstances["filtered-chart"]) {
+                    try { window.chartInstances["filtered-chart"].destroy(); } catch (e) {}
+                }
+                window.chartInstances["filtered-chart"] = chart;
             }
         },
         async mounted() {
