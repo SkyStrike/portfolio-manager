@@ -2030,7 +2030,7 @@ function _txvRenderChart(containerEl, prices, range) {
     const options = {
         chart: {
             type: "candlestick",
-            height: 400,
+            height: 600,
             background: "transparent",
             toolbar: { show: false },
             animations: { enabled: false },
@@ -2087,17 +2087,17 @@ function _txvRenderChart(containerEl, prices, range) {
                 let txHtml = "";
                 if (txs.length > 0) {
                     txHtml = `
-                        <div style="margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px;">
-                            <div style="font-weight: bold; color: #a78bfa; margin-bottom: 3px;">Transactions:</div>
+                        <div class="txv-tooltip-tx-section">
+                            <div class="txv-tooltip-tx-title">Transactions:</div>
                             ${txs.map(t => {
                                 const isBuy = t.action.toUpperCase() === "BUY";
-                                const actColor = isBuy ? "#10b981" : "#ef4444";
+                                const actClass = isBuy ? "buy" : "sell";
                                 const marker = isBuy ? "▲" : "▼";
                                 const qty = t.quantity || t.qty || 0;
                                 const p = t.price || 0;
                                 return `
-                                    <div style="color: #e2e8f0; font-size: 10px;">
-                                        <span style="color: ${actColor}; font-weight: bold;">${marker} ${t.action.toUpperCase()}</span>
+                                    <div class="txv-tooltip-tx-row">
+                                        <span class="txv-tooltip-tx-action ${actClass}">${marker} ${t.action.toUpperCase()}</span>
                                         ${qty} @ ${_txvState.currency} ${p.toFixed(3)}
                                     </div>
                                 `;
@@ -2107,12 +2107,12 @@ function _txvRenderChart(containerEl, prices, range) {
                 }
                 
                 return `
-                    <div style="padding: 10px; background: #111827; border: 1px solid var(--border-color, rgba(255,255,255,0.1)); border-radius: 6px; font-family: monospace; font-size: 11px; color: #f8fafc; line-height: 1.5;">
-                        <div style="font-weight: bold; margin-bottom: 5px; color: #38bdf8;">${dateStr}</div>
-                        <div>Open:  <span style="float: right; margin-left: 15px; font-weight: bold;">${o}</span></div>
-                        <div>High:  <span style="float: right; margin-left: 15px; font-weight: bold; color: #10b981;">${h}</span></div>
-                        <div>Low:   <span style="float: right; margin-left: 15px; font-weight: bold; color: #ef4444;">${l}</span></div>
-                        <div>Close: <span style="float: right; margin-left: 15px; font-weight: bold; color: #38bdf8;">${c}</span></div>
+                    <div class="txv-tooltip-card">
+                        <div class="txv-tooltip-date">${dateStr}</div>
+                        <div class="txv-tooltip-row"><span>Open:</span><span class="txv-tooltip-value">${o}</span></div>
+                        <div class="txv-tooltip-row"><span>High:</span><span class="txv-tooltip-value high">${h}</span></div>
+                        <div class="txv-tooltip-row"><span>Low:</span><span class="txv-tooltip-value low">${l}</span></div>
+                        <div class="txv-tooltip-row"><span>Close:</span><span class="txv-tooltip-value close">${c}</span></div>
                         ${txHtml}
                     </div>
                 `;
