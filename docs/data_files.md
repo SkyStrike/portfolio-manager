@@ -28,7 +28,6 @@ This document provides a detailed catalog of the various JSON configuration, cac
   },
   "ui": {
     "page_width": "1800px",
-    "chart_height": "40vh",
     "font_size": "1em",
     "mobile_font_size": "0.8em",
     "colors": {
@@ -62,7 +61,6 @@ This document provides a detailed catalog of the various JSON configuration, cac
 
 #### UI Customization
 * **`ui.page_width`** (CSS string): Declares the desktop container constraint wrapper size.
-* **`ui.chart_height`** (CSS string): Sets the viewport height for the ChartJS rendering frames on the dashboard.
 * **`ui.font_size`** & **`ui.mobile_font_size`** (CSS strings): Scales base HTML REM sizing dynamically for responsive UI displays.
 * **`ui.colors`** (hex codes): Color tags mapping to metric cards:
   * `invested`: Colors representing original cost capital invested.
