@@ -353,5 +353,7 @@ def get_performance_report():
         "portfolio_data": portfolio_by_class_year_month,
         "cash_ytd": cash_ytd,
         "portfolio_ytd": dict(portfolio_ytd),
+        "broker_cash_data": data.get("broker_cash_data", {}),
+        "broker_cash_ytd": data.get("broker_cash_ytd", {}),
         "chart_data": chart_data
     }

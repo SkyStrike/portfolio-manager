@@ -303,6 +303,8 @@
             <button class="view-btn" :class="{ active: currentView === 'transactions' }" @click="currentView = 'transactions'">Transactions Log</button>
             <button class="view-btn" :class="{ active: currentView === 'calendar' }" @click="currentView = 'calendar'">Dividend Calendar</button>
             <button class="view-btn" :class="{ active: currentView === 'charts' }" @click="currentView = 'charts'">Charts</button>
+            <button class="view-btn" :class="{ active: currentView === 'performance' }" @click="currentView = 'performance'">Performance Report</button>
+            <button class="view-btn" :class="{ active: currentView === 'fdComparison' }" @click="currentView = 'fdComparison'">vs Fixed Deposits</button>
         </div>
 
         <!-- 1. ACTIVE HOLDINGS TAB VIEW -->
@@ -368,22 +370,22 @@
                     <h4>Daily Performance & Realized P/L<span v-if="summary.options_open_unrealized_profit_sgd !== null"> & Options Unrealized</span></h4>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; width: 100%;">
                         <div class="stat-item" style="border-top: none; padding-top: 0; margin-top: 0;">
-                            <span class="stat-label">Daily P/L (Stocks)</span>
+                            <span class="stat-label tooltip-trigger" data-tooltip="Unrealized profit/loss from stock movements today.">Daily P/L (Stocks)</span>
                             <span class="stat-value" :class="getValClass(summary.total_daily_sgd)" v-text="formatCommas(summary.total_daily_sgd, true) + ' SGD'"></span>
-                            <span class="stat-subvalue" :class="getValClass(summary.total_daily_pct)" v-text="'(' + formatPct(summary.total_daily_pct) + ')'"></span>
+                            <span class="stat-subvalue" :class="getValClass(summary.total_daily_pct)" v-text="'(' + formatPct(summary.total_daily_pct, true) + ')'"></span>
                         </div>
                         <div class="stat-item" style="border-top: none; padding-top: 0; margin-top: 0; border-left: 1px solid rgba(255,255,255,0.08); padding-left: 20px;">
-                            <span class="stat-label">Daily Realized P/L (Stocks)</span>
+                            <span class="stat-label tooltip-trigger" data-tooltip="Total realized profit/loss from stock sales executed today.">Daily Realized P/L (Stocks)</span>
                             <span class="stat-value" :class="getValClass(summary.daily_realized_pl_sgd)" v-text="formatCommas(summary.daily_realized_pl_sgd, true) + ' SGD'"></span>
                         </div>
                         <div v-if="summary.options_daily_realized_sgd !== null" class="stat-item" style="border-top: none; padding-top: 0; margin-top: 0; border-left: 1px solid rgba(255,255,255,0.08); padding-left: 20px;">
-                            <span class="stat-label">Daily Realized P/L (Options)</span>
+                            <span class="stat-label tooltip-trigger" data-tooltip="Total realized profit/loss from options closed today.">Daily Realized P/L (Options)</span>
                             <span class="stat-value" :class="getValClass(summary.options_daily_realized_sgd)" v-text="formatCommas(summary.options_daily_realized_sgd, true) + ' SGD'"></span>
                         </div>
                         <div v-if="summary.options_open_unrealized_profit_sgd !== null" class="stat-item" style="border-top: none; padding-top: 0; margin-top: 0; border-left: 1px solid rgba(255,255,255,0.08); padding-left: 20px;">
-                            <span class="stat-label">Open Options Unrealized P/L (Total)</span>
+                            <span class="stat-label tooltip-trigger" data-tooltip="Total current unrealized P/L of all open options.">Open Options Unrealized P/L (Total)</span>
                             <span class="stat-value" :class="getValClass(summary.options_open_unrealized_profit_sgd)" v-text="formatCommas(summary.options_open_unrealized_profit_sgd, true) + ' SGD'"></span>
-                            <span class="stat-subvalue" v-text="'(' + formatPct(summary.options_open_unrealized_profit_pct) + ')'"></span>
+                            <span class="stat-subvalue" v-text="'(' + formatPct(summary.options_open_unrealized_profit_pct, true) + ')'"></span>
                         </div>
                     </div>
                 </div>
@@ -405,17 +407,21 @@
                 <div class="stat-group">
                     <h4>Performance</h4>
                     <div class="stat-item">
-                        <span class="stat-label">Capital Gains</span>
+                        <span class="stat-label tooltip-trigger" data-tooltip="Capital gains excluding dividends">Capital Gains</span>
                         <span class="stat-value" :class="getValClass(summary.total_capital_gains_sgd)" v-text="formatCommas(summary.total_capital_gains_sgd) + ' SGD'"></span>
-                        <span class="stat-subvalue" :class="getValClass(summary.total_capital_gains_pct)" v-text="'(' + formatPct(summary.total_capital_gains_pct) + ')'"></span>
+                        <span class="stat-subvalue" :class="getValClass(summary.total_capital_gains_pct)" v-text="'(' + formatPct(summary.total_capital_gains_pct, true) + ')'"></span>
                     </div>
                 </div>
                 <div class="stat-group">
                     <h4>Outcome</h4>
+                    <div v-if="summary.options_profit_sgd && summary.options_profit_sgd !== 0" class="stat-item">
+                        <span class="stat-label tooltip-trigger" data-tooltip="Lifetime profit from options trading">Options Profit</span>
+                        <span class="stat-value" :class="getValClass(summary.options_profit_sgd)" v-text="formatCommas(summary.options_profit_sgd, true) + ' SGD'"></span>
+                    </div>
                     <div class="stat-item">
-                        <span class="stat-label">Total Returns (Lifetime)</span>
+                        <span class="stat-label tooltip-trigger" data-tooltip="Total gains including dividends, sale of stock, and closed options. Varies against actual due to floating rates calculation.">Total Returns (Lifetime) <span style="font-size: 0.75rem; vertical-align: middle;">📊</span></span>
                         <span class="stat-value" :class="getValClass(summary.lifetime_profit_sgd)" v-text="formatCommas(summary.lifetime_profit_sgd, true) + ' SGD'"></span>
-                        <span class="stat-subvalue" :class="getValClass(summary.lifetime_profit_sgd)" v-text="'(' + formatPct((summary.lifetime_profit_sgd / summary.total_invested_active_sgd * 100)) + ')'"></span>
+                        <span class="stat-subvalue" :class="getValClass(summary.lifetime_profit_sgd)" v-text="'(' + formatPct((summary.lifetime_profit_sgd / summary.total_invested_active_sgd * 100), true) + ')'"></span>
                     </div>
                 </div>
             </div>
@@ -432,23 +438,23 @@
                     <div class="stat-group">
                         <h4>Options Exposure & Risk</h4>
                         <div class="stat-item">
-                            <span class="stat-label">Open Options Max Loss</span>
+                            <span class="stat-label tooltip-trigger" data-tooltip="Maximum potential loss from all currently open stock options (vs Portfolio Value)">Open Options Max Loss</span>
                             <span class="stat-value neg-val" v-text="formatCommas(summary.options_open_max_loss_sgd) + ' SGD'"></span>
                             <span v-if="summary.total_market_value_sgd" class="stat-subvalue" v-text="'(' + formatPct(summary.options_open_max_loss_sgd / summary.total_market_value_sgd * 100) + ')'"></span>
                         </div>
                         <div v-if="summary.options_assignment_risk_sgd" class="stat-item">
-                            <span class="stat-label">Total Assignment Risk</span>
+                            <span class="stat-label tooltip-trigger" data-tooltip="Total cash required to take assignment of all open short put positions.">Total Assignment Risk</span>
                             <span class="stat-value neg-val" v-text="formatCommas(summary.options_assignment_risk_sgd) + ' SGD'"></span>
                         </div>
                         <div v-if="summary.options_open_potential_return_sgd !== null" class="stat-item">
-                            <span class="stat-label">Total Potential Return (R/R)</span>
+                            <span class="stat-label tooltip-trigger" data-tooltip="Total potential return from all open options (net premium collected vs risk).">Total Potential Return (R/R)</span>
                             <span class="stat-value pos-val" v-text="formatCommas(summary.options_open_potential_return_sgd) + ' SGD'"></span>
-                            <span class="stat-subvalue" v-text="'(' + formatPct(summary.options_open_potential_return_pct) + ')'"></span>
+                            <span class="stat-subvalue" v-text="'(' + formatPct(summary.options_open_potential_return_pct, true) + ')'"></span>
                         </div>
                         <div v-if="summary.options_open_unrealized_profit_sgd !== null" class="stat-item">
-                            <span class="stat-label">Total Unrealized Profit</span>
+                            <span class="stat-label tooltip-trigger" data-tooltip="Total current unrealized P/L of all open options.">Total Unrealized Profit</span>
                             <span class="stat-value" :class="getValClass(summary.options_open_unrealized_profit_sgd)" v-text="formatCommas(summary.options_open_unrealized_profit_sgd, true) + ' SGD'"></span>
-                            <span class="stat-subvalue" v-text="'(' + formatPct(summary.options_open_unrealized_profit_pct) + ')'"></span>
+                            <span class="stat-subvalue" v-text="'(' + formatPct(summary.options_open_unrealized_profit_pct, true) + ')'"></span>
                         </div>
                     </div>
 
@@ -460,11 +466,11 @@
                             <span class="stat-value" v-text="formatCommas(cashReport.cash_on_hand) + ' SGD'"></span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-label">Cash Coverage (ML)</span>
+                            <span class="stat-label tooltip-trigger" data-tooltip="Percentage of max loss covered by cash on hand.">Cash Coverage (ML)</span>
                             <span class="stat-value" v-text="((cashReport.cash_on_hand / summary.options_open_max_loss_sgd * 100).toFixed(1)) + '%'"></span>
                         </div>
                         <div v-if="summary.options_assignment_risk_sgd" class="stat-item">
-                            <span class="stat-label">Assignment Coverage</span>
+                            <span class="stat-label tooltip-trigger" data-tooltip="Percentage of total assignment risk covered by cash on hand.">Assignment Coverage</span>
                             <span class="stat-value" v-text="((cashReport.cash_on_hand / summary.options_assignment_risk_sgd * 100).toFixed(1)) + '%'"></span>
                         </div>
                         <div class="stat-item">
@@ -481,7 +487,7 @@
                             <span class="stat-value" v-text="formatCommas(cashReport.liquidation_value) + ' SGD'"></span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-label">Liquidation Coverage</span>
+                            <span class="stat-label tooltip-trigger" data-tooltip="Percentage of max loss covered by full liquidation value.">Liquidation Coverage</span>
                             <span class="stat-value" v-text="((cashReport.liquidation_value / summary.options_open_max_loss_sgd * 100).toFixed(1)) + '%'"></span>
                         </div>
                     </div>
@@ -491,7 +497,7 @@
                         <h4>Options Expiration Profile</h4>
                         <div class="stat-item risk-breakdown-container" style="border-top: none; padding-top: 0; margin-top: 0;">
                             <div class="risk-breakdown-header">
-                                <span class="stat-label">By Expiration (ML / AR)</span>
+                                <span class="stat-label tooltip-trigger" data-tooltip="Max Loss / Assignment Risk">By Expiration (ML / AR)</span>
                             </div>
                             <div v-for="item in summary.options_max_loss_by_expiry" :key="item.expiry_date" class="risk-breakdown-item">
                                 <span>{{ item.expiry_date }} ({{ item.dte }}D)</span>
@@ -541,9 +547,9 @@
                     <div class="stat-group">
                         <h4>Performance</h4>
                         <div class="stat-item">
-                            <span class="stat-label">Base Capital Gains</span>
+                            <span class="stat-label tooltip-trigger" data-tooltip="Cummulative Capital Gains">Base Capital Gains</span>
                             <span class="stat-value" :class="getValClass(cashReport.base_capital_gains)" v-text="formatCommas(cashReport.base_capital_gains) + ' SGD'"></span>
-                            <span class="stat-subvalue" :class="getValClass(cashReport.base_capital_gains_pct)" v-text="'(' + formatPct(cashReport.base_capital_gains_pct) + ')'"></span>
+                            <span class="stat-subvalue" :class="getValClass(cashReport.base_capital_gains_pct)" v-text="'(' + formatPct(cashReport.base_capital_gains_pct, true) + ')'"></span>
                         </div>
                         <div class="stat-item">
                             <span class="stat-label">Avg Returns per year</span>
@@ -584,7 +590,7 @@
                                         <td class="sensitive-value align-right" v-text="formatCommas(cashReport.details.ibkr.base_capital) + ' SGD'"></td>
                                         <td class="sensitive-value align-right" v-text="formatCommas(cashReport.details.ibkr.total_stock_value) + ' SGD'"></td>
                                         <td class="sensitive-value align-right" :class="getValClass(cashReport.details.ibkr.base_capital_gains)" v-text="formatCommas(cashReport.details.ibkr.base_capital_gains) + ' SGD'"></td>
-                                        <td class="align-right" :class="getValClass(cashReport.details.ibkr.base_capital_gains_pct)" v-text="formatPct(cashReport.details.ibkr.base_capital_gains_pct)"></td>
+                                        <td class="align-right" :class="getValClass(cashReport.details.ibkr.base_capital_gains_pct)" v-text="formatPct(cashReport.details.ibkr.base_capital_gains_pct, true)"></td>
                                     </tr>
                                     <tr v-if="cashReport.details && cashReport.details.moomoo">
                                         <td style="font-weight: 600;">MooMoo</td>
@@ -593,7 +599,7 @@
                                         <td class="sensitive-value align-right" v-text="formatCommas(cashReport.details.moomoo.base_capital) + ' SGD'"></td>
                                         <td class="sensitive-value align-right" v-text="formatCommas(cashReport.details.moomoo.total_stock_value) + ' SGD'"></td>
                                         <td class="sensitive-value align-right" :class="getValClass(cashReport.details.moomoo.base_capital_gains)" v-text="formatCommas(cashReport.details.moomoo.base_capital_gains) + ' SGD'"></td>
-                                        <td class="align-right" :class="getValClass(cashReport.details.moomoo.base_capital_gains_pct)" v-text="formatPct(cashReport.details.moomoo.base_capital_gains_pct)"></td>
+                                        <td class="align-right" :class="getValClass(cashReport.details.moomoo.base_capital_gains_pct)" v-text="formatPct(cashReport.details.moomoo.base_capital_gains_pct, true)"></td>
                                     </tr>
                                     <tr class="total-row">
                                         <td>Total Combined</td>
@@ -602,7 +608,7 @@
                                         <td class="sensitive-value align-right" v-text="formatCommas(cashReport.base_capital) + ' SGD'"></td>
                                         <td class="sensitive-value align-right" v-text="formatCommas(cashReport.total_stock_value) + ' SGD'"></td>
                                         <td class="sensitive-value align-right" :class="getValClass(cashReport.base_capital_gains)" v-text="formatCommas(cashReport.base_capital_gains) + ' SGD'"></td>
-                                        <td class="align-right" :class="getValClass(cashReport.base_capital_gains_pct)" v-text="formatPct(cashReport.base_capital_gains_pct)"></td>
+                                        <td class="align-right" :class="getValClass(cashReport.base_capital_gains_pct)" v-text="formatPct(cashReport.base_capital_gains_pct, true)"></td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -957,7 +963,7 @@
                                         <!-- Ticker Utilities Calculator Dropdown -->
                                         <div class="ticker-menu-container" style="position: relative; display: inline-block;">
                                             <button class="ticker-menu-btn" @click.stop="toggleMenuDisplay(p.symbol, $event)">⋮</button>
-                                            <div :id="'ticker-menu-' + p.symbol" class="ticker-menu-dropdown" v-show="activeMenu === p.symbol">
+                                            <div :id="'ticker-menu-' + p.symbol" class="ticker-menu-dropdown" :style="{ display: activeMenu === p.symbol ? 'block' : 'none' }">
                                                 <a href="javascript:void(0)" @click="triggerCalculator(p, u.title, $event)">🖩 Calculator</a>
                                             </div>
                                         </div>
@@ -1525,6 +1531,515 @@
             </div>
         </div>
 
+        <!-- 6. PERFORMANCE REPORT TAB VIEW -->
+        <div v-show="currentView === 'performance'">
+            <div v-if="!perfData" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                <div class="spinner" style="margin: 0 auto 15px auto;"></div>
+                <p>Loading Performance Report data...</p>
+            </div>
+            
+            <div v-else>
+                <h1 id="perf-top" style="margin-bottom: 20px; font-family: 'Outfit', sans-serif;">
+                    <span>Monthly Performance Report</span>
+                </h1>
+                
+                <!-- Performance Tabs Navigation -->
+                <div class="perf-tabs-container" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 25px; border-bottom: 1px solid var(--card-border); padding-bottom: 15px;">
+                    <button class="view-btn" :class="{ active: perfActiveTab === 'cash' }" @click="perfActiveTab = 'cash'">💰 Combined Net Worth</button>
+                    
+                    <button v-for="br in Object.keys(perfData.broker_cash_ytd || {})" 
+                            :key="br" 
+                            class="view-btn" 
+                            :class="{ active: perfActiveTab === 'cash-' + br.toLowerCase() }" 
+                            @click="perfActiveTab = 'cash-' + br.toLowerCase()">
+                        <span v-if="br === 'MOOMOO'">🐮</span>
+                        <span v-else-if="br === 'IBKR'">🏢</span>
+                        <span v-else>💼</span>
+                        {{ br }} Cash
+                    </button>
+                    
+                    <button class="view-btn" :class="{ active: perfActiveTab === 'portfolio' }" @click="perfActiveTab = 'portfolio'">📈 Classification Portfolios</button>
+                </div>
+                <!-- A/B: COMBINED NET WORTH OR BROKER CASH TAB -->
+                <div v-if="perfActiveTab === 'cash' || perfActiveTab.startsWith('cash-')">
+                    <div v-if="getActiveYtdData()" class="ytd-summary-container">
+                        <div class="ytd-block">
+                            <h3 style="font-family: 'Outfit', sans-serif; margin-bottom: 15px; font-size: 1.1rem; color: var(--accent-blue);">📅 Year-to-Date Performance Comparison ({{ getActiveYtdData().label }})</h3>
+                            <div class="ytd-table-scroll-wrapper">
+                                <table class="summary-table perf-table">
+                                    <thead>
+                                        <tr class="perf-table-header">
+                                            <th class="perf-th-left" style="text-align: left;">YTD Metrics</th>
+                                            <th v-for="year in perfData.years" :key="year" class="perf-th" style="text-align: right;">{{ year }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="perf-td-label" style="text-align: left;">Liquidation Value</td>
+                                            <td v-for="year in perfData.years" :key="year" style="text-align: right;">
+                                                <div v-if="getActiveYtdData().data[year]" style="display: flex; flex-direction: column; align-items: flex-end; font-size: 0.9em; line-height: 1.3;">
+                                                    <span style="color: #64748b; font-size: 0.85em;">{{ formatCommas(getActiveYtdData().data[year].liquidation_start) }}</span>
+                                                    <span style="font-weight: 600; color: #f8fafc;">{{ formatCommas(getActiveYtdData().data[year].liquidation_end) }}</span>
+                                                </div>
+                                                <span v-else style="color: #666;">-</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="sub-row-title" style="text-align: left; padding-left: 20px; color: #aaa;">- Liquidation Change (value)</td>
+                                            <td v-for="year in perfData.years" :key="year" style="text-align: right;">
+                                                <span v-if="getActiveYtdData().data[year]" :class="getValClass(getActiveYtdData().data[year].liquidation_val)">
+                                                    {{ formatCommas(getActiveYtdData().data[year].liquidation_val, true) }}
+                                                </span>
+                                                <span v-else style="color: #666;">-</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="sub-row-title" style="text-align: left; padding-left: 20px; color: #aaa;">- Liquidation Change (%)</td>
+                                            <td v-for="year in perfData.years" :key="year" style="text-align: right;">
+                                                <span v-if="getActiveYtdData().data[year]" :class="getValClass(getActiveYtdData().data[year].liquidation_pct)">
+                                                    {{ formatCommas(getActiveYtdData().data[year].liquidation_pct, true) }}%
+                                                </span>
+                                                <span v-else style="color: #666;">-</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="perf-td-label" style="text-align: left;">Base Capital</td>
+                                            <td v-for="year in perfData.years" :key="year" style="text-align: right;">
+                                                <div v-if="getActiveYtdData().data[year]" style="display: flex; flex-direction: column; align-items: flex-end; font-size: 0.9em; line-height: 1.3;">
+                                                    <span style="color: #64748b; font-size: 0.85em;">{{ formatCommas(getActiveYtdData().data[year].capital_start) }}</span>
+                                                    <span style="font-weight: 600; color: #f8fafc;">{{ formatCommas(getActiveYtdData().data[year].capital_end) }}</span>
+                                                </div>
+                                                <span v-else style="color: #666;">-</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="sub-row-title" style="text-align: left; padding-left: 20px; color: #aaa;">- Net Capital Additions</td>
+                                            <td v-for="year in perfData.years" :key="year" style="text-align: right;">
+                                                <span v-if="getActiveYtdData().data[year]" :class="getValClass(getActiveYtdData().data[year].capital_val)">
+                                                    {{ formatCommas(getActiveYtdData().data[year].capital_val, true) }}
+                                                </span>
+                                                <span v-else style="color: #666;">-</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="perf-td-label" style="text-align: left;">Net Portfolio Gains (Capital Return)</td>
+                                            <td v-for="year in perfData.years" :key="year" style="text-align: right;">
+                                                <div v-if="getActiveYtdData().data[year]" style="display: flex; flex-direction: column; align-items: flex-end; font-size: 0.9em; line-height: 1.3;">
+                                                    <span style="color: #64748b; font-size: 0.85em;">{{ formatCommas(getActiveYtdData().data[year].gains_start) }}</span>
+                                                    <span style="font-weight: 600; color: #f8fafc;">{{ formatCommas(getActiveYtdData().data[year].gains_end) }}</span>
+                                                </div>
+                                                <span v-else style="color: #666;">-</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="sub-row-title" style="text-align: left; padding-left: 20px; color: #aaa;">- Return Change (value)</td>
+                                            <td v-for="year in perfData.years" :key="year" style="text-align: right;">
+                                                <span v-if="getActiveYtdData().data[year]" :class="getValClass(getActiveYtdData().data[year].gains_val)">
+                                                    {{ formatCommas(getActiveYtdData().data[year].gains_val, true) }}
+                                                </span>
+                                                <span v-else style="color: #666;">-</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="sub-row-title" style="text-align: left; padding-left: 20px; color: #aaa;">- Return Change (%)</td>
+                                            <td v-for="year in perfData.years" :key="year" style="text-align: right;">
+                                                <span v-if="getActiveYtdData().data[year]" :class="getValClass(getActiveYtdData().data[year].gains_pct)">
+                                                    {{ formatCommas(getActiveYtdData().data[year].gains_pct, true) }}%
+                                                </span>
+                                                <span v-else style="color: #666;">-</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="perf-td-label" style="text-align: left;">Cash In Hand</td>
+                                            <td v-for="year in perfData.years" :key="year" style="text-align: right;">
+                                                <div v-if="getActiveYtdData().data[year]" style="display: flex; flex-direction: column; align-items: flex-end; font-size: 0.9em; line-height: 1.3;">
+                                                    <span style="color: #64748b; font-size: 0.85em;">{{ formatCommas(getActiveYtdData().data[year].cash_start) }}</span>
+                                                    <span style="font-weight: 600; color: #f8fafc;">{{ formatCommas(getActiveYtdData().data[year].cash_end) }}</span>
+                                                </div>
+                                                <span v-else style="color: #666;">-</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="perf-td-label" style="text-align: left;">Dividends Received (YTD)</td>
+                                            <td v-for="year in perfData.years" :key="year" style="text-align: right;">
+                                                <span v-if="getActiveYtdData().data[year]" class="pos-val" style="font-weight: 600;">
+                                                    {{ formatCommas(getActiveYtdData().data[year].dividends_received) }}
+                                                </span>
+                                                <span v-else style="color: #666;">-</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="year-nav-container" style="display: flex; gap: 8px; align-items: center; margin-bottom: 20px; margin-top: 30px;">
+                        <span class="year-nav-label">Select Year:</span>
+                        <button v-for="year in [...perfData.years].reverse()" 
+                                :key="year" 
+                                class="toggle-btn" 
+                                :class="{ active: perfSelectedYear === year }" 
+                                @click="perfSelectedYear = year">{{ year }}</button>
+                    </div>
+                    
+                    <div v-if="perfSelectedYear">
+                        <h2 style="font-size: 1.15rem; font-family: 'Outfit', sans-serif; margin-bottom: 15px;">{{ getActiveYtdData().label }} Summary - Year {{ perfSelectedYear }}</h2>
+                        <div class="monthly-table-scroll-wrapper" style="overflow-x: auto; background: rgba(255,255,255,0.01); border: 1px solid var(--card-border); border-radius: 8px; margin-bottom: 30px;">
+                            <table class="summary-table" style="width: 100%; min-width: 1100px; border-collapse: collapse; text-align: right; font-family: monospace;">
+                                <thead>
+                                    <tr style="background: rgba(255,255,255,0.03); border-bottom: 2px solid var(--card-border);">
+                                        <th style="text-align: left; padding: 12px; font-family: sans-serif;">Metrics</th>
+                                        <th v-for="m in calMonths" :key="m" style="padding: 12px; text-align: right;">{{ m.substring(0, 3) }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="row in [
+                                        { label: 'Liquidation Value', startKey: 'liquidation_value_start', endKey: 'liquidation_value' },
+                                        { label: 'Base Capital', startKey: 'base_capital_start', endKey: 'base_capital' },
+                                        { label: 'Total Stock Value', startKey: 'total_stock_value_start', endKey: 'total_stock_value' },
+                                        { label: 'Base Capital Gains', startKey: 'base_capital_gains_start', endKey: 'base_capital_gains' },
+                                        { label: 'Cash on Hand', startKey: 'cash_on_hand_start', endKey: 'cash_on_hand' }
+                                    ]" :key="row.label">
+                                        <td class="metric-label" style="text-align: left; font-weight: bold; background: rgba(255,255,255,0.02);">{{ row.label }}</td>
+                                        <td v-for="(m, m_idx) in calMonths" :key="m_idx">
+                                            <div v-if="getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1]" style="display: flex; flex-direction: column; align-items: flex-end; font-size: 0.9em; line-height: 1.3;">
+                                                <span style="color: #64748b; font-size: 0.85em;">{{ formatCommas(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1][row.startKey]) }}</span>
+                                                <span style="font-weight: 600; color: #f8fafc;">{{ formatCommas(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1][row.endKey]) }}</span>
+                                            </div>
+                                            <span v-else style="color: #666;">-</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="metric-label" style="text-align: left; font-weight: bold; background: rgba(255,255,255,0.02);">Dividends Received</td>
+                                        <td v-for="(m, m_idx) in calMonths" :key="m_idx">
+                                            <span v-if="getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1]">
+                                                {{ formatCommas(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].dividends_received) }}
+                                            </span>
+                                            <span v-else style="color: #666;">-</span>
+                                        </td>
+                                    </tr>
+                                    <tr class="header-row" style="background: rgba(255, 255, 255, 0.04); font-weight: bold;">
+                                        <td colspan="13" style="text-align: left; padding: 10px 12px;">Monthly Change</td>
+                                    </tr>
+                                    <tr v-for="metric in [
+                                        { l: 'Liquidation Value (value)', k: 'liquidation_value_val', p: false },
+                                        { l: 'Liquidation Value (%)', k: 'liquidation_value_pct', p: true },
+                                        { l: 'Base Capital (value)', k: 'base_capital_val', p: false },
+                                        { l: 'Base Capital (%)', k: 'base_capital_pct', p: true },
+                                        { l: 'Total Stock Value (value)', k: 'total_stock_value_val', p: false },
+                                        { l: 'Total Stock Value (%)', k: 'total_stock_value_pct', p: true },
+                                        { l: 'Base Capital Gains (value)', k: 'base_capital_gains_val', p: false },
+                                        { l: 'Base Capital Gains (%)', k: 'base_capital_gains_pct', p: true }
+                                    ]" :key="'chg-' + metric.k">
+                                        <td class="sub-row-title" style="text-align: left; padding-left: 20px; color: #aaa;">{{ metric.l }}</td>
+                                        <td v-for="(m, m_idx) in calMonths" :key="m_idx">
+                                            <span v-if="getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1] && getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].mtd"
+                                                  :class="getValClass(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].mtd[metric.k])">
+                                                {{ formatCommas(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].mtd[metric.k], true) }}{{ metric.p ? '%' : '' }}
+                                            </span>
+                                            <span v-else style="color: #666;">-</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- C: CLASSIFICATION PORTFOLIOS TAB -->
+                <div v-if="perfActiveTab === 'portfolio'">
+                    <div class="selector-wrapper" style="display: flex; align-items: center; gap: 10px; margin-bottom: 25px;">
+                        <label class="selector-label" style="font-weight: bold;">Select Classification:</label>
+                        <select v-model="perfSelectedClassification" class="selector-dropdown" style="padding: 8px 16px; background: #1e293b; color: white; border: 1px solid var(--card-border); border-radius: 6px; cursor: pointer; outline: none;">
+                            <option v-for="cls in perfData.classifications" :key="cls" :value="cls">{{ cls }}</option>
+                        </select>
+                    </div>
+                    
+                    <div v-if="perfSelectedClassification && perfData.portfolio_ytd[perfSelectedClassification]" class="ytd-summary-container">
+                        <div class="ytd-block">
+                            <h3 style="font-family: 'Outfit', sans-serif; margin-bottom: 15px; font-size: 1.1rem; color: var(--accent-blue);">📅 Year-to-Date Performance Comparison ({{ perfSelectedClassification }})</h3>
+                            <div class="ytd-table-scroll-wrapper">
+                                <table class="summary-table perf-table">
+                                    <thead>
+                                        <tr class="perf-table-header">
+                                            <th class="perf-th-left" style="text-align: left;">YTD Classification Metrics</th>
+                                            <th v-for="year in perfData.years" :key="year" class="perf-th" style="text-align: right;">{{ year }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="perf-td-label" style="text-align: left;">Beginning Invested Capital</td>
+                                            <td v-for="year in perfData.years" :key="year" style="text-align: right;">
+                                                <span v-if="perfData.portfolio_ytd[perfSelectedClassification][year]">
+                                                    {{ formatCommas(perfData.portfolio_ytd[perfSelectedClassification][year].invested_start) }}
+                                                </span>
+                                                <span v-else style="color: #666;">-</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="perf-td-label" style="text-align: left;">Ending Invested Capital</td>
+                                            <td v-for="year in perfData.years" :key="year" style="text-align: right;">
+                                                <span v-if="perfData.portfolio_ytd[perfSelectedClassification][year]">
+                                                    {{ formatCommas(perfData.portfolio_ytd[perfSelectedClassification][year].invested_end) }}
+                                                </span>
+                                                <span v-else style="color: #666;">-</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="sub-row-title" style="text-align: left; padding-left: 20px; color: #aaa;">- Capital Invested Change</td>
+                                            <td v-for="year in perfData.years" :key="year" style="text-align: right;">
+                                                <span v-if="perfData.portfolio_ytd[perfSelectedClassification][year]"
+                                                      :class="getValClass(perfData.portfolio_ytd[perfSelectedClassification][year].invested_val)">
+                                                    {{ formatCommas(perfData.portfolio_ytd[perfSelectedClassification][year].invested_val, true) }}
+                                                </span>
+                                                <span v-else style="color: #666;">-</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="perf-td-label" style="text-align: left;">Total Returns (value)</td>
+                                            <td v-for="year in perfData.years" :key="year" style="text-align: right;">
+                                                <span v-if="perfData.portfolio_ytd[perfSelectedClassification][year]"
+                                                      :class="getValClass(perfData.portfolio_ytd[perfSelectedClassification][year].returns_val)">
+                                                    {{ formatCommas(perfData.portfolio_ytd[perfSelectedClassification][year].returns_val, true) }}
+                                                </span>
+                                                <span v-else style="color: #666;">-</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="sub-row-title" style="text-align: left; padding-left: 20px; color: #aaa;">- Total Returns (%)</td>
+                                            <td v-for="year in perfData.years" :key="year" style="text-align: right;">
+                                                <span v-if="perfData.portfolio_ytd[perfSelectedClassification][year]"
+                                                      :class="getValClass(perfData.portfolio_ytd[perfSelectedClassification][year].returns_pct)">
+                                                    {{ formatCommas(perfData.portfolio_ytd[perfSelectedClassification][year].returns_pct, true) }}%
+                                                </span>
+                                                <span v-else style="color: #666;">-</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="perf-td-label" style="text-align: left;">Options Profit</td>
+                                            <td v-for="year in perfData.years" :key="year" style="text-align: right;">
+                                                <span v-if="perfData.portfolio_ytd[perfSelectedClassification][year]"
+                                                      :class="getValClass(perfData.portfolio_ytd[perfSelectedClassification][year].options_val)">
+                                                    {{ formatCommas(perfData.portfolio_ytd[perfSelectedClassification][year].options_val, true) }}
+                                                </span>
+                                                <span v-else style="color: #666;">-</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="perf-td-label" style="text-align: left;">Dividends Received</td>
+                                            <td v-for="year in perfData.years" :key="year" style="text-align: right;">
+                                                <span v-if="perfData.portfolio_ytd[perfSelectedClassification][year]">
+                                                    {{ formatCommas(perfData.portfolio_ytd[perfSelectedClassification][year].dividends_received) }}
+                                                </span>
+                                                <span v-else style="color: #666;">-</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="year-nav-container" style="display: flex; gap: 8px; align-items: center; margin-bottom: 20px; margin-top: 30px;">
+                        <span class="year-nav-label">Select Year:</span>
+                        <button v-for="year in [...perfData.years].reverse()" 
+                                :key="year" 
+                                class="toggle-btn" 
+                                :class="{ active: perfSelectedYear === year }" 
+                                @click="perfSelectedYear = year">{{ year }}</button>
+                    </div>
+                    
+                    <div v-if="perfSelectedClassification && perfSelectedYear">
+                        <h2 style="font-size: 1.15rem; font-family: 'Outfit', sans-serif; margin-bottom: 15px;">{{ perfSelectedClassification }} Performance - Year {{ perfSelectedYear }}</h2>
+                        <div class="monthly-table-scroll-wrapper" style="overflow-x: auto; background: rgba(255,255,255,0.01); border: 1px solid var(--card-border); border-radius: 8px; margin-bottom: 30px;">
+                            <table class="summary-table" style="width: 100%; min-width: 1100px; border-collapse: collapse; text-align: right; font-family: monospace;">
+                                <thead>
+                                    <tr style="background: rgba(255,255,255,0.03); border-bottom: 2px solid var(--card-border);">
+                                        <th style="text-align: left; padding: 12px; font-family: sans-serif;">Metrics</th>
+                                        <th v-for="m in calMonths" :key="m" style="padding: 12px; text-align: right;">{{ m.substring(0, 3) }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="row in [
+                                        { label: 'Total Invested', startKey: 'total_invested_start', endKey: 'total_invested' },
+                                        { label: 'Current Value', startKey: 'current_value_start', endKey: 'current_value' },
+                                        { label: 'Options Profit', startKey: 'options_profit_start', endKey: 'options_profit' },
+                                        { label: 'Total Returns', startKey: 'total_returns_start', endKey: 'total_returns' }
+                                    ]" :key="row.label">
+                                        <td class="metric-label" style="text-align: left; font-weight: bold; background: rgba(255,255,255,0.02);">{{ row.label }}</td>
+                                        <td v-for="(m, m_idx) in calMonths" :key="m_idx">
+                                            <div v-if="perfData.portfolio_data[perfSelectedClassification] && perfData.portfolio_data[perfSelectedClassification][perfSelectedYear] && perfData.portfolio_data[perfSelectedClassification][perfSelectedYear][m_idx + 1]" style="display: flex; flex-direction: column; align-items: flex-end; font-size: 0.9em; line-height: 1.3;">
+                                                <span style="color: #64748b; font-size: 0.85em;">{{ formatCommas(perfData.portfolio_data[perfSelectedClassification][perfSelectedYear][m_idx + 1][row.startKey]) }}</span>
+                                                <span style="font-weight: 600; color: #f8fafc;">{{ formatCommas(perfData.portfolio_data[perfSelectedClassification][perfSelectedYear][m_idx + 1][row.endKey]) }}</span>
+                                            </div>
+                                            <span v-else style="color: #666;">-</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="metric-label" style="text-align: left; font-weight: bold; background: rgba(255,255,255,0.02);">Dividends Received</td>
+                                        <td v-for="(m, m_idx) in calMonths" :key="m_idx">
+                                            <span v-if="perfData.portfolio_data[perfSelectedClassification] && perfData.portfolio_data[perfSelectedClassification][perfSelectedYear] && perfData.portfolio_data[perfSelectedClassification][perfSelectedYear][m_idx + 1]">
+                                                {{ formatCommas(perfData.portfolio_data[perfSelectedClassification][perfSelectedYear][m_idx + 1].dividends_received) }}
+                                            </span>
+                                            <span v-else style="color: #666;">-</span>
+                                        </td>
+                                    </tr>
+                                    <tr class="header-row" style="background: rgba(255, 255, 255, 0.04); font-weight: bold;">
+                                        <td colspan="13" style="text-align: left; padding: 10px 12px;">Monthly Change</td>
+                                    </tr>
+                                    <tr v-for="metric in [
+                                        { l: 'Total Returns (value)', k: 'total_returns_val', p: false },
+                                        { l: 'Total Returns (%)', k: 'total_returns_pct', p: true },
+                                        { l: 'Capital Invested (value)', k: 'capital_invested_val', p: false },
+                                        { l: 'Capital Invested (%)', k: 'capital_invested_pct', p: true },
+                                        { l: 'Current Value (value)', k: 'current_value_val', p: false },
+                                        { l: 'Current Value (%)', k: 'current_value_pct', p: true },
+                                        { l: 'Options Profit (value)', k: 'options_profit_val', p: false },
+                                        { l: 'Options Profit (%)', k: 'options_profit_pct', p: true },
+                                        { l: 'Dividends Received (value)', k: 'dividends_received_val', p: false },
+                                        { l: 'Dividends Received (%)', k: 'dividends_received_pct', p: true }
+                                    ]" :key="'portmetric-' + metric.k">
+                                        <td class="sub-row-title" style="text-align: left; padding-left: 20px; color: #aaa;">{{ metric.l }}</td>
+                                        <td v-for="(m, m_idx) in calMonths" :key="m_idx">
+                                            <span v-if="perfData.portfolio_data[perfSelectedClassification] && perfData.portfolio_data[perfSelectedClassification][perfSelectedYear] && perfData.portfolio_data[perfSelectedClassification][perfSelectedYear][m_idx + 1] && perfData.portfolio_data[perfSelectedClassification][perfSelectedYear][m_idx + 1].mtd"
+                                                  :class="getValClass(perfData.portfolio_data[perfSelectedClassification][perfSelectedYear][m_idx + 1].mtd[metric.k])">
+                                                {{ formatCommas(perfData.portfolio_data[perfSelectedClassification][perfSelectedYear][m_idx + 1].mtd[metric.k], true) }}{{ metric.p ? '%' : '' }}
+                                            </span>
+                                            <span v-else style="color: #666;">-</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 7. FIXED DEPOSIT COMPARISON VIEW -->
+        <div v-show="currentView === 'fdComparison'">
+            <div class="header-action-container" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 25px;">
+                <h1>vs Fixed Deposits (Alternative Cash Analysis)</h1>
+            </div>
+
+            <div class="fd-comparison-layout">
+                <!-- Top Summary KPI Grid -->
+                <div class="fd-kpi-grid">
+                    <div class="fd-kpi-card">
+                        <div class="fd-kpi-title">Simulated FD Portfolio Value</div>
+                        <div class="fd-kpi-value" v-text="formatFdCurrency(fdData?.summary?.total_fd_value)"></div>
+                    </div>
+                    <div class="fd-kpi-card">
+                        <div class="fd-kpi-title">Current Portfolio Market Value</div>
+                        <div class="fd-kpi-value" v-text="formatFdCurrency(fdData?.summary?.total_market_value)"></div>
+                    </div>
+                    <div class="fd-kpi-card">
+                        <div class="fd-kpi-title">FD vs Market Difference</div>
+                        <div class="fd-kpi-value" :class="getFdValClass(fdData?.summary?.delta_value)" v-text="formatFdCurrency(fdData?.summary?.delta_value) + ' (' + formatPct(fdData?.summary?.delta_pct, true) + ')'"></div>
+                    </div>
+                </div>
+
+                <!-- Controls and Assumptions Row -->
+                <div class="fd-controls-row">
+                    <!-- Controls Card -->
+                    <div class="fd-card">
+                        <h4 class="fd-card-title">Simulator Settings</h4>
+                        
+                        <div class="fd-form-group">
+                            <span class="fd-form-label">Simulation Mode</span>
+                            <div class="fd-btn-group">
+                                <button class="fd-toggle-btn" :class="{ active: fdRateMode === 'fixed' }" @click="setFdRateMode('fixed')">Simplistic Fixed Rate</button>
+                                <button class="fd-toggle-btn" :class="{ active: fdRateMode === 'csv' }" @click="setFdRateMode('csv')">CSV Rates File (Upload)</button>
+                            </div>
+                        </div>
+
+                        <!-- Fixed Rate Input -->
+                        <div class="fd-form-group" v-show="fdRateMode === 'fixed'">
+                            <label class="fd-form-label" for="fd-fixed-rate-input">Annual FD Interest Rate (%)</label>
+                            <input type="number" id="fd-fixed-rate-input" class="fd-input" v-model.number="fdFixedRate" step="0.05" min="0" @change="fetchFdComparison">
+                        </div>
+
+                        <!-- CSV Upload Input -->
+                        <div class="fd-form-group" v-show="fdRateMode === 'csv'">
+                            <div class="fd-upload-header">
+                                <span class="fd-form-label fd-upload-label">Upload FD Rates CSV File</span>
+                                <a href="static/rates.csv" download="rates.csv" class="fd-reference-link">⬇️ Reference CSV</a>
+                            </div>
+                            <div class="fd-file-upload">
+                                <input type="file" id="fd-csv-file-input" class="fd-file-input" accept=".csv" @change="handleFdFileSelected">
+                                <div class="fd-upload-btn">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="17 8 12 3 7 8"></polyline>
+                                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                                    </svg>
+                                    <span v-text="fdFileName || 'Choose CSV File...'"></span>
+                                </div>
+                            </div>
+                            <div class="fd-upload-status" style="display: block;" v-if="fdFileUploaded">File uploaded successfully in-memory.</div>
+                        </div>
+                    </div>
+
+                    <!-- Assumptions Card -->
+                    <div class="fd-card">
+                        <h4 class="fd-card-title">Simulator Core Assumptions</h4>
+                        <ul class="fd-assumptions-list">
+                            <li><strong>1-Year Lock-in</strong>: All fixed deposits run for exactly 12 months.</li>
+                            <li><strong>Shifted Availability</strong>: Base capital additions are shifted forward by 1 month to set the start date (placed on the 1st).</li>
+                            <li><strong>No Withdrawals</strong>: Assumes zero cash withdrawals out of the capital.</li>
+                            <li><strong>Maturity Payouts</strong>: Interest earned is generated and paid out only on maturity (end of 1 year).</li>
+                            <li><strong>Auto Rollover</strong>: On maturity, matured principal and earned interest are immediately rolled into another 1-year FD at the new rate.</li>
+                            <li><strong>No Minimum sum limits</strong>: No minimum balance restrictions apply to opening FDs.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Comparison Table Card -->
+                <div class="fd-table-container" style="overflow-x: auto; margin-top: 20px;">
+                    <h4 class="fd-card-title" style="margin-bottom: 15px; border-bottom: none; padding-bottom: 0;">Month-By-Month Comparison Table</h4>
+                    <table class="fd-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th style="text-align: right;">Injected This Month</th>
+                                <th style="text-align: right;">Total Principal Injected</th>
+                                <th style="text-align: center;">Effective FD Rate</th>
+                                <th style="text-align: right;">Interest Earned (Month)</th>
+                                <th style="text-align: right;">Accum. Interest Received</th>
+                                <th style="text-align: right;">Current FD Value</th>
+                                <th style="text-align: right;">Actual Market Value</th>
+                                <th style="text-align: right;">FD vs Market Delta</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-if="!fdData">
+                                <td colspan="9" style="text-align: center; padding: 30px; color: var(--text-secondary);">Loading simulation data...</td>
+                            </tr>
+                            <tr v-else v-for="row in fdData.rows" :key="row.date">
+                                <td><strong>{{ row.date }}</strong></td>
+                                <td style="text-align: right;">{{ row.capital_injected > 0 ? formatFdCurrency(row.capital_injected) : '-' }}</td>
+                                <td style="text-align: right;">{{ formatFdCurrency(row.total_capital_injected) }}</td>
+                                <td style="text-align: center;">{{ (row.effective_rate * 100).toFixed(2) }}%</td>
+                                <td style="text-align: right;">{{ row.interest_earned > 0 ? formatFdCurrency(row.interest_earned) : '-' }}</td>
+                                <td style="text-align: right;">{{ row.accum_interest > 0 ? formatFdCurrency(row.accum_interest) : '-' }}</td>
+                                <td style="text-align: right;">{{ formatFdCurrency(row.fd_value) }}</td>
+                                <td style="text-align: right;">{{ row.market_value !== null ? formatFdCurrency(row.market_value) : 'N/A' }}</td>
+                                <td style="text-align: right;" :class="getFdValClass(row.delta_val)">
+                                    <template v-if="row.delta_val !== null">
+                                        {{ formatFdCurrency(row.delta_val) }} ({{ formatPct(row.delta_pct, true) }})
+                                    </template>
+                                    <template v-else>
+                                        N/A
+                                    </template>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <!-- 5. CHARTS TAB VIEW -->
         <div v-show="currentView === 'charts'">
             <!-- Allocation Overview -->
@@ -1884,7 +2399,21 @@
                 
                 // Transactions History fields
                 showTxChart: false,
-                txSearch: ''
+                txSearch: '',
+                
+                // Performance Report fields
+                perfData: null,
+                perfActiveTab: 'cash',
+                perfSelectedYear: null,
+                perfSelectedClassification: null,
+
+                // Fixed Deposit Comparison fields
+                fdData: null,
+                fdRateMode: 'fixed',
+                fdFixedRate: 2.0,
+                fdFileName: '',
+                fdFileUploaded: false,
+                fdFile: null
             }
         },
         computed: {
@@ -2405,6 +2934,14 @@
                     this.$nextTick(() => {
                         this.initGlobalCharts();
                     });
+                } else if (newView === 'performance') {
+                    if (!this.perfData) {
+                        this.fetchPerformanceReport();
+                    }
+                } else if (newView === 'fdComparison') {
+                    if (!this.fdData) {
+                        this.fetchFdComparison();
+                    }
                 }
             },
             txSearch() {
@@ -2428,6 +2965,95 @@
                 } catch (error) {
                     console.error("Error loading portfolio data:", error);
                 }
+            },
+            setFdRateMode(mode) {
+                this.fdRateMode = mode;
+                this.fetchFdComparison();
+            },
+            handleFdFileSelected(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    this.fdFileName = file.name;
+                    this.fdFile = file;
+                    this.fdFileUploaded = true;
+                    this.fetchFdComparison();
+                }
+            },
+            async fetchFdComparison() {
+                const formData = new FormData();
+                formData.append("rate_mode", this.fdRateMode);
+                formData.append("fixed_rate", this.fdFixedRate);
+                if (this.fdRateMode === 'csv' && this.fdFile) {
+                    formData.append("file", this.fdFile);
+                }
+                try {
+                    const res = await fetch('api/analytics/fd-comparison', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    if (res.ok) {
+                        this.fdData = await res.json();
+                    }
+                } catch (err) {
+                    console.error("Failed to fetch FD simulation data", err);
+                }
+            },
+            formatFdCurrency(val) {
+                if (val === null || val === undefined) return "-";
+                return (val >= 0 ? "" : "-") + "SG$ " + Math.abs(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            },
+            getFdValClass(val) {
+                if (val === null || val === undefined) return '';
+                return parseFloat(val) >= 0 ? 'fd-delta-positive' : 'fd-delta-negative';
+            },
+            async fetchPerformanceReport() {
+                try {
+                    const res = await fetch("api/reports/performance");
+                    if (res.ok) {
+                        this.perfData = await res.json();
+                        if (this.perfData && this.perfData.years && this.perfData.years.length > 0) {
+                            this.perfSelectedYear = this.perfData.years[this.perfData.years.length - 1];
+                        }
+                        if (this.perfData && this.perfData.classifications && this.perfData.classifications.length > 0) {
+                            this.perfSelectedClassification = this.perfData.classifications[0];
+                        }
+                    }
+                } catch (e) {
+                    console.error("Error fetching performance report:", e);
+                }
+            },
+            formatStartEnd(startVal, endVal) {
+                if (startVal === undefined || startVal === null) startVal = '-';
+                else startVal = this.formatCommas(startVal);
+                
+                if (endVal === undefined || endVal === null) endVal = '-';
+                else endVal = this.formatCommas(endVal);
+                
+                return { start: startVal, end: endVal };
+            },
+            getMonthlyMetricsForActiveTab(year) {
+                if (!this.perfData) return {};
+                if (this.perfActiveTab === 'cash') {
+                    return this.perfData.cash_data[year] || {};
+                } else if (this.perfActiveTab.startsWith('cash-')) {
+                    const br = this.perfActiveTab.substring(5).toUpperCase();
+                    if (this.perfData.broker_cash_data && this.perfData.broker_cash_data[br]) {
+                        return this.perfData.broker_cash_data[br][year] || {};
+                    }
+                }
+                return {};
+            },
+            getActiveYtdData() {
+                if (!this.perfData) return null;
+                if (this.perfActiveTab === 'cash') {
+                    return { label: 'Combined Net Worth', data: this.perfData.cash_ytd || {} };
+                } else if (this.perfActiveTab.startsWith('cash-')) {
+                    const br = this.perfActiveTab.substring(5).toUpperCase();
+                    if (this.perfData.broker_cash_ytd && this.perfData.broker_cash_ytd[br]) {
+                        return { label: br + ' Cash', data: this.perfData.broker_cash_ytd[br] || {} };
+                    }
+                }
+                return null;
             },
             getClosedExitValue(p) {
                 if (!p.transactions) return 0;
@@ -2682,10 +3308,10 @@
                 const sign = includeSign && num > 0 ? '+' : '';
                 return `${sign}${formatted}`;
             },
-            formatPct(val) {
+            formatPct(val, includeSign = false) {
                 if (val === null || val === undefined) return '0.00%';
                 const num = parseFloat(val);
-                const sign = num > 0 ? '+' : '';
+                const sign = (includeSign && num > 0) ? '+' : '';
                 return `${sign}${num.toFixed(2)}%`;
             },
             getValClass(val) {
@@ -3131,6 +3757,20 @@
                 navHist.addEventListener("click", (e) => {
                     e.preventDefault();
                     this.currentView = 'transactions';
+                });
+            }
+            const navPerf = document.getElementById("nav-perf-main");
+            if (navPerf) {
+                navPerf.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    this.currentView = 'performance';
+                });
+            }
+            const navFd = document.getElementById("nav-fd-comparison");
+            if (navFd) {
+                navFd.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    this.currentView = 'fdComparison';
                 });
             }
 
