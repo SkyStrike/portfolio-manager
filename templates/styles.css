@@ -1718,6 +1718,7 @@ body.mask-values .sensitive-value::after {
     max-width: 1600px !important;
     width: 94vw;
     padding: 1.5rem;
+    position: relative;
 }
 
 /* Modal header row */
@@ -1813,13 +1814,19 @@ body.mask-values .sensitive-value::after {
 }
 
 .txv-status {
-    font-size: 0.82rem;
-    color: var(--text-secondary, #94a3b8);
-    text-align: center;
-}
-.txv-status:not(:empty) {
-    min-height: 20px;
-    margin-bottom: 8px;
+    position: absolute;
+    top: 55%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 100;
+    font-size: 0.88rem;
+    color: #f8fafc;
+    background: rgba(17, 24, 39, 0.95);
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+    pointer-events: none;
 }
 .txv-status:empty {
     display: none;

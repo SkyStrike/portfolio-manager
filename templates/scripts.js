@@ -1743,11 +1743,11 @@ window.openTxVisualizer = async function(btnEl) {
 
     // Reset active range button
     document.querySelectorAll(".txv-range-btn").forEach(b => {
-        b.classList.toggle("txv-range-active", b.dataset.range === "1y");
+        b.classList.toggle("txv-range-active", b.dataset.range === "6m");
     });
 
     openModal("txv-modal");
-    await _txvLoadAndRender("1y");
+    await _txvLoadAndRender("6m");
 };
 
 window.closeTxVisualizer = function() {
@@ -1825,10 +1825,6 @@ async function _txvLoadAndRender(range, customStart = null, customEnd = null) {
 
     statusEl.textContent = "Loading price history…";
 
-    // Destroy old chart
-    if (_txvChart) { _txvChart.destroy(); _txvChart = null; }
-    containerEl.innerHTML = "";
-
     let prices = [];
     try {
         let url = `/api/prices/history/${encodeURIComponent(_txvState.symbol)}?range=${range}`;
@@ -1854,6 +1850,7 @@ async function _txvLoadAndRender(range, customStart = null, customEnd = null) {
     }
     statusEl.textContent = "";
 
+    // Invoke render function without clearing or destroying the existing canvas
     _txvRenderChart(containerEl, prices, range);
 }
 
@@ -2125,6 +2122,11 @@ function _txvRenderChart(containerEl, prices, range) {
         legend:    { show: false }
     };
 
-    _txvChart = new ApexCharts(containerEl, options);
-    _txvChart.render();
+    if (_txvChart) {
+        _txvChart.updateOptions(options);
+    } else {
+        containerEl.innerHTML = "";
+        _txvChart = new ApexCharts(containerEl, options);
+        _txvChart.render();
+    }
 }
