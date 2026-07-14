@@ -389,8 +389,12 @@ li {
     border-radius: 8px;
     padding: 20px 20px 30px 20px;
     margin-bottom: 30px;
-    min-height: {{CHART_HEIGHT}};
+    min-height: 440px;
     /* max-height: {{CHART_HEIGHT}}; */
+}
+
+.chart-container.full-width {
+    min-height: 540px;
 }
 
 .chart-controls {
