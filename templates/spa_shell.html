@@ -329,6 +329,11 @@
                         </button>
                     </div>
                 </div>
+                <a href="#detailed-holdings-breakdown" class="back-to-toc" title="Jump to Detailed Holdings Breakdown">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </a>
             </h1>
 
             <!-- Report Info & Sources (Metadata bar) -->
@@ -751,6 +756,11 @@
             <!-- Table of Contents (TOC) View Switcher -->
             <h1 id="detailed-holdings-breakdown">
                 Detailed Holdings Breakdown
+                <a href="#top" class="back-to-toc" title="Return to Top">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="18 15 12 9 6 15"></polyline>
+                    </svg>
+                </a>
             </h1>
             <div class="toc-controls" style="margin-bottom: 20px;">
                 <button class="view-btn" :class="{ active: tocView === 'list' }" @click="tocView = 'list'">List View</button>
@@ -1202,7 +1212,7 @@
         <div v-show="currentView === 'closed'">
             <div class="report-container" style="display: flex; gap: 25px; flex-wrap: wrap;">
                 <!-- Sidebar Flat TOC -->
-                <div class="sidebar" style="flex: 1 1 300px; max-width: 400px; min-width: 280px; background: rgba(22, 28, 45, 0.45); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px; max-height: 80vh; overflow-y: auto;">
+                <div class="sidebar" style="flex: 1 1 300px; max-width: 400px; min-width: 280px; background: rgba(22, 28, 45, 0.45); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px;">
                     <h1 id="table-of-contents" style="font-size: 1.15rem; margin-top: 0; margin-bottom: 20px; font-family: 'Outfit', sans-serif;">Table of Contents</h1>
                     
                     <div class="search-container" style="margin-bottom: 20px;">
@@ -1212,9 +1222,9 @@
                     </div>
 
                     <div class="toc-closed-nav">
-                        <div v-for="(yr_data, year) in closedReport.toc" :key="year" style="margin-bottom: 20px;">
+                        <div v-for="yr_data in closedReport.toc" :key="yr_data.year" style="margin-bottom: 20px;">
                             <div class="toc-year" style="font-weight: 700; font-size: 0.95rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; margin-bottom: 8px; display: flex; justify-content: space-between;">
-                                <span>{{ year }}</span>
+                                <span>{{ yr_data.year }}</span>
                                 <small>(<span :class="getValClass(yr_data.total_gl)">{{ formatCommas(yr_data.total_gl, true) }} SGD</span>)</small>
                             </div>
                             <div v-for="(data, month) in yr_data.months" :key="month" style="margin-bottom: 10px; margin-left: 10px;">
@@ -2145,7 +2155,7 @@
                 });
                 
                 const sortedYears = Object.keys(hierarchy).sort().reverse();
-                const toc = {};
+                const tocList = [];
                 const body = [];
                 
                 sortedYears.forEach(yr => {
@@ -2158,13 +2168,8 @@
                         return mB - mA;
                     });
                     months.forEach(mo => {
-                        const getLastSellDate = (p) => {
-                            const sellTxs = p.transactions ? p.transactions.filter(t => t.action === 'Sell') : [];
-                            if (sellTxs.length === 0) return "1970-01-01";
-                            return sellTxs.map(t => t.date).sort().reverse()[0] || "1970-01-01";
-                        };
                         const positions = hierarchy[yr][mo].sort((a, b) => {
-                            return getLastSellDate(b).localeCompare(getLastSellDate(a));
+                            return (b.sgd_metrics?.profit_sgd || 0) - (a.sgd_metrics?.profit_sgd || 0);
                         });
                         
                         const moProfit = positions.reduce((sum, p) => sum + (p.sgd_metrics?.profit_sgd || 0), 0);
@@ -2182,13 +2187,14 @@
                         body.push(monthSection);
                     });
                     
-                    toc[yr] = {
+                    tocList.push({
+                        year: yr,
                         total_gl: yrProfit,
                         months: monthsData
-                    };
+                    });
                 });
                 
-                return { toc, body };
+                return { toc: tocList, body };
             }
         },
         watch: {
