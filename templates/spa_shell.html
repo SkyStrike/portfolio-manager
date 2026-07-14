@@ -299,8 +299,10 @@
         <!-- Tab selector controls styled exactly like standard TOC/chart buttons -->
         <div class="toc-controls" style="margin-bottom: 25px;">
             <button class="view-btn" :class="{ active: currentView === 'dashboard' }" @click="currentView = 'dashboard'">Active Holdings</button>
+            <button class="view-btn" :class="{ active: currentView === 'closed' }" @click="currentView = 'closed'">Closed Positions</button>
             <button class="view-btn" :class="{ active: currentView === 'transactions' }" @click="currentView = 'transactions'">Transactions Log</button>
             <button class="view-btn" :class="{ active: currentView === 'calendar' }" @click="currentView = 'calendar'">Dividend Calendar</button>
+            <button class="view-btn" :class="{ active: currentView === 'charts' }" @click="currentView = 'charts'">Charts</button>
         </div>
 
         <!-- 1. ACTIVE HOLDINGS TAB VIEW -->
@@ -1069,8 +1071,8 @@
 
                             <!-- Expandable history dropdown lists (Transactions & Income) -->
                             <div class="symbol-card-lower" style="margin-top: 15px;">
-                                <div class="tx-section-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 6px;">
-                                    <h3 style="margin: 0; font-size: 1rem;">Ledger History</h3>
+                                <div class="tx-section-header">
+                                    <h3>Transactions</h3>
                                     <!-- Transaction Visualizer Button -->
                                     <button class="txv-trigger-btn"
                                             :data-symbol="p.symbol"
@@ -1109,7 +1111,7 @@
 
                                 <!-- Income / Dividends section grouped by year -->
                                 <div style="margin-top: 20px;">
-                                    <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;">Income</h4>
+                                    <h3 class="tx-section-header" style="margin-top: 25px; margin-bottom: 8px;">Income Dividends</h3>
                                     <p v-if="!p.income || p.income.length === 0" style="color: var(--text-secondary); font-size: 0.85rem;">No income records.</p>
                                     <template v-else>
                                         <details v-for="grp in getGroupedIncome(p.income, p.yearly_income_summaries)" :key="grp.year" style="margin-top: 8px;">
@@ -1192,6 +1194,379 @@
                     </template>
                 </tbody>
             </table>
+        </div>
+
+        </div>
+
+        <!-- 4. CLOSED HOLDINGS TAB VIEW -->
+        <div v-show="currentView === 'closed'">
+            <div class="report-container" style="display: flex; gap: 25px; flex-wrap: wrap;">
+                <!-- Sidebar Flat TOC -->
+                <div class="sidebar" style="flex: 1 1 300px; max-width: 400px; min-width: 280px; background: rgba(22, 28, 45, 0.45); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px; max-height: 80vh; overflow-y: auto;">
+                    <h1 id="table-of-contents" style="font-size: 1.15rem; margin-top: 0; margin-bottom: 20px; font-family: 'Outfit', sans-serif;">Table of Contents</h1>
+                    
+                    <div class="search-container" style="margin-bottom: 20px;">
+                        <div class="search-wrapper">
+                            <input type="text" v-model="closedSearch" placeholder="Search closed symbols..." style="background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); padding: 8px 12px; border-radius: 6px; color: var(--text-primary); width: 100%; outline: none; font-size: 0.85rem;">
+                        </div>
+                    </div>
+
+                    <div class="toc-closed-nav">
+                        <div v-for="(yr_data, year) in closedReport.toc" :key="year" style="margin-bottom: 20px;">
+                            <div class="toc-year" style="font-weight: 700; font-size: 0.95rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; margin-bottom: 8px; display: flex; justify-content: space-between;">
+                                <span>{{ year }}</span>
+                                <small>(<span :class="getValClass(yr_data.total_gl)">{{ formatCommas(yr_data.total_gl, true) }} SGD</span>)</small>
+                            </div>
+                            <div v-for="(data, month) in yr_data.months" :key="month" style="margin-bottom: 10px; margin-left: 10px;">
+                                <div class="toc-month" onclick="this.classList.toggle('active')" style="font-weight: 600; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 6px; display: flex; justify-content: space-between; cursor: pointer;">
+                                    <span>📅 {{ month }} ({{ data.positions.length }} tickers)</span>
+                                    <small>(<span :class="getValClass(data.total_gl)">{{ formatCommas(data.total_gl, true) }} SGD</span>)</small>
+                                </div>
+                                <div class="toc-month-content">
+                                    <ul style="list-style: none; padding-left: 10px; margin: 0;">
+                                        <li v-for="p in data.positions" :key="p.symbol" style="margin-bottom: 6px; font-size: 0.8rem;">
+                                            <a :href="'#' + slugify(p.symbol)" style="text-decoration: none; display: flex; justify-content: space-between; color: var(--text-primary);">
+                                                <span style="font-weight: 600;">{{ p.symbol }}</span>
+                                                <span :class="getValClass(p.sgd_metrics.profit_sgd)">
+                                                    {{ formatCommas(p.sgd_metrics.profit_sgd, true) }} SGD, {{ p.metrics.roi_pct.toFixed(2) }}%
+                                                </span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Contents -->
+                <div class="main-content" style="flex: 2 1 600px; min-width: 320px;">
+                    <div v-for="group in closedReport.body" :key="group.title" class="report-group" style="margin-bottom: 45px;">
+                        <h2 style="background: rgba(22, 28, 45, 0.65); padding: 12px 20px; border-radius: 8px; border-left: 5px solid #8b5cf6; display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; font-family: 'Outfit', sans-serif;">
+                            <span>{{ group.year }} – {{ group.month_name }}</span>
+                            <small :class="getValClass(group.total_gl)" style="font-size: 1.1rem; font-weight: 700;">{{ formatCommas(group.total_gl, true) }} SGD</small>
+                        </h2>
+                        
+                        <!-- Loop symbol card positions -->
+                        <div v-for="p in group.positions" :key="p.symbol" :id="slugify(p.symbol)" style="margin-bottom: 45px; background: rgba(22, 28, 45, 0.15); border: 1px solid var(--card-border); border-radius: 12px; padding: 25px;">
+                            <h2 class="symbol-card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <div class="header-content">
+                                    <div class="title" style="display: flex; align-items: center; gap: 8px;">
+                                        <span v-text="p.symbol" style="font-size: 1.4rem; font-family: 'Outfit', sans-serif; font-weight: bold; color: var(--text-primary);"></span>
+                                        <span class="augmented-badge" style="background: rgba(142, 68, 173, 0.12); color: #9b59b6; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px;">Closed</span>
+                                    </div>
+                                    <div class="subtitle" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">
+                                        ROI: <span :class="getValClass(p.metrics.roi_pct)" style="font-weight: 600;">{{ formatCommas(p.metrics.roi_pct, true) }}%</span>
+                                    </div>
+                                </div>
+                            </h2>
+
+                            <!-- 4-Column Stat Matrix -->
+                            <div class="symbol-card-upper" style="margin-top: 20px; margin-bottom: 25px;">
+                                <div class="symbol-stats-grid">
+                                    <!-- Position Column -->
+                                    <div class="stat-group">
+                                        <h4>Position</h4>
+                                        <div class="stat-item">
+                                            <span class="stat-label">Total Quantity</span>
+                                            <span class="stat-value" v-text="p.metrics.quantity"></span>
+                                            <span class="stat-subvalue" style="text-transform: capitalize;">{{ p.subclass }} subclass</span>
+                                        </div>
+                                        <div class="stat-item">
+                                            <span class="stat-label">Days Held</span>
+                                            <span class="stat-value" v-text="p.metrics.days_since_first_tx + ' days'"></span>
+                                            <span v-if="p.metrics.latest_tx_date" class="stat-subvalue">Last Tx: {{ p.metrics.latest_tx_date }}</span>
+                                        </div>
+                                    </div>
+                                    <!-- Valuation Column -->
+                                    <div class="stat-group">
+                                        <h4>Valuation</h4>
+                                        <div class="stat-item">
+                                            <span class="stat-label">Invested Basis</span>
+                                            <span class="stat-value" v-text="formatCommas(p.metrics.cost_basis) + ' ' + p.currency"></span>
+                                            <span class="stat-subvalue" v-text="formatCommas(p.sgd_metrics.invested_sgd) + ' SGD'"></span>
+                                        </div>
+                                        <div class="stat-item">
+                                            <span class="stat-label">Exit Value</span>
+                                            <span class="stat-value" v-text="formatCommas(getClosedExitValue(p)) + ' ' + p.currency"></span>
+                                            <span class="stat-subvalue">Realized outcome</span>
+                                        </div>
+                                        <div class="stat-item">
+                                            <span class="stat-label">Average Buy Price</span>
+                                            <span class="stat-value" v-text="formatCommas(p.metrics.average_buy_price) + ' ' + p.currency"></span>
+                                        </div>
+                                    </div>
+                                    <!-- Performance Column -->
+                                    <div class="stat-group">
+                                        <h4>Performance</h4>
+                                        <div class="stat-item">
+                                            <span class="stat-label">Capital Gain/Loss</span>
+                                            <span class="stat-value" :class="getValClass(p.metrics.capital_gain)" v-text="formatCommas(p.metrics.capital_gain, true) + ' ' + p.currency"></span>
+                                            <span class="stat-subvalue" :class="getValClass(p.metrics.capital_gain_sgd)" v-text="formatCommas(p.metrics.capital_gain_sgd, true) + ' SGD (' + formatPct(p.metrics.capital_gain_pct) + ')'"></span>
+                                        </div>
+                                        <div class="stat-item">
+                                            <span class="stat-label">Total Income</span>
+                                            <span class="stat-value pos-val" v-text="'+' + formatCommas(p.sgd_metrics.income_sgd) + ' SGD'"></span>
+                                        </div>
+                                        <div class="stat-item">
+                                            <span class="stat-label">Total Fees</span>
+                                            <span class="stat-value neg-val" v-text="'-' + formatCommas(p.sgd_metrics.fees_sgd) + ' SGD'"></span>
+                                        </div>
+                                    </div>
+                                    <!-- Outcome Column -->
+                                    <div class="stat-group">
+                                        <h4>Outcome</h4>
+                                        <div class="stat-item">
+                                            <span class="stat-label">Total Returns</span>
+                                            <span class="stat-value" :class="getValClass(p.metrics.lifetime_profit)" v-text="formatCommas(p.metrics.lifetime_profit, true) + ' ' + p.currency"></span>
+                                            <span class="stat-subvalue" v-text="formatCommas(p.sgd_metrics.profit_sgd) + ' SGD'"></span>
+                                        </div>
+                                        <div class="stat-item">
+                                            <span class="stat-label">ROI (Lifetime)</span>
+                                            <span class="stat-value" :class="getValClass(p.metrics.roi_pct)" style="font-size: 1.5rem;" v-text="formatPct(p.metrics.roi_pct)"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Wide Analytics Chart -->
+                            <div class="symbol-analytics-full" style="width: 100%; margin-top: 15px; margin-bottom: 15px;">
+                                <div class="symbol-chart-container" 
+                                     :id="'chart-' + slugify(p.symbol)" 
+                                     :data-symbol="p.symbol"
+                                     :data-txs="JSON.stringify(p.transactions)"
+                                     :data-income="JSON.stringify(p.income)"
+                                     :data-rate="p.rate || 1.0"
+                                     style="min-height: 350px;">
+                                </div>
+                            </div>
+
+                            <!-- Transactions and Dividends Accordions -->
+                            <div class="symbol-card-lower" style="width: 100%; margin-top: 15px;">
+                                <div class="tx-section-header">
+                                    <h3 style="margin: 0; font-size: 0.95rem; font-family: 'Outfit', sans-serif;">Transactions</h3>
+                                    <button class="txv-trigger-btn"
+                                            :data-symbol="p.symbol"
+                                            :data-avg-cost="p.metrics?.average_buy_price || 0"
+                                            :data-currency="p.currency"
+                                            :data-txs="JSON.stringify(p.transactions)"
+                                            title="View price history chart"
+                                            @click="triggerTxVisualizer($event)">
+                                        📈 Chart
+                                    </button>
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 25px;">
+                                    <details v-for="grp in groupTransactionsByYear(p.transactions)" :key="grp.year" class="tx-details-wrapper">
+                                        <summary style="font-size: 0.85rem; font-weight: 600; cursor: pointer; padding: 4px 0; outline: none; user-select: none;">
+                                            {{ grp.year }} (Qty: {{ formatCommas(grp.totalQty, false, 0) }}, Net: <span :class="getValClass(grp.sgdImpact)">{{ formatCommas(grp.netVal, true) }} {{ p.currency }}</span>)
+                                        </summary>
+                                        <div class="details-content" style="padding-top: 10px;">
+                                            <ul class="tx-list tx-list-clean">
+                                                <li v-for="t in grp.list" :key="t.date" class="tx-item tx-item-row" :data-action="t.action.toLowerCase()">
+                                                    <span :class="t.action.toLowerCase() === 'buy' ? 'pos-val' : 'neg-val'">[{{ t.action.toUpperCase() }}]</span>
+                                                    [{{ t.date }}]
+                                                    {{ t.qty }} @ {{ formatCommas(t.price) }} {{ p.currency }}, 
+                                                    Fees: {{ formatCommas(t.fee) }} 
+                                                    ({{ formatCommas(t.qty * t.price + (t.action.toLowerCase() === 'buy' ? t.fee : -t.fee)) }} {{ p.currency }})
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </details>
+                                </div>
+
+                                <!-- Dividends Accordion -->
+                                <template v-if="p.income && p.income.length > 0">
+                                    <div class="tx-section-header">
+                                        <h3 style="margin: 0; font-size: 0.95rem; font-family: 'Outfit', sans-serif;">Income Dividends</h3>
+                                    </div>
+                                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                                        <details v-for="grp in groupIncomeByYear(p.income)" :key="grp.year" class="tx-details-wrapper">
+                                            <summary style="font-size: 0.85rem; font-weight: 600; cursor: pointer; padding: 4px 0; outline: none; user-select: none;">
+                                                {{ grp.year }} (Net: <span style="color: #10b981;">+{{ formatCommas(grp.summary.total_net) }} {{ p.currency }}</span>)
+                                            </summary>
+                                            <div class="details-content" style="padding: 10px 0;">
+                                                <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 6px; margin-bottom: 12px; display: flex; gap: 20px;">
+                                                    <div>
+                                                        <span style="color: #888; display: block; font-size: 0.8em; text-transform: uppercase;">Gross Income</span>
+                                                        <span style="font-weight: bold;" v-text="formatCommas(grp.summary.total_gross) + ' ' + p.currency"></span>
+                                                    </div>
+                                                    <div>
+                                                        <span style="color: #888; display: block; font-size: 0.8em; text-transform: uppercase;">Tax Paid</span>
+                                                        <span style="font-weight: bold; color: #f43f5e;" v-text="formatCommas(grp.summary.total_tax) + ' ' + p.currency"></span>
+                                                    </div>
+                                                    <div>
+                                                        <span style="color: #888; display: block; font-size: 0.8em; text-transform: uppercase;">Net Income</span>
+                                                        <span style="font-weight: bold; color: #10b981;" v-text="formatCommas(grp.summary.total_net) + ' ' + p.currency"></span>
+                                                    </div>
+                                                    <!-- Render ROC stats only if ROC exists -->
+                                                    <template v-if="grp.summary.roc_amount > 0">
+                                                        <div>
+                                                            <span style="color: #888; display: block; font-size: 0.8em; text-transform: uppercase;">ROC</span>
+                                                            <span style="font-weight: bold; color: #10b981;" v-text="formatCommas(grp.summary.roc_amount) + ' ' + p.currency"></span>
+                                                        </div>
+                                                        <div>
+                                                            <span style="color: #888; display: block; font-size: 0.8em; text-transform: uppercase;">ROC %</span>
+                                                            <span style="font-weight: bold; color: #10b981;" v-text="grp.summary.roc_pct.toFixed(2) + '%'"></span>
+                                                        </div>
+                                                        <div>
+                                                            <span style="color: #888; display: block; font-size: 0.8em; text-transform: uppercase;">Actual Tax</span>
+                                                            <span style="font-weight: bold; color: var(--accent-blue);" v-text="formatCommas(grp.summary.actual_tax_value) + ' ' + p.currency + ' (' + grp.summary.actual_tax_rate.toFixed(2) + '%)'"></span>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                                <ul style="list-style-type: disc; padding-left: 20px; font-family: monospace; font-size: 0.9rem; line-height: 1.6;">
+                                                    <li v-for="inc in grp.list" :key="inc.date">
+                                                        <strong>{{ inc.date }}</strong>: Net: {{ formatCommas(inc.net) }} {{ p.currency }} 
+                                                        (Gross: {{ formatCommas(inc.amt) }}, Tax: {{ formatCommas(inc.tax) }}<span v-if="inc.qty && inc.qty > 0.0001">, Qty: {{ inc.qty }}, Net/Share: {{ formatCommas(inc.net_per_share, false, 4) }} {{ p.currency }}</span>)<span v-if="inc.note" v-text="', ' + inc.note"></span>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </details>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. CHARTS TAB VIEW -->
+        <div v-show="currentView === 'charts'">
+            <!-- Allocation Overview -->
+            <div class="dashboard-grid top-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 25px;">
+                <div id="chart-category-curr-pie" class="chart-container" style="min-height: 320px; background: rgba(22, 28, 45, 0.4); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px;"></div>
+                <div id="chart-category-inv-pie" class="chart-container" style="min-height: 320px; background: rgba(22, 28, 45, 0.4); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px;"></div>
+                <div class="chart-container" style="background: rgba(22, 28, 45, 0.4); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px;">
+                    <h4 style="margin-top: 0; margin-bottom: 15px; font-size: 0.95rem; font-weight: 600; color: var(--text-secondary);">Summary by Category</h4>
+                    <table class="summary-table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                        <thead>
+                            <tr style="text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--text-secondary);">
+                                <th style="padding: 6px 0;">Category</th>
+                                <th style="padding: 6px 0; text-align: right;">Invested</th>
+                                <th style="padding: 6px 0; text-align: right;">Current</th>
+                                <th style="padding: 6px 0; text-align: right;">Alloc</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="cat in dashboard.categories" :key="cat.name" style="border-bottom: 1px solid rgba(255,255,255,0.02);">
+                                <td style="padding: 8px 0;"><strong v-text="cat.name"></strong></td>
+                                <td style="padding: 8px 0; text-align: right;" v-text="formatCommas(cat.inv, false, 0)"></td>
+                                <td style="padding: 8px 0; text-align: right;" v-text="formatCommas(cat.curr, false, 0)"></td>
+                                <td style="padding: 8px 0; text-align: right;">{{ ((cat.curr / (dashboard.categories ? dashboard.categories.reduce((acc, c) => acc + c.curr, 0) : 1)) * 100).toFixed(1) }}%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Country Breakdown -->
+            <div class="dashboard-grid country-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 25px;">
+                <div id="chart-country-pie" class="chart-container country-chart-container" style="min-height: 320px; background: rgba(22, 28, 45, 0.4); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px;"></div>
+                <div class="chart-container country-chart-container" style="background: rgba(22, 28, 45, 0.4); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px;">
+                    <h4 style="margin-top: 0; margin-bottom: 15px; font-size: 0.95rem; font-weight: 600; color: var(--text-secondary);">Summary by Country</h4>
+                    <table class="summary-table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                        <thead>
+                            <tr style="text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--text-secondary);">
+                                <th style="padding: 6px 0;">Country</th>
+                                <th style="padding: 6px 0; text-align: right;">Value</th>
+                                <th style="padding: 6px 0; text-align: right;">Pct</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="c in prepareCountryBreakdown()" :key="c.name" style="border-bottom: 1px solid rgba(255,255,255,0.02);">
+                                <td style="padding: 8px 0;"><strong v-text="c.name"></strong></td>
+                                <td style="padding: 8px 0; text-align: right;" v-text="formatCommas(c.value, false, 0) + ' SGD'"></td>
+                                <td style="padding: 8px 0; text-align: right;">{{ c.pct.toFixed(1) }}%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Income Dashboard -->
+            <div class="dashboard-grid" style="margin-bottom: 25px;">
+                <div class="chart-container full-width" style="background: rgba(22, 28, 45, 0.4); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px;">
+                    <div class="chart-controls" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--text-secondary);">Portfolio Passive Income</h4>
+                        <div>
+                            <button class="toggle-btn active" onclick="toggleIncomeView('monthly', this)">Monthly</button>
+                            <button class="toggle-btn" onclick="toggleIncomeView('yearly', this)">Yearly</button>
+                        </div>
+                    </div>
+                    <div id="chart-portfolio-income" style="min-height: 320px;"></div>
+                </div>
+            </div>
+
+            <!-- Category Chart -->
+            <div class="dashboard-grid" style="margin-bottom: 25px;">
+                <div class="chart-container full-width" style="background: rgba(22, 28, 45, 0.4); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px;">
+                    <div class="chart-controls" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--text-secondary);">Global Category Overview</h4>
+                        <div>
+                            <button class="toggle-btn active" onclick="toggleChartMode('category', 'val', this)">Value</button>
+                            <button class="toggle-btn" onclick="toggleChartMode('category', 'pct', this)">% ROI</button>
+                        </div>
+                    </div>
+                    <div id="chart-category" style="min-height: 320px;"></div>
+                </div>
+            </div>
+
+            <!-- Strategy Charts -->
+            <h2 style="margin-top: 35px; margin-bottom: 15px; font-family: 'Outfit', sans-serif; font-size: 1.15rem; font-weight: bold;">Strategy Asset Performance</h2>
+            <div class="dashboard-grid" style="margin-bottom: 25px;">
+                <div class="chart-container full-width" style="background: rgba(22, 28, 45, 0.4); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px;">
+                    <div class="chart-controls" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--text-secondary);">Growth Strategy Assets</h4>
+                        <div>
+                            <button class="toggle-btn active" onclick="toggleChartMode('growth-strat', 'val', this)">Value</button>
+                            <button class="toggle-btn" onclick="toggleChartMode('growth-strat', 'pct', this)">% ROI</button>
+                        </div>
+                    </div>
+                    <div id="chart-growth-strat" style="min-height: 320px;"></div>
+                </div>
+            </div>
+            <div class="dashboard-grid" style="margin-bottom: 25px;">
+                <div class="chart-container full-width" style="background: rgba(22, 28, 45, 0.4); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px;">
+                    <div class="chart-controls" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--text-secondary);">Income Strategy Assets</h4>
+                        <div>
+                            <button class="toggle-btn active" onclick="toggleChartMode('income-strat', 'val', this)">Value</button>
+                            <button class="toggle-btn" onclick="toggleChartMode('income-strat', 'pct', this)">% ROI</button>
+                        </div>
+                    </div>
+                    <div id="chart-income-strat" style="min-height: 320px;"></div>
+                </div>
+            </div>
+
+            <!-- Classification Charts -->
+            <div v-for="c in dashboard.classifications" :key="c.name">
+                <template v-if="c.is_explicit === undefined || c.is_explicit">
+                    <h2 style="margin-top: 35px; margin-bottom: 15px; font-family: 'Outfit', sans-serif; font-size: 1.15rem; font-weight: bold;">{{ c.name }} Breakdown</h2>
+                    <div class="dashboard-grid" style="margin-bottom: 25px; display: grid; grid-template-columns: 1fr; gap: 20px;">
+                        <div v-if="c.show_summary" class="chart-container full-width" style="background: rgba(22, 28, 45, 0.4); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px;">
+                            <div class="chart-controls" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--text-secondary);">Summary</h4>
+                                <div>
+                                    <button class="toggle-btn active" :onclick="'toggleChartMode(\'sum-' + c.slug + '\', \'val\', this)'">Value</button>
+                                    <button class="toggle-btn" :onclick="'toggleChartMode(\'sum-' + c.slug + '\', \'pct\', this)'">% ROI</button>
+                                </div>
+                            </div>
+                            <div :id="'chart-sum-' + c.slug" style="min-height: 320px;"></div>
+                        </div>
+                        <div class="chart-container full-width" style="background: rgba(22, 28, 45, 0.4); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px;">
+                            <div class="chart-controls" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--text-secondary);">Underlyings</h4>
+                                <div>
+                                    <button class="toggle-btn active" :onclick="'toggleChartMode(\'und-' + c.slug + '\', \'val\', this)'">Value</button>
+                                    <button class="toggle-btn" :onclick="'toggleChartMode(\'und-' + c.slug + '\', \'pct\', this)'">% ROI</button>
+                                </div>
+                            </div>
+                            <div :id="'chart-und-' + c.slug" style="min-height: 320px;"></div>
+                        </div>
+                    </div>
+                </template>
+            </div>
         </div>
 
         <!-- 3. DIVIDEND CALENDAR TAB VIEW -->
@@ -1408,7 +1783,10 @@
                 calMonths: [
                     "January", "February", "March", "April", "May", "June",
                     "July", "August", "September", "October", "November", "December"
-                ]
+                ],
+                
+                // Closed holdings fields
+                closedSearch: ''
             }
         },
         computed: {
@@ -1731,6 +2109,86 @@
                 }
                 
                 return list.sort((a, b) => a.date.localeCompare(b.date));
+            },
+            closedReport() {
+                if (!this.portfolioData || !this.portfolioData.positions) return { toc: {}, body: [] };
+                
+                const closedPositions = this.portfolioData.positions.filter(p => p.is_closed);
+                let filteredPositions = closedPositions;
+                if (this.closedSearch.trim()) {
+                    const q = this.closedSearch.toLowerCase().trim();
+                    filteredPositions = closedPositions.filter(p => {
+                        return (p.symbol && p.symbol.toLowerCase().includes(q)) ||
+                               (p.friendly_name && p.friendly_name.toLowerCase().includes(q)) ||
+                               (p.underlying && p.underlying.toLowerCase().includes(q));
+                    });
+                }
+                
+                const hierarchy = {};
+                
+                filteredPositions.forEach(p => {
+                    const sellTxs = p.transactions ? p.transactions.filter(t => t.action === 'Sell') : [];
+                    let lastSellDate = "2025-01-01";
+                    if (sellTxs.length > 0) {
+                        sellTxs.sort((a, b) => b.date.localeCompare(a.date));
+                        lastSellDate = sellTxs[0].date;
+                    }
+                    
+                    const d = new Date(lastSellDate);
+                    const year = d.getFullYear();
+                    const monthName = d.toLocaleString('en-US', { month: 'long' });
+                    
+                    if (!hierarchy[year]) hierarchy[year] = {};
+                    if (!hierarchy[year][monthName]) hierarchy[year][monthName] = [];
+                    
+                    hierarchy[year][monthName].push(p);
+                });
+                
+                const sortedYears = Object.keys(hierarchy).sort().reverse();
+                const toc = {};
+                const body = [];
+                
+                sortedYears.forEach(yr => {
+                    let yrProfit = 0;
+                    const monthsData = {};
+                    
+                    const months = Object.keys(hierarchy[yr]).sort((a, b) => {
+                        const mA = new Date(`${a} 1, 2000`).getMonth();
+                        const mB = new Date(`${b} 1, 2000`).getMonth();
+                        return mB - mA;
+                    });
+                    months.forEach(mo => {
+                        const getLastSellDate = (p) => {
+                            const sellTxs = p.transactions ? p.transactions.filter(t => t.action === 'Sell') : [];
+                            if (sellTxs.length === 0) return "1970-01-01";
+                            return sellTxs.map(t => t.date).sort().reverse()[0] || "1970-01-01";
+                        };
+                        const positions = hierarchy[yr][mo].sort((a, b) => {
+                            return getLastSellDate(b).localeCompare(getLastSellDate(a));
+                        });
+                        
+                        const moProfit = positions.reduce((sum, p) => sum + (p.sgd_metrics?.profit_sgd || 0), 0);
+                        yrProfit += moProfit;
+                        
+                        const monthSection = {
+                            title: `${yr} - ${mo}`,
+                            month_name: mo,
+                            year: yr,
+                            total_gl: moProfit,
+                            positions: positions
+                        };
+                        
+                        monthsData[mo] = monthSection;
+                        body.push(monthSection);
+                    });
+                    
+                    toc[yr] = {
+                        total_gl: yrProfit,
+                        months: monthsData
+                    };
+                });
+                
+                return { toc, body };
             }
         },
         watch: {
@@ -1738,6 +2196,10 @@
                 if (newView === 'calendar') {
                     this.$nextTick(() => {
                         this.initCalendarChart();
+                    });
+                } else if (newView === 'charts') {
+                    this.$nextTick(() => {
+                        this.initGlobalCharts();
                     });
                 }
             }
@@ -1755,6 +2217,115 @@
                 } catch (error) {
                     console.error("Error loading portfolio data:", error);
                 }
+            },
+            getClosedExitValue(p) {
+                if (!p.transactions) return 0;
+                return p.transactions.filter(t => t.action === 'Sell').reduce((sum, t) => sum + (t.qty * t.price), 0);
+            },
+            groupTransactionsByYear(transactions) {
+                if (!transactions) return [];
+                const groups = {};
+                transactions.forEach(t => {
+                    const year = new Date(t.date).getFullYear();
+                    if (!groups[year]) {
+                        groups[year] = {
+                            year: year,
+                            totalQty: 0,
+                            netVal: 0,
+                            sgdImpact: 0,
+                            list: []
+                        };
+                    }
+                    groups[year].totalQty += t.qty;
+                    const totalCost = t.qty * t.price + t.fee;
+                    groups[year].netVal += (t.action.toLowerCase() === 'buy' ? totalCost : -totalCost);
+                    groups[year].sgdImpact += (t.action.toLowerCase() === 'buy' ? totalCost : -totalCost);
+                    
+                    groups[year].list.push({
+                        ...t,
+                        totalNet: totalCost,
+                        gainPct: 0.0
+                    });
+                });
+                return Object.values(groups).sort((a, b) => b.year - a.year);
+            },
+            prepareCountryBreakdown() {
+                if (!this.portfolioData || !this.portfolioData.positions) return [];
+                const countryVals = { "Singapore": 0, "Canada": 0, "US": 0 };
+                this.portfolioData.positions.forEach(p => {
+                    if (p.is_closed) return;
+                    const val = p.sgd_metrics?.current_sgd || 0;
+                    if (val <= 0) return;
+                    
+                    const ex = (p.exchange || "").trim().toUpperCase();
+                    let country = "US";
+                    if (["SG", "SI"].includes(ex)) {
+                        country = "Singapore";
+                    } else if (["TO", "TSE", "V", "TSX", "NEO", "NE", "CSE"].includes(ex)) {
+                        country = "Canada";
+                    }
+                    countryVals[country] += val;
+                });
+                
+                const totalVal = Object.values(countryVals).reduce((sum, v) => sum + v, 0);
+                const list = [];
+                Object.keys(countryVals).forEach(name => {
+                    const val = countryVals[name];
+                    const pct = totalVal > 0 ? (val / totalVal * 100) : 0;
+                    list.push({
+                        name: name,
+                        value: val,
+                        pct: pct
+                    });
+                });
+                return list.sort((a, b) => b.value - a.value);
+            },
+            initGlobalCharts() {
+                if (!this.portfolioData || !this.portfolioData.dashboard) return;
+                this.portfolioData.dashboard.countries = this.prepareCountryBreakdown();
+                
+                if (window.chartInstances) {
+                    Object.keys(window.chartInstances).forEach(key => {
+                        try {
+                            window.chartInstances[key].destroy();
+                            delete window.chartInstances[key];
+                        } catch (e) {}
+                    });
+                }
+                
+                if (window.initCharts) {
+                    window.initCharts(this.portfolioData.dashboard);
+                }
+            },
+            groupIncomeByYear(income) {
+                if (!income) return [];
+                const groups = {};
+                income.forEach(inc => {
+                    const year = new Date(inc.date).getFullYear();
+                    if (!groups[year]) {
+                        groups[year] = {
+                            year: year,
+                            summary: {
+                                total_gross: 0,
+                                total_tax: 0,
+                                total_net: 0,
+                                roc_amount: 0,
+                                roc_pct: 0,
+                                actual_tax_value: 0,
+                                actual_tax_rate: 0
+                            },
+                            list: []
+                        };
+                    }
+                    groups[year].summary.total_gross += inc.amt || 0;
+                    groups[year].summary.total_tax += inc.tax || 0;
+                    groups[year].summary.total_net += inc.net || 0;
+                    if (inc.note && inc.note.toLowerCase().includes("roc")) {
+                        groups[year].summary.roc_amount += inc.net || 0;
+                    }
+                    groups[year].list.push(inc);
+                });
+                return Object.values(groups).sort((a, b) => b.year - a.year);
             },
             async fetchCalendarData() {
                 try {
@@ -2077,7 +2648,7 @@
             },
             triggerTxVisualizer(event) {
                 if (window.openTxVisualizer) {
-                    window.openTxVisualizer(event.target);
+                    window.openTxVisualizer(event.currentTarget);
                 }
             },
             async initializeDashboardCharts() {
@@ -2232,6 +2803,43 @@
         async mounted() {
             await this.initializeDashboardCharts();
             
+            // Intercept global navigation header links to switch views inline in the SPA
+            const navActive = document.getElementById("nav-active-main");
+            if (navActive) {
+                navActive.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    this.currentView = 'dashboard';
+                });
+            }
+            const navClosed = document.getElementById("nav-closed-main");
+            if (navClosed) {
+                navClosed.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    this.currentView = 'closed';
+                });
+            }
+            const navCharts = document.getElementById("nav-charts-main");
+            if (navCharts) {
+                navCharts.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    this.currentView = 'charts';
+                });
+            }
+            const navCal = document.getElementById("nav-dividend-calendar");
+            if (navCal) {
+                navCal.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    this.currentView = 'calendar';
+                });
+            }
+            const navHist = document.getElementById("nav-history-main");
+            if (navHist) {
+                navHist.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    this.currentView = 'transactions';
+                });
+            }
+
             // Populate #tx-portfolio dropdown select for transaction modal
             try {
                 const res = await fetch("api/portfolios");
@@ -2251,6 +2859,9 @@
                 btn.addEventListener("click", async () => {
                     setTimeout(async () => {
                         await this.initializeDashboardCharts();
+                        if (this.currentView === 'charts') {
+                            this.initGlobalCharts();
+                        }
                     }, 50);
                 });
             });

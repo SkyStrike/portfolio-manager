@@ -1,32 +1,13 @@
 continue.
 
 ```
-it is missing alot of details
-- "Generated: 14 Jul 09:51 AM (3m ago) Quotes Updated: 10 Jul 04:00 AM (4d ago) IB Report: 14 Jul 05:50 AM (4h ago)"
-    - Generated is irrelevant, but quotes and ib report is still relevant.
-- Quick Jump
-- Daily Performance & Realized P/L & Options Unrealized
-- Risk & Liquidity Analysis
-- Cash Report
-- Recent Transactions: Last 4 Weeks
-    - should only expand the latest week
-- Active Open Options
-- Recently Closed Options
-    - should only expand the latest week
-- Detailed Holdings Breakdown
-    - missing individual tickers details
-    - the sort order is wrong.
-- Underlying
-    - missing summary chart
-    - backtest button
-    - Individual Ticker
-        - missing tools (calculator)
-        - Transaction History
-            - Missing percentage changed vs current price for "buy"
-            - Buy/Sell color is reversed
-        - Income 
-            - it should be grouped by year
-            - Missing summary for each year 
-                - US Listed: Total Income, Gross, Tax, ROC, ROC %, Actual Tax
-                - Canadian/SG Listed: Total Income, Gross, Tax
-```
+- implemented SPA for dashboard and dividend calendar
+- WIP for closed positions
+    - closed positions transaction and dividend income section header/container padding looks like 0px.
+    - left nav items should be sorted descending. Year/Month/Profit Amount
+    - left nav use 100% height, I don't want scrollbars
+- not started: Performance Report, Charts, Transaction History
+
+minor things to pick
+- missing "Return to Top" in the beta dashboard
+- ticker utility - Calculator broken. can't get the menu to show when I click "⋮"
