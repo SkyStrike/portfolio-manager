@@ -2413,7 +2413,10 @@
                 fdFixedRate: 2.0,
                 fdFileName: '',
                 fdFileUploaded: false,
-                fdFile: null
+                fdFile: null,
+
+                // Active Portfolio Prefix
+                activePrefix: 'portfolio_data'
             }
         },
         computed: {
@@ -2959,7 +2962,7 @@
                     if (headerSelector) {
                         this.priceMode = headerSelector.innerText.trim().toLowerCase();
                     }
-                    const res = await fetch(`src/portfolio_data_${this.priceMode}.json`);
+                    const res = await fetch(`src/${this.activePrefix}_${this.priceMode}.json`);
                     if (!res.ok) throw new Error("API failed");
                     this.portfolioData = await res.json();
                 } catch (error) {
@@ -3773,6 +3776,45 @@
                     this.currentView = 'fdComparison';
                 });
             }
+
+            // Intercept header portfolio/classification selector dropdown items
+            document.querySelectorAll("#classification-dropdown-menu .portfolio-item").forEach(item => {
+                item.addEventListener("click", async (e) => {
+                    e.preventDefault();
+                    const href = item.getAttribute("href");
+                    let prefix = 'portfolio_data';
+                    if (href.includes("portfolio_active_port_")) {
+                        const match = href.match(/portfolio_active_port_([^.]+)\.html/);
+                        if (match) prefix = 'portfolio_data_port_' + match[1];
+                    } else if (href.includes("portfolio_active_")) {
+                        const match = href.match(/portfolio_active_([^.]+)\.html/);
+                        if (match) prefix = 'portfolio_data_' + match[1];
+                    }
+                    this.activePrefix = prefix;
+                    
+                    // Update header display text
+                    const displayEl = document.getElementById("current-classification-display");
+                    if (displayEl) {
+                        const nameSpan = item.querySelector("span");
+                        if (nameSpan) {
+                            displayEl.childNodes[0].nodeValue = `📂 ${nameSpan.innerText.trim()}`;
+                        }
+                    }
+                    
+                    // Close dropdown menu
+                    const menuEl = document.getElementById("classification-dropdown-menu");
+                    if (menuEl) {
+                        menuEl.classList.remove("show"); // If legacy js uses class toggling
+                    }
+                    
+                    // Refresh data
+                    await this.fetchPortfolioData();
+                    await this.initializeDashboardCharts();
+                    if (this.currentView === 'charts') {
+                        this.initGlobalCharts();
+                    }
+                });
+            });
 
             // Populate #tx-portfolio dropdown select for transaction modal
             try {
