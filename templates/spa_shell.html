@@ -1,0 +1,421 @@
+{% raw %}
+<!-- Load Vue 3 via CDN -->
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+
+<div id="spa-app">
+    <!-- Spinner loading state styled identically to application loaders -->
+    <div v-if="loading" style="text-align: center; padding: 100px; color: var(--text-secondary);">
+        <h3 style="margin-bottom: 10px;">Loading SPA Dashboard Data...</h3>
+        <p style="font-size: 0.9rem;">Fetching raw metrics asynchronously</p>
+    </div>
+
+    <div v-else>
+        <!-- Tab selector controls styled exactly like standard TOC/chart buttons -->
+        <div class="toc-controls" style="margin-bottom: 25px;">
+            <button class="view-btn" :class="{ active: currentView === 'dashboard' }" @click="currentView = 'dashboard'">Active Holdings</button>
+            <button class="view-btn" :class="{ active: currentView === 'transactions' }" @click="currentView = 'transactions'">Transactions Log</button>
+        </div>
+
+        <!-- 1. ACTIVE HOLDINGS TAB VIEW -->
+        <div v-show="currentView === 'dashboard'">
+            <!-- Summary Stats Grid Header Block -->
+            <div class="symbol-stats-grid" style="margin-bottom: 40px;">
+                <div class="stat-group">
+                    <h4>Overview</h4>
+                    <div class="stat-item">
+                        <span class="stat-label">Total Invested (Active)</span>
+                        <span class="stat-value" v-text="formatCommas(summary.total_invested_active_sgd) + ' SGD'"></span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Current Value</span>
+                        <span class="stat-value" v-text="formatCommas(summary.total_market_value_sgd) + ' SGD'"></span>
+                    </div>
+                </div>
+                <div class="stat-group">
+                    <h4>Performance</h4>
+                    <div class="stat-item">
+                        <span class="stat-label">Capital Gains</span>
+                        <span class="stat-value" :class="getValClass(summary.total_capital_gains_sgd)" v-text="formatCommas(summary.total_capital_gains_sgd) + ' SGD'"></span>
+                        <span class="stat-subvalue" :class="getValClass(summary.total_capital_gains_pct)" v-text="'(' + formatPct(summary.total_capital_gains_pct) + ')'"></span>
+                    </div>
+                </div>
+                <div class="stat-group">
+                    <h4>Outcome</h4>
+                    <div class="stat-item">
+                        <span class="stat-label">Total Returns (Lifetime)</span>
+                        <span class="stat-value" :class="getValClass(summary.lifetime_profit_sgd)" v-text="formatCommas(summary.lifetime_profit_sgd, true) + ' SGD'"></span>
+                        <span class="stat-subvalue" :class="getValClass(summary.lifetime_profit_sgd)" v-text="'(' + formatPct((summary.lifetime_profit_sgd / summary.total_invested_active_sgd * 100)) + ')'"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Charts Grid -->
+            <div id="performance-charts" class="dashboard-grid">
+                <div v-for="(dp, slug) in dashboard.daily_performance" :key="slug" class="chart-container full-width">
+                    <div class="chart-controls">
+                        <div>
+                            <h4 style="text-transform: capitalize;">Daily Performance: {{ slug.replace('-', ' ') }}</h4>
+                            <div class="dashboard-sub-header">
+                                Total Change: 
+                                <span :class="getValClass(dp.summary.val)" class="bold-text">
+                                    {{ formatCommas(dp.summary.val, true) }} SGD ({{ formatPct(dp.summary.pct) }})
+                                </span>
+                            </div>
+                        </div>
+                        <div>
+                            <button class="toggle-btn" @click="triggerDailyChartToggle(slug, 'val', $event)">Value</button>
+                            <button class="toggle-btn active" @click="triggerDailyChartToggle(slug, 'pct', $event)">Percentage</button>
+                        </div>
+                    </div>
+                    <div :id="'chart-daily-perf-' + slug"></div>
+                </div>
+            </div>
+
+            <div class="dashboard-grid" style="margin-top: 20px; margin-bottom: 40px;">
+                <div class="chart-container">
+                    <div class="chart-controls">
+                        <h4>Top Gainers</h4>
+                        <div>
+                            <button class="toggle-btn" @click="triggerTopPerformersToggle('gainers', 'val', $event)">Value</button>
+                            <button class="toggle-btn active" @click="triggerTopPerformersToggle('gainers', 'pct', $event)">Percentage</button>
+                        </div>
+                    </div>
+                    <div id="chart-top-gainers"></div>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-controls">
+                        <h4>Top Losers</h4>
+                        <div>
+                            <button class="toggle-btn" @click="triggerTopPerformersToggle('losers', 'val', $event)">Value</button>
+                            <button class="toggle-btn active" @click="triggerTopPerformersToggle('losers', 'pct', $event)">Percentage</button>
+                        </div>
+                    </div>
+                    <div id="chart-top-losers"></div>
+                </div>
+            </div>
+
+            <!-- Recent Transactions (Past 4 Weeks Accordion) -->
+            <div v-if="recentTx" id="recent-transactions" class="recent-transactions-section dashboard-section-spacer" style="margin-bottom: 40px;">
+                <h2 class="flex-between-center">
+                    <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                        <span>Recent Transactions: {{ recentTx.month_name }}</span>
+                        <div class="tx-filter-links" style="display: flex; gap: 10px; font-size: 0.8rem; margin-left: 10px; align-items: center;">
+                            Show (
+                            <a href="javascript:void(0)" class="tx-filter-link" :class="{ active: txFilter === 'both' }" @click="txFilter = 'both'">Both</a>
+                            <span style="color: rgba(255,255,255,0.15)">|</span>
+                            <a href="javascript:void(0)" class="tx-filter-link" :class="{ active: txFilter === 'buy' }" @click="txFilter = 'buy'">Buy</a>
+                            <span style="color: rgba(255,255,255,0.15)">|</span>
+                            <a href="javascript:void(0)" class="tx-filter-link" :class="{ active: txFilter === 'sell' }" @click="txFilter = 'sell'">Sell</a>
+                            ) Tx
+                        </div>
+                    </div>
+                    <span :class="getValClass(recentTx.month_flow)" class="text-lg bold-text">
+                        4W Net Flow: {{ formatCommas(recentTx.month_flow, true) }} SGD
+                    </span>
+                </h2>
+                
+                <div class="weeks-container">
+                    <details v-for="week in recentTx.weeks" :key="week.range" class="week-details week-details-card" open>
+                        <summary class="week-details-summary">
+                            <span class="week-summary-center">Week: {{ week.range }}</span>
+                            <div class="week-summary-right">
+                                <span class="week-col-net">Net: <span :class="getValClass(week.flow)" class="bold-text">{{ formatCommas(week.flow, true) }}</span></span>
+                                <span class="week-col-buy">Buys: <span class="neg-val">{{ formatCommas(week.buy_flow) }}</span></span>
+                                <span class="week-col-sell">Sells: <span class="pos-val">{{ formatCommas(Math.abs(week.sell_flow)) }}</span></span>
+                            </div>
+                        </summary>
+                        <div class="week-details-content">
+                            <ul class="tx-list tx-list-clean">
+                                <template v-for="tx in week.transactions">
+                                    <li v-show="txFilter === 'both' || tx.action.toLowerCase() === txFilter" class="tx-item tx-item-row" :data-action="tx.action.toLowerCase()">
+                                        [{{ tx.symbol }}] 
+                                        <span :class="tx.action.toLowerCase()">[{{ tx.action.toUpperCase() }}]</span>
+                                        [{{ tx.date }}] 
+                                        {{ tx.qty }} @ {{ formatCommas(tx.price) }} {{ tx.currency }}, 
+                                        Fees: {{ formatCommas(tx.fee) }} 
+                                        ({{ formatCommas(tx.totalNet) }} {{ tx.currency }})
+                                        
+                                        <span v-if="tx.action === 'Buy' && !tx.isClosed" class="metadata text-muted text-xs">
+                                            (Current Value: {{ formatCommas(tx.currentVal) }} {{ tx.currency }}, 
+                                            <span :class="getValClass(tx.gainPct)">
+                                                {{ formatPct(tx.gainPct) }}, {{ formatCommas(tx.currentVal - tx.totalNet, true) }} {{ tx.currency }}
+                                            </span>)
+                                        </span>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
+                    </details>
+                </div>
+            </div>
+
+            <!-- Holdings Summary Table Grid -->
+            <h2>Detailed Holdings Summary</h2>
+            <table class="holdings-summary">
+                <thead>
+                    <tr>
+                        <th>Name / Ticker</th>
+                        <th>Classification</th>
+                        <th>Subclass</th>
+                        <th>Quantity</th>
+                        <th>Cost Basis (SGD)</th>
+                        <th>Current Value (SGD)</th>
+                        <th>Gains / Profit</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="pos in activePositions" :key="pos.symbol" class="ticker-row">
+                        <td style="font-weight: 600;">
+                            <span v-text="pos.symbol"></span>
+                            <span v-if="pos.is_augmented" class="augmented-badge" style="background: rgba(46, 204, 113, 0.15); color: #2ecc71; font-size: 0.7rem; padding: 2px 4px; border-radius: 4px; margin-left: 6px;">IB Sync</span>
+                        </td>
+                        <td v-text="pos.classification"></td>
+                        <td v-text="pos.subclass"></td>
+                        <td v-text="pos.metrics.quantity"></td>
+                        <td class="sensitive-value" v-text="formatCommas(pos.sgd_metrics.invested_sgd)"></td>
+                        <td class="sensitive-value" v-text="formatCommas(pos.sgd_metrics.current_sgd)"></td>
+                        <td :class="getValClass(pos.sgd_metrics.profit_sgd)">
+                            <span class="sensitive-value" v-text="formatCommas(pos.sgd_metrics.profit_sgd, true)"></span>
+                            <div class="sub-val" v-text="'(' + formatPct(pos.metrics.roi_pct) + ')'"></div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 2. TRANSACTIONS TAB VIEW -->
+        <div v-show="currentView === 'transactions'">
+            <h2>Transaction Log History</h2>
+            <table class="holdings-summary">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Symbol</th>
+                        <th>Action</th>
+                        <th>Quantity</th>
+                        <th>Price</th>
+                        <th>Fees</th>
+                        <th>Total Cost</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template v-for="pos in portfolioData.positions">
+                        <tr v-for="tx in pos.transactions" :key="tx.id" class="ticker-row">
+                            <td v-text="tx.date"></td>
+                            <td style="font-weight: 600;" v-text="pos.symbol"></td>
+                            <td>
+                                <span :class="tx.action === 'Buy' ? 'neg-val' : 'pos-val'" v-text="tx.action"></span>
+                            </td>
+                            <td v-text="tx.qty"></td>
+                            <td v-text="formatCommas(tx.price) + ' ' + tx.currency"></td>
+                            <td v-text="formatCommas(tx.fee) + ' ' + tx.currency"></td>
+                            <td v-text="formatCommas(tx.qty * tx.price + tx.fee) + ' ' + tx.currency"></td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    const { createApp } = Vue;
+
+    createApp({
+        data() {
+            return {
+                loading: true,
+                currentView: 'dashboard',
+                priceMode: 'intraday',
+                txFilter: 'both',
+                portfolioData: null
+            }
+        },
+        computed: {
+            summary() {
+                return this.portfolioData?.metadata?.summary || {};
+            },
+            dashboard() {
+                return this.portfolioData?.dashboard || {};
+            },
+            activePositions() {
+                if (!this.portfolioData?.positions) return [];
+                return this.portfolioData.positions.filter(p => !p.is_closed);
+            },
+            recentTx() {
+                if (!this.portfolioData?.positions) return null;
+                
+                const allTxs = [];
+                const now = new Date();
+                const limitDate = new Date(now.getTime() - 28 * 24 * 60 * 60 * 1000);
+                
+                this.portfolioData.positions.forEach(pos => {
+                    const rate = pos.rate || 1.0;
+                    const symbol = pos.symbol;
+                    const isClosed = pos.is_closed;
+                    const currentPrice = pos.metrics?.current_price || 0;
+                    
+                    if (pos.transactions) {
+                        pos.transactions.forEach(tx => {
+                            const txDate = new Date(tx.date);
+                            if (txDate >= limitDate) {
+                                const valRaw = tx.qty * tx.price;
+                                let totalNet = 0;
+                                let sgdImpact = 0;
+                                if (tx.action === 'Buy') {
+                                    totalNet = valRaw + tx.fee;
+                                    sgdImpact = totalNet * rate;
+                                } else {
+                                    totalNet = valRaw - tx.fee;
+                                    sgdImpact = -totalNet * rate;
+                                }
+                                
+                                let currentVal = 0;
+                                let gainPct = 0;
+                                if (tx.action === 'Buy' && !isClosed) {
+                                    currentVal = tx.qty * currentPrice;
+                                    gainPct = valRaw > 0 ? ((currentVal - valRaw) / valRaw) * 100 : 0;
+                                }
+                                
+                                allTxs.push({
+                                    ...tx,
+                                    symbol,
+                                    rate,
+                                    totalNet,
+                                    sgdImpact,
+                                    currentVal,
+                                    gainPct,
+                                    isClosed
+                                });
+                            }
+                        });
+                    }
+                });
+                
+                if (allTxs.length === 0) return null;
+                
+                const weeksMap = {};
+                let totalMonthFlow = 0;
+                
+                allTxs.forEach(tx => {
+                    const d = new Date(tx.date);
+                    const day = d.getDay();
+                    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+                    const monday = new Date(d.setDate(diff));
+                    const mondayStr = monday.toISOString().split('T')[0];
+                    
+                    if (!weeksMap[mondayStr]) {
+                        weeksMap[mondayStr] = [];
+                    }
+                    weeksMap[mondayStr].push(tx);
+                    totalMonthFlow += tx.sgdImpact;
+                });
+                
+                const sortedWeeks = Object.keys(weeksMap).sort().reverse().map(mondayStr => {
+                    const txs = weeksMap[mondayStr];
+                    const weekFlow = txs.reduce((sum, t) => sum + t.sgdImpact, 0);
+                    const buyFlow = txs.filter(t => t.action === 'Buy').reduce((sum, t) => sum + t.sgdImpact, 0);
+                    const sellFlow = txs.filter(t => t.action !== 'Buy').reduce((sum, t) => sum + t.sgdImpact, 0);
+                    
+                    const mon = new Date(mondayStr);
+                    const sun = new Date(mon.getTime() + 6 * 24 * 60 * 60 * 1000);
+                    const options = { day: 'numeric', month: 'short' };
+                    const rangeStr = `${mon.toLocaleDateString('en-SG', options)} - ${sun.toLocaleDateString('en-SG', options)}`;
+                    
+                    return {
+                        range: rangeStr,
+                        flow: weekFlow,
+                        buy_flow: buyFlow,
+                        sell_flow: sellFlow,
+                        transactions: txs.sort((a, b) => b.date.localeCompare(a.date))
+                    };
+                });
+                
+                return {
+                    month_name: "Last 4 Weeks",
+                    month_flow: totalMonthFlow,
+                    weeks: sortedWeeks
+                };
+            }
+        },
+        methods: {
+            async fetchPortfolioData() {
+                try {
+                    // Detect current price mode from base layout selector
+                    const headerSelector = document.querySelector(".price-btn.active");
+                    if (headerSelector) {
+                        this.priceMode = headerSelector.innerText.trim().toLowerCase();
+                    }
+                    const res = await fetch(`src/portfolio_data_${this.priceMode}.json`);
+                    if (!res.ok) throw new Error("API failed");
+                    this.portfolioData = await res.json();
+                } catch (error) {
+                    console.error("Error loading portfolio metrics:", error);
+                }
+            },
+            formatCommas(val, includeSign = false) {
+                if (val === null || val === undefined) return '0.00';
+                const num = parseFloat(val);
+                const formatted = num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const sign = includeSign && num > 0 ? '+' : '';
+                return `${sign}${formatted}`;
+            },
+            formatPct(val) {
+                if (val === null || val === undefined) return '0.00%';
+                const num = parseFloat(val);
+                const sign = num > 0 ? '+' : '';
+                return `${sign}${num.toFixed(2)}%`;
+            },
+            getValClass(val) {
+                if (!val) return '';
+                return parseFloat(val) >= 0 ? 'pos-val' : 'neg-val';
+            },
+            triggerDailyChartToggle(slug, type, event) {
+                if (window.toggleDailyChart) {
+                    window.toggleDailyChart(slug, type, event.target);
+                }
+            },
+            triggerTopPerformersToggle(type, valOrPct, event) {
+                if (window.toggleTopPerformers) {
+                    window.toggleTopPerformers(type, valOrPct, event.target);
+                }
+            },
+            async initializeDashboardCharts() {
+                this.loading = true;
+                await this.fetchPortfolioData();
+                this.loading = false;
+                
+                // Wait for the DOM elements to render before initializing ApexCharts
+                this.$nextTick(() => {
+                    // Destroy any previous instances to prevent duplicates
+                    if (window.chartInstances) {
+                        Object.keys(window.chartInstances).forEach(key => {
+                            try {
+                                window.chartInstances[key].destroy();
+                                delete window.chartInstances[key];
+                            } catch (e) {}
+                        });
+                    }
+                    if (window.initCharts && this.dashboard) {
+                        window.initCharts(this.dashboard);
+                    }
+                });
+            }
+        },
+        async mounted() {
+            await this.initializeDashboardCharts();
+            
+            // Listen for top header price mode selector changes
+            document.querySelectorAll(".price-btn").forEach(btn => {
+                btn.addEventListener("click", async () => {
+                    // Give class changes a split second to apply
+                    setTimeout(async () => {
+                        await this.initializeDashboardCharts();
+                    }, 50);
+                });
+            });
+        }
+    }).mount('#spa-app');
+</script>
+{% endraw %}

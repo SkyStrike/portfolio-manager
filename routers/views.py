@@ -103,6 +103,90 @@ def get_json_file(filename: str, price_mode: str = "intraday"):
     normalized_key = f"src/{base}{ext}"
     return get_cached_view(normalized_key, price_mode)
 
+# Beta SPA Route
+@router.get("/beta", response_class=HTMLResponse)
+def get_beta_dashboard():
+    logger.info("GET /beta - serving beta SPA dashboard wrapped in base.html")
+    if os.path.exists("templates/spa_shell.html"):
+        from jinja2 import Environment, FileSystemLoader
+        from services.rebuild_dashboard import load_config
+        from core.database import get_connection
+        from services.report_renderer import ReportRenderer
+        
+        conn = get_connection()
+        nav_items = [{"name": "All", "url": f"{base_path}/", "id": "nav-all", "slug": "all"}]
+        category_nav = []
+        portfolio_nav = []
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT DISTINCT classification FROM tickers WHERE classification IS NOT NULL AND classification != ''")
+            classifications = [row['classification'] for row in cursor.fetchall()]
+            
+            config = load_config()
+            priority = config.get('sorting', {}).get('classification_priority', [])
+            def class_sort_key(c_name):
+                try: return (priority.index(c_name), c_name)
+                except ValueError: return (100, c_name)
+            classifications.sort(key=class_sort_key)
+            
+            for c in classifications:
+                c_slug = c.lower().replace(" ", "-")
+                category_nav.append({
+                    "name": c,
+                    "url": f"{base_path}/portfolio_active_{c_slug}.html",
+                    "id": f"nav-{c_slug}",
+                    "slug": c_slug
+                })
+                
+            cursor.execute("SELECT id, name, broker, classification FROM portfolios ORDER BY name")
+            portfolios = cursor.fetchall()
+            for port in portfolios:
+                pslug = port['name'].lower().replace(" ", "-")
+                portfolio_nav.append({
+                    "name": port['name'],
+                    "url": f"{base_path}/portfolio_active_port_{pslug}.html",
+                    "id": f"port-{pslug}",
+                    "slug": f"port-{pslug}",
+                    "broker": port['broker'] or '',
+                })
+        except Exception as e:
+            logger.error("Error fetching portfolios for navigation: %s", e)
+        finally:
+            conn.close()
+
+        env = Environment(loader=FileSystemLoader("templates"))
+        spa_template = env.get_template("spa_shell.html")
+        spa_content = spa_template.render(BASE_PATH=base_path)
+        
+        # Instantiate a mock renderer to get base layout wrapping
+        dummy_data = {
+            "metadata": {
+                "config": {},
+                "summary": {
+                    "total_market_value_sgd": 0, 
+                    "total_invested_active_sgd": 0,
+                    "total_capital_gains_sgd": 0,
+                    "total_capital_gains_pct": 0,
+                    "lifetime_profit_sgd": 0
+                }
+            },
+            "positions": [],
+            "dashboard": {"daily_performance": {}}
+        }
+        renderer = ReportRenderer(dummy_data)
+        
+        wrapped = renderer._wrap_body(
+            content=spa_content,
+            title="Beta SPA Dashboard",
+            is_closed=False,
+            nav_items=nav_items,
+            cat_nav=category_nav,
+            port_nav=portfolio_nav,
+            json_filename="portfolio_data_intraday.json"
+        )
+        return HTMLResponse(content=wrapped)
+    return HTMLResponse("<h3>Please create templates/spa_shell.html</h3>")
+
 # Trades Ledger SPA Route
 @router.get("/trades", response_class=HTMLResponse)
 def get_trades():
