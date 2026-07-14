@@ -1,0 +1,389 @@
+{% raw %}
+        <div v-show="currentView === 'performance'">
+            <div v-if="!perfData" class="spa-center-loader">
+                <div class="spinner spa-spinner-margin"></div>
+                <p>Loading Performance Report data...</p>
+            </div>
+            
+            <div v-else>
+                <h1 id="perf-top" class="spa-heading-outfit">
+                    <span>Monthly Performance Report</span>
+                </h1>
+                
+                <!-- Performance Tabs Navigation -->
+                <div class="perf-tabs-container" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 25px; border-bottom: 1px solid var(--card-border); padding-bottom: 15px;">
+                    <button class="view-btn" :class="{ active: perfActiveTab === 'cash' }" @click="perfActiveTab = 'cash'">💰 Combined Net Worth</button>
+                    
+                    <button v-for="br in Object.keys(perfData.broker_cash_ytd || {})" 
+                            :key="br" 
+                            class="view-btn" 
+                            :class="{ active: perfActiveTab === 'cash-' + br.toLowerCase() }" 
+                            @click="perfActiveTab = 'cash-' + br.toLowerCase()">
+                        <span v-if="br === 'MOOMOO'">🐮</span>
+                        <span v-else-if="br === 'IBKR'">🏢</span>
+                        <span v-else>💼</span>
+                        {{ br }} Cash
+                    </button>
+                    
+                    <button class="view-btn" :class="{ active: perfActiveTab === 'portfolio' }" @click="perfActiveTab = 'portfolio'">📈 Classification Portfolios</button>
+                </div>
+                <!-- A/B: COMBINED NET WORTH OR BROKER CASH TAB -->
+                <div v-if="perfActiveTab === 'cash' || perfActiveTab.startsWith('cash-')">
+                    <div v-if="getActiveYtdData()" class="ytd-summary-container">
+                        <div class="ytd-block">
+                            <h3 class="spa-comparison-heading">📅 Year-to-Date Performance Comparison ({{ getActiveYtdData().label }})</h3>
+                            <div class="ytd-table-scroll-wrapper">
+                                <table class="summary-table perf-table">
+                                    <thead>
+                                        <tr class="perf-table-header">
+                                            <th class="perf-th-left spa-ta-left">YTD Metrics</th>
+                                            <th v-for="year in perfData.years" :key="year" class="perf-th spa-ta-right">{{ year }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="perf-td-label spa-ta-left">Liquidation Value</td>
+                                            <td v-for="year in perfData.years" :key="year" class="spa-ta-right">
+                                                <div v-if="getActiveYtdData().data[year]" class="spa-cell-stack">
+                                                    <span class="spa-cell-stack-top">{{ formatCommas(getActiveYtdData().data[year].liquidation_start) }}</span>
+                                                    <span class="spa-cell-stack-bottom">{{ formatCommas(getActiveYtdData().data[year].liquidation_end) }}</span>
+                                                </div>
+                                                <span v-else class="spa-color-666">-</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="sub-row-title spa-sub-row-label">- Liquidation Change (value)</td>
+                                            <td v-for="year in perfData.years" :key="year" class="spa-ta-right">
+                                                <span v-if="getActiveYtdData().data[year]" :class="getValClass(getActiveYtdData().data[year].liquidation_val)">
+                                                    {{ formatCommas(getActiveYtdData().data[year].liquidation_val, true) }}
+                                                </span>
+                                                <span v-else class="spa-color-666">-</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="sub-row-title spa-sub-row-label">- Liquidation Change (%)</td>
+                                            <td v-for="year in perfData.years" :key="year" class="spa-ta-right">
+                                                <span v-if="getActiveYtdData().data[year]" :class="getValClass(getActiveYtdData().data[year].liquidation_pct)">
+                                                    {{ formatCommas(getActiveYtdData().data[year].liquidation_pct, true) }}%
+                                                </span>
+                                                <span v-else class="spa-color-666">-</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="perf-td-label spa-ta-left">Base Capital</td>
+                                            <td v-for="year in perfData.years" :key="year" class="spa-ta-right">
+                                                <div v-if="getActiveYtdData().data[year]" class="spa-cell-stack">
+                                                    <span class="spa-cell-stack-top">{{ formatCommas(getActiveYtdData().data[year].capital_start) }}</span>
+                                                    <span class="spa-cell-stack-bottom">{{ formatCommas(getActiveYtdData().data[year].capital_end) }}</span>
+                                                </div>
+                                                <span v-else class="spa-color-666">-</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="sub-row-title spa-sub-row-label">- Net Capital Additions</td>
+                                            <td v-for="year in perfData.years" :key="year" class="spa-ta-right">
+                                                <span v-if="getActiveYtdData().data[year]" :class="getValClass(getActiveYtdData().data[year].capital_val)">
+                                                    {{ formatCommas(getActiveYtdData().data[year].capital_val, true) }}
+                                                </span>
+                                                <span v-else class="spa-color-666">-</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="perf-td-label spa-ta-left">Net Portfolio Gains (Capital Return)</td>
+                                            <td v-for="year in perfData.years" :key="year" class="spa-ta-right">
+                                                <div v-if="getActiveYtdData().data[year]" class="spa-cell-stack">
+                                                    <span class="spa-cell-stack-top">{{ formatCommas(getActiveYtdData().data[year].gains_start) }}</span>
+                                                    <span class="spa-cell-stack-bottom">{{ formatCommas(getActiveYtdData().data[year].gains_end) }}</span>
+                                                </div>
+                                                <span v-else class="spa-color-666">-</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="sub-row-title spa-sub-row-label">- Return Change (value)</td>
+                                            <td v-for="year in perfData.years" :key="year" class="spa-ta-right">
+                                                <span v-if="getActiveYtdData().data[year]" :class="getValClass(getActiveYtdData().data[year].gains_val)">
+                                                    {{ formatCommas(getActiveYtdData().data[year].gains_val, true) }}
+                                                </span>
+                                                <span v-else class="spa-color-666">-</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="sub-row-title spa-sub-row-label">- Return Change (%)</td>
+                                            <td v-for="year in perfData.years" :key="year" class="spa-ta-right">
+                                                <span v-if="getActiveYtdData().data[year]" :class="getValClass(getActiveYtdData().data[year].gains_pct)">
+                                                    {{ formatCommas(getActiveYtdData().data[year].gains_pct, true) }}%
+                                                </span>
+                                                <span v-else class="spa-color-666">-</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="perf-td-label spa-ta-left">Cash In Hand</td>
+                                            <td v-for="year in perfData.years" :key="year" class="spa-ta-right">
+                                                <div v-if="getActiveYtdData().data[year]" class="spa-cell-stack">
+                                                    <span class="spa-cell-stack-top">{{ formatCommas(getActiveYtdData().data[year].cash_start) }}</span>
+                                                    <span class="spa-cell-stack-bottom">{{ formatCommas(getActiveYtdData().data[year].cash_end) }}</span>
+                                                </div>
+                                                <span v-else class="spa-color-666">-</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="perf-td-label spa-ta-left">Dividends Received (YTD)</td>
+                                            <td v-for="year in perfData.years" :key="year" class="spa-ta-right">
+                                                <span v-if="getActiveYtdData().data[year]" class="pos-val spa-weight-600">
+                                                    {{ formatCommas(getActiveYtdData().data[year].dividends_received) }}
+                                                </span>
+                                                <span v-else class="spa-color-666">-</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="year-nav-container" style="display: flex; gap: 8px; align-items: center; margin-bottom: 20px; margin-top: 30px;">
+                        <span class="year-nav-label">Select Year:</span>
+                        <button v-for="year in [...perfData.years].reverse()" 
+                                :key="year" 
+                                class="toggle-btn" 
+                                :class="{ active: perfSelectedYear === year }" 
+                                @click="perfSelectedYear = year">{{ year }}</button>
+                    </div>
+                    
+                    <div v-if="perfSelectedYear">
+                        <h2 style="font-size: 1.15rem; font-family: 'Outfit', sans-serif; margin-bottom: 15px;">{{ getActiveYtdData().label }} Summary - Year {{ perfSelectedYear }}</h2>
+                        <div class="monthly-table-scroll-wrapper spa-monthly-table-wrapper">
+                            <table class="summary-table spa-monthly-table">
+                                <thead>
+                                    <tr class="spa-monthly-table-header">
+                                        <th class="spa-monthly-th-left">Metrics</th>
+                                        <th v-for="m in calMonths" :key="m" class="spa-monthly-th-right">{{ m.substring(0, 3) }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="row in [
+                                        { label: 'Liquidation Value', startKey: 'liquidation_value_start', endKey: 'liquidation_value' },
+                                        { label: 'Base Capital', startKey: 'base_capital_start', endKey: 'base_capital' },
+                                        { label: 'Total Stock Value', startKey: 'total_stock_value_start', endKey: 'total_stock_value' },
+                                        { label: 'Base Capital Gains', startKey: 'base_capital_gains_start', endKey: 'base_capital_gains' },
+                                        { label: 'Cash on Hand', startKey: 'cash_on_hand_start', endKey: 'cash_on_hand' }
+                                    ]" :key="row.label">
+                                        <td class="metric-label spa-monthly-td-label">{{ row.label }}</td>
+                                        <td v-for="(m, m_idx) in calMonths" :key="m_idx">
+                                            <div v-if="getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1]" class="spa-cell-stack">
+                                                <span class="spa-cell-stack-top">{{ formatCommas(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1][row.startKey]) }}</span>
+                                                <span class="spa-cell-stack-bottom">{{ formatCommas(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1][row.endKey]) }}</span>
+                                            </div>
+                                            <span v-else class="spa-color-666">-</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="metric-label spa-monthly-td-label">Dividends Received</td>
+                                        <td v-for="(m, m_idx) in calMonths" :key="m_idx">
+                                            <span v-if="getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1]">
+                                                {{ formatCommas(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].dividends_received) }}
+                                            </span>
+                                            <span v-else class="spa-color-666">-</span>
+                                        </td>
+                                    </tr>
+                                    <tr class="header-row spa-monthly-sub-header">
+                                        <td colspan="13" class="spa-monthly-sub-header-td">Monthly Change</td>
+                                    </tr>
+                                    <tr v-for="metric in [
+                                        { l: 'Liquidation Value (value)', k: 'liquidation_value_val', p: false },
+                                        { l: 'Liquidation Value (%)', k: 'liquidation_value_pct', p: true },
+                                        { l: 'Base Capital (value)', k: 'base_capital_val', p: false },
+                                        { l: 'Base Capital (%)', k: 'base_capital_pct', p: true },
+                                        { l: 'Total Stock Value (value)', k: 'total_stock_value_val', p: false },
+                                        { l: 'Total Stock Value (%)', k: 'total_stock_value_pct', p: true },
+                                        { l: 'Base Capital Gains (value)', k: 'base_capital_gains_val', p: false },
+                                        { l: 'Base Capital Gains (%)', k: 'base_capital_gains_pct', p: true }
+                                    ]" :key="'chg-' + metric.k">
+                                        <td class="sub-row-title spa-sub-row-label">{{ metric.l }}</td>
+                                        <td v-for="(m, m_idx) in calMonths" :key="m_idx">
+                                            <span v-if="getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1] && getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].mtd"
+                                                  :class="getValClass(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].mtd[metric.k])">
+                                                {{ formatCommas(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].mtd[metric.k], true) }}{{ metric.p ? '%' : '' }}
+                                            </span>
+                                            <span v-else class="spa-color-666">-</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- C: CLASSIFICATION PORTFOLIOS TAB -->
+                <div v-if="perfActiveTab === 'portfolio'">
+                    <div class="selector-wrapper spa-selector-row">
+                        <label class="selector-label spa-weight-bold">Select Classification:</label>
+                        <select v-model="perfSelectedClassification" class="selector-dropdown spa-selector-dropdown">
+                            <option v-for="cls in perfData.classifications" :key="cls" :value="cls">{{ cls }}</option>
+                        </select>
+                    </div>
+                    
+                    <div v-if="perfSelectedClassification && perfData.portfolio_ytd[perfSelectedClassification]" class="ytd-summary-container">
+                        <div class="ytd-block">
+                            <h3 class="spa-comparison-heading">📅 Year-to-Date Performance Comparison ({{ perfSelectedClassification }})</h3>
+                            <div class="ytd-table-scroll-wrapper">
+                                <table class="summary-table perf-table">
+                                    <thead>
+                                        <tr class="perf-table-header">
+                                            <th class="perf-th-left spa-ta-left">YTD Classification Metrics</th>
+                                            <th v-for="year in perfData.years" :key="year" class="perf-th spa-ta-right">{{ year }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="perf-td-label spa-ta-left">Beginning Invested Capital</td>
+                                            <td v-for="year in perfData.years" :key="year" class="spa-ta-right">
+                                                <span v-if="perfData.portfolio_ytd[perfSelectedClassification][year]">
+                                                    {{ formatCommas(perfData.portfolio_ytd[perfSelectedClassification][year].invested_start) }}
+                                                </span>
+                                                <span v-else class="spa-color-666">-</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="perf-td-label spa-ta-left">Ending Invested Capital</td>
+                                            <td v-for="year in perfData.years" :key="year" class="spa-ta-right">
+                                                <span v-if="perfData.portfolio_ytd[perfSelectedClassification][year]">
+                                                    {{ formatCommas(perfData.portfolio_ytd[perfSelectedClassification][year].invested_end) }}
+                                                </span>
+                                                <span v-else class="spa-color-666">-</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="sub-row-title spa-sub-row-label">- Capital Invested Change</td>
+                                            <td v-for="year in perfData.years" :key="year" class="spa-ta-right">
+                                                <span v-if="perfData.portfolio_ytd[perfSelectedClassification][year]"
+                                                      :class="getValClass(perfData.portfolio_ytd[perfSelectedClassification][year].invested_val)">
+                                                    {{ formatCommas(perfData.portfolio_ytd[perfSelectedClassification][year].invested_val, true) }}
+                                                </span>
+                                                <span v-else class="spa-color-666">-</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="perf-td-label spa-ta-left">Total Returns (value)</td>
+                                            <td v-for="year in perfData.years" :key="year" class="spa-ta-right">
+                                                <span v-if="perfData.portfolio_ytd[perfSelectedClassification][year]"
+                                                      :class="getValClass(perfData.portfolio_ytd[perfSelectedClassification][year].returns_val)">
+                                                    {{ formatCommas(perfData.portfolio_ytd[perfSelectedClassification][year].returns_val, true) }}
+                                                </span>
+                                                <span v-else class="spa-color-666">-</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="sub-row-title spa-sub-row-label">- Total Returns (%)</td>
+                                            <td v-for="year in perfData.years" :key="year" class="spa-ta-right">
+                                                <span v-if="perfData.portfolio_ytd[perfSelectedClassification][year]"
+                                                      :class="getValClass(perfData.portfolio_ytd[perfSelectedClassification][year].returns_pct)">
+                                                    {{ formatCommas(perfData.portfolio_ytd[perfSelectedClassification][year].returns_pct, true) }}%
+                                                </span>
+                                                <span v-else class="spa-color-666">-</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="perf-td-label spa-ta-left">Options Profit</td>
+                                            <td v-for="year in perfData.years" :key="year" class="spa-ta-right">
+                                                <span v-if="perfData.portfolio_ytd[perfSelectedClassification][year]"
+                                                      :class="getValClass(perfData.portfolio_ytd[perfSelectedClassification][year].options_val)">
+                                                    {{ formatCommas(perfData.portfolio_ytd[perfSelectedClassification][year].options_val, true) }}
+                                                </span>
+                                                <span v-else class="spa-color-666">-</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="perf-td-label spa-ta-left">Dividends Received</td>
+                                            <td v-for="year in perfData.years" :key="year" class="spa-ta-right">
+                                                <span v-if="perfData.portfolio_ytd[perfSelectedClassification][year]">
+                                                    {{ formatCommas(perfData.portfolio_ytd[perfSelectedClassification][year].dividends_received) }}
+                                                </span>
+                                                <span v-else class="spa-color-666">-</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="year-nav-container" style="display: flex; gap: 8px; align-items: center; margin-bottom: 20px; margin-top: 30px;">
+                        <span class="year-nav-label">Select Year:</span>
+                        <button v-for="year in [...perfData.years].reverse()" 
+                                :key="year" 
+                                class="toggle-btn" 
+                                :class="{ active: perfSelectedYear === year }" 
+                                @click="perfSelectedYear = year">{{ year }}</button>
+                    </div>
+                    
+                    <div v-if="perfSelectedClassification && perfSelectedYear">
+                        <h2 style="font-size: 1.15rem; font-family: 'Outfit', sans-serif; margin-bottom: 15px;">{{ perfSelectedClassification }} Performance - Year {{ perfSelectedYear }}</h2>
+                        <div class="monthly-table-scroll-wrapper spa-monthly-table-wrapper">
+                            <table class="summary-table spa-monthly-table">
+                                <thead>
+                                    <tr class="spa-monthly-table-header">
+                                        <th class="spa-monthly-th-left">Metrics</th>
+                                        <th v-for="m in calMonths" :key="m" class="spa-monthly-th-right">{{ m.substring(0, 3) }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="row in [
+                                        { label: 'Total Invested', startKey: 'total_invested_start', endKey: 'total_invested' },
+                                        { label: 'Current Value', startKey: 'current_value_start', endKey: 'current_value' },
+                                        { label: 'Options Profit', startKey: 'options_profit_start', endKey: 'options_profit' },
+                                        { label: 'Total Returns', startKey: 'total_returns_start', endKey: 'total_returns' }
+                                    ]" :key="row.label">
+                                        <td class="metric-label spa-monthly-td-label">{{ row.label }}</td>
+                                        <td v-for="(m, m_idx) in calMonths" :key="m_idx">
+                                            <div v-if="perfData.portfolio_data[perfSelectedClassification] && perfData.portfolio_data[perfSelectedClassification][perfSelectedYear] && perfData.portfolio_data[perfSelectedClassification][perfSelectedYear][m_idx + 1]" class="spa-cell-stack">
+                                                <span class="spa-cell-stack-top">{{ formatCommas(perfData.portfolio_data[perfSelectedClassification][perfSelectedYear][m_idx + 1][row.startKey]) }}</span>
+                                                <span class="spa-cell-stack-bottom">{{ formatCommas(perfData.portfolio_data[perfSelectedClassification][perfSelectedYear][m_idx + 1][row.endKey]) }}</span>
+                                            </div>
+                                            <span v-else class="spa-color-666">-</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="metric-label spa-monthly-td-label">Dividends Received</td>
+                                        <td v-for="(m, m_idx) in calMonths" :key="m_idx">
+                                            <span v-if="perfData.portfolio_data[perfSelectedClassification] && perfData.portfolio_data[perfSelectedClassification][perfSelectedYear] && perfData.portfolio_data[perfSelectedClassification][perfSelectedYear][m_idx + 1]">
+                                                {{ formatCommas(perfData.portfolio_data[perfSelectedClassification][perfSelectedYear][m_idx + 1].dividends_received) }}
+                                            </span>
+                                            <span v-else class="spa-color-666">-</span>
+                                        </td>
+                                    </tr>
+                                    <tr class="header-row spa-monthly-sub-header">
+                                        <td colspan="13" class="spa-monthly-sub-header-td">Monthly Change</td>
+                                    </tr>
+                                    <tr v-for="metric in [
+                                        { l: 'Total Returns (value)', k: 'total_returns_val', p: false },
+                                        { l: 'Total Returns (%)', k: 'total_returns_pct', p: true },
+                                        { l: 'Capital Invested (value)', k: 'capital_invested_val', p: false },
+                                        { l: 'Capital Invested (%)', k: 'capital_invested_pct', p: true },
+                                        { l: 'Current Value (value)', k: 'current_value_val', p: false },
+                                        { l: 'Current Value (%)', k: 'current_value_pct', p: true },
+                                        { l: 'Options Profit (value)', k: 'options_profit_val', p: false },
+                                        { l: 'Options Profit (%)', k: 'options_profit_pct', p: true },
+                                        { l: 'Dividends Received (value)', k: 'dividends_received_val', p: false },
+                                        { l: 'Dividends Received (%)', k: 'dividends_received_pct', p: true }
+                                    ]" :key="'portmetric-' + metric.k">
+                                        <td class="sub-row-title spa-sub-row-label">{{ metric.l }}</td>
+                                        <td v-for="(m, m_idx) in calMonths" :key="m_idx">
+                                            <span v-if="perfData.portfolio_data[perfSelectedClassification] && perfData.portfolio_data[perfSelectedClassification][perfSelectedYear] && perfData.portfolio_data[perfSelectedClassification][perfSelectedYear][m_idx + 1] && perfData.portfolio_data[perfSelectedClassification][perfSelectedYear][m_idx + 1].mtd"
+                                                  :class="getValClass(perfData.portfolio_data[perfSelectedClassification][perfSelectedYear][m_idx + 1].mtd[metric.k])">
+                                                {{ formatCommas(perfData.portfolio_data[perfSelectedClassification][perfSelectedYear][m_idx + 1].mtd[metric.k], true) }}{{ metric.p ? '%' : '' }}
+                                            </span>
+                                            <span v-else class="spa-color-666">-</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 7. FIXED DEPOSIT COMPARISON VIEW -->
+
+{% endraw %}

@@ -1,0 +1,126 @@
+{% raw %}
+        <div v-show="currentView === 'fdComparison'">
+            <div class="header-action-container" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 25px;">
+                <h1>vs Fixed Deposits (Alternative Cash Analysis)</h1>
+            </div>
+
+            <div class="fd-comparison-layout">
+                <!-- Top Summary KPI Grid -->
+                <div class="fd-kpi-grid">
+                    <div class="fd-kpi-card">
+                        <div class="fd-kpi-title">Simulated FD Portfolio Value</div>
+                        <div class="fd-kpi-value" v-text="formatFdCurrency(fdData?.summary?.total_fd_value)"></div>
+                    </div>
+                    <div class="fd-kpi-card">
+                        <div class="fd-kpi-title">Current Portfolio Market Value</div>
+                        <div class="fd-kpi-value" v-text="formatFdCurrency(fdData?.summary?.total_market_value)"></div>
+                    </div>
+                    <div class="fd-kpi-card">
+                        <div class="fd-kpi-title">FD vs Market Difference</div>
+                        <div class="fd-kpi-value" :class="getFdValClass(fdData?.summary?.delta_value)" v-text="formatFdCurrency(fdData?.summary?.delta_value) + ' (' + formatPct(fdData?.summary?.delta_pct, true) + ')'"></div>
+                    </div>
+                </div>
+
+                <!-- Controls and Assumptions Row -->
+                <div class="fd-controls-row">
+                    <!-- Controls Card -->
+                    <div class="fd-card">
+                        <h4 class="fd-card-title">Simulator Settings</h4>
+                        
+                        <div class="fd-form-group">
+                            <span class="fd-form-label">Simulation Mode</span>
+                            <div class="fd-btn-group">
+                                <button class="fd-toggle-btn" :class="{ active: fdRateMode === 'fixed' }" @click="setFdRateMode('fixed')">Simplistic Fixed Rate</button>
+                                <button class="fd-toggle-btn" :class="{ active: fdRateMode === 'csv' }" @click="setFdRateMode('csv')">CSV Rates File (Upload)</button>
+                            </div>
+                        </div>
+
+                        <!-- Fixed Rate Input -->
+                        <div class="fd-form-group" v-show="fdRateMode === 'fixed'">
+                            <label class="fd-form-label" for="fd-fixed-rate-input">Annual FD Interest Rate (%)</label>
+                            <input type="number" id="fd-fixed-rate-input" class="fd-input" v-model.number="fdFixedRate" step="0.05" min="0" @change="fetchFdComparison">
+                        </div>
+
+                        <!-- CSV Upload Input -->
+                        <div class="fd-form-group" v-show="fdRateMode === 'csv'">
+                            <div class="fd-upload-header">
+                                <span class="fd-form-label fd-upload-label">Upload FD Rates CSV File</span>
+                                <a href="static/rates.csv" download="rates.csv" class="fd-reference-link">⬇️ Reference CSV</a>
+                            </div>
+                            <div class="fd-file-upload">
+                                <input type="file" id="fd-csv-file-input" class="fd-file-input" accept=".csv" @change="handleFdFileSelected">
+                                <div class="fd-upload-btn">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="17 8 12 3 7 8"></polyline>
+                                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                                    </svg>
+                                    <span v-text="fdFileName || 'Choose CSV File...'"></span>
+                                </div>
+                            </div>
+                            <div class="fd-upload-status" style="display: block;" v-if="fdFileUploaded">File uploaded successfully in-memory.</div>
+                        </div>
+                    </div>
+
+                    <!-- Assumptions Card -->
+                    <div class="fd-card">
+                        <h4 class="fd-card-title">Simulator Core Assumptions</h4>
+                        <ul class="fd-assumptions-list">
+                            <li><strong>1-Year Lock-in</strong>: All fixed deposits run for exactly 12 months.</li>
+                            <li><strong>Shifted Availability</strong>: Base capital additions are shifted forward by 1 month to set the start date (placed on the 1st).</li>
+                            <li><strong>No Withdrawals</strong>: Assumes zero cash withdrawals out of the capital.</li>
+                            <li><strong>Maturity Payouts</strong>: Interest earned is generated and paid out only on maturity (end of 1 year).</li>
+                            <li><strong>Auto Rollover</strong>: On maturity, matured principal and earned interest are immediately rolled into another 1-year FD at the new rate.</li>
+                            <li><strong>No Minimum sum limits</strong>: No minimum balance restrictions apply to opening FDs.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Comparison Table Card -->
+                <div class="fd-table-container" style="overflow-x: auto; margin-top: 20px;">
+                    <h4 class="fd-card-title" style="margin-bottom: 15px; border-bottom: none; padding-bottom: 0;">Month-By-Month Comparison Table</h4>
+                    <table class="fd-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th class="spa-ta-right">Injected This Month</th>
+                                <th class="spa-ta-right">Total Principal Injected</th>
+                                <th style="text-align: center;">Effective FD Rate</th>
+                                <th class="spa-ta-right">Interest Earned (Month)</th>
+                                <th class="spa-ta-right">Accum. Interest Received</th>
+                                <th class="spa-ta-right">Current FD Value</th>
+                                <th class="spa-ta-right">Actual Market Value</th>
+                                <th class="spa-ta-right">FD vs Market Delta</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-if="!fdData">
+                                <td colspan="9" style="text-align: center; padding: 30px; color: var(--text-secondary);">Loading simulation data...</td>
+                            </tr>
+                            <tr v-else v-for="row in fdData.rows" :key="row.date">
+                                <td><strong>{{ row.date }}</strong></td>
+                                <td class="spa-ta-right">{{ row.capital_injected > 0 ? formatFdCurrency(row.capital_injected) : '-' }}</td>
+                                <td class="spa-ta-right">{{ formatFdCurrency(row.total_capital_injected) }}</td>
+                                <td style="text-align: center;">{{ (row.effective_rate * 100).toFixed(2) }}%</td>
+                                <td class="spa-ta-right">{{ row.interest_earned > 0 ? formatFdCurrency(row.interest_earned) : '-' }}</td>
+                                <td class="spa-ta-right">{{ row.accum_interest > 0 ? formatFdCurrency(row.accum_interest) : '-' }}</td>
+                                <td class="spa-ta-right">{{ formatFdCurrency(row.fd_value) }}</td>
+                                <td class="spa-ta-right">{{ row.market_value !== null ? formatFdCurrency(row.market_value) : 'N/A' }}</td>
+                                <td :class="getFdValClass(row.delta_val)" class="spa-ta-right">
+                                    <template v-if="row.delta_val !== null">
+                                        {{ formatFdCurrency(row.delta_val) }} ({{ formatPct(row.delta_pct, true) }})
+                                    </template>
+                                    <template v-else>
+                                        N/A
+                                    </template>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. CHARTS TAB VIEW -->
+
+{% endraw %}

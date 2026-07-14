@@ -1,0 +1,189 @@
+{% raw %}
+        <div v-show="currentView === 'calendar'">
+            <!-- Stats Summary Cards Grid -->
+            <div v-if="calendarData && calendarData.summary" class="div-metrics-grid spa-mb-25">
+                <div class="cal-metric-stat">
+                    <div class="cal-metric-title">Expected Annual Income</div>
+                    <div class="cal-metric-value text-gain">SG$ {{ formatCommas(calendarData.summary.annual_income_sgd) }}</div>
+                </div>
+                <div class="cal-metric-stat">
+                    <div class="cal-metric-title">Expected Monthly Average</div>
+                    <div class="cal-metric-value">SG$ {{ formatCommas(calendarData.summary.monthly_average_sgd) }}</div>
+                </div>
+                <div class="cal-metric-stat">
+                    <div class="cal-metric-title">Expected Daily Average</div>
+                    <div class="cal-metric-value">SG$ {{ formatCommas(calendarData.summary.daily_average_sgd) }}</div>
+                </div>
+                <div class="cal-metric-stat">
+                    <div class="cal-metric-title">Portfolio Dividend Yield</div>
+                    <div class="cal-metric-value text-info spa-color-blue">{{ formatCommas(calendarData.summary.portfolio_yield_pct) }}%</div>
+                </div>
+                <div class="cal-metric-stat">
+                    <div class="cal-metric-title">Yet to Receive (Forward)</div>
+                    <div class="cal-metric-value text-warning spa-color-yellow">SG$ {{ formatCommas(calendarData.summary.yet_to_receive_sgd) }}</div>
+                </div>
+            </div>
+            
+            <!-- Forward Monthly Income Bar Chart Card -->
+            <div class="dashboard-grid symbol-stats-grid-single dashboard-section-spacer spa-mb-30">
+                <div class="chart-card spa-summary-card-container">
+                    <h4 class="chart-card-header spa-summary-card-title">Expected Dividends (Next 12 Months)</h4>
+                    <div id="dividend-chart" class="chart-container spa-min-h-320"></div>
+                </div>
+            </div>
+
+            <!-- Calendar Navigation Header -->
+            <div class="calendar-header-bar spa-calendar-header-row">
+                <div class="calendar-controls-left spa-flex-center-gap-15">
+                    <div class="spa-flex-center-gap-8">
+                        <button class="btn calendar-nav-btn spa-calendar-nav-btn" @click="changeMonth(-1)">&lsaquo;</button>
+                        <h3 class="calendar-month-title spa-calendar-month-title">{{ calMonths[calMonth] }} {{ calYear }}</h3>
+                        <button class="btn calendar-nav-btn spa-calendar-nav-btn" @click="changeMonth(1)">&rsaquo;</button>
+                    </div>
+                    <span class="calendar-month-total spa-calendar-total">+SG$ {{ formatCommas(calMonthlyTotalSgd) }}</span>
+                    <button class="btn calendar-today-btn spa-calendar-today-btn" @click="jumpToToday">Today</button>
+                </div>
+                
+                <div class="calendar-controls-right spa-flex-center-gap-15">
+                    <div class="calendar-view-toggle spa-calendar-toggle-wrapper">
+                        <button class="view-toggle-btn" :class="{ active: calViewMode === 'grid' }" @click="calViewMode = 'grid'">Grid View</button>
+                        <button class="view-toggle-btn" :class="{ active: calViewMode === 'list' }" @click="calViewMode = 'list'">List View</button>
+                    </div>
+                    
+                    <button id="sync-dividends-btn-spa" @click="handleSyncDividends" class="btn calendar-sync-btn spa-calendar-sync-btn">
+                        <svg id="sync-dividends-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                        </svg>
+                        Sync Dividends
+                    </button>
+                </div>
+            </div>
+
+            <!-- Grid View -->
+            <div v-show="calViewMode === 'grid'" id="calendar-grid-wrapper">
+                <div class="cal-grid-header-row spa-calendar-grid-header">
+                    <div class="cal-grid-header">Mon</div>
+                    <div class="cal-grid-header">Tue</div>
+                    <div class="cal-grid-header">Wed</div>
+                    <div class="cal-grid-header">Thu</div>
+                    <div class="cal-grid-header">Fri</div>
+                    <div class="cal-grid-header">Sat</div>
+                    <div class="cal-grid-header">Sun</div>
+                </div>
+                <div class="calendar-days-grid spa-calendar-grid">
+                    <div v-for="(cell, index) in calendarWeeks" :key="index" 
+                         class="calendar-cell" 
+                         :class="{ 'other-month': !cell.isCurrentMonth, 'today': cell.isToday }">
+                        <span class="calendar-cell-date">{{ cell.day }}</span>
+                        <span v-if="cell.totalSgd > 0" class="calendar-cell-sum">+SG${{ formatCommas(cell.totalSgd) }}</span>
+                        
+                        <div v-if="cell.payouts.length > 0" class="calendar-badge-list">
+                            <div v-for="p in cell.payouts" :key="p.id" 
+                                 class="calendar-badge" 
+                                 :class="p.status.toLowerCase()"
+                                 @click.stop="openDividendDetail(p)">
+                                <span><span v-if="p.status === 'Paid'">✓ </span>{{ p.ticker }}</span>
+                                <span>${{ formatCommas(p.net_amount_foreign) }} <span style="font-size: 0.55rem; opacity: 0.8;">{{ p.currency }}</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- List View -->
+            <div v-show="calViewMode === 'list'" id="calendar-list-wrapper" class="calendar-list-wrapper">
+                <div class="calendar-list-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px;">
+                    <input type="text" v-model="calListSearch" placeholder="Search by ticker, portfolio or status..." class="calendar-list-search spa-calendar-search">
+                    <div class="calendar-list-count spa-modal-label">{{ filteredCalList.length }} payouts found for this month</div>
+                </div>
+                
+                <table class="summary-table cal-summary-table">
+                    <thead>
+                        <tr class="cal-list-thead-row">
+                            <th class="cal-list-th">Date</th>
+                            <th class="cal-list-th">Portfolio</th>
+                            <th class="cal-list-th">Ticker</th>
+                            <th class="cal-list-th">Status</th>
+                            <th class="cal-list-th-right spa-ta-right">Gross Amount</th>
+                            <th class="cal-list-th-right spa-ta-right">Net (Foreign)</th>
+                            <th class="cal-list-th-right spa-ta-right">Net (SGD)</th>
+                            <th class="cal-list-th-right spa-ta-right">Yield</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="p in filteredCalList" :key="p.id" class="ticker-row spa-cursor-pointer" @click="openDividendDetail(p)">
+                            <td v-text="p.date"></td>
+                            <td v-text="p.portfolio_name"></td>
+                            <td v-text="p.ticker" class="spa-weight-600"></td>
+                            <td>
+                                <span class="cal-div-status-badge" :class="p.status.toLowerCase()" v-text="p.status"></span>
+                            </td>
+                            <td v-text="formatCommas(p.gross_amount) + ' ' + p.currency" class="spa-ta-right"></td>
+                            <td v-text="formatCommas(p.net_amount_foreign) + ' ' + p.currency" class="spa-ta-right"></td>
+                            <td v-text="formatCommas(p.net_amount_sgd) + ' SGD'" class="spa-cal-net-sgd"></td>
+                            <td v-text="(p.yield_pct ? p.yield_pct.toFixed(2) + '%' : '-')" class="spa-cal-yield"></td>
+                        </tr>
+                        <tr v-if="filteredCalList.length === 0">
+                            <td colspan="8" class="spa-table-empty">No dividend payouts for this period matching search filters.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Dynamic Dividend Detail Modal Popup -->
+        <div v-if="activeDividend" class="modal-overlay cal-div-modal-overlay spa-modal-overlay">
+            <div class="cal-div-modal-box">
+                <div class="cal-div-modal-header spa-modal-header">
+                    <h4 class="cal-div-modal-title spa-modal-title">{{ activeDividend.ticker }}</h4>
+                    <span class="cal-div-status-badge" :class="activeDividend.status.toLowerCase()">{{ activeDividend.status }}</span>
+                </div>
+                
+                <div class="cal-div-modal-fields spa-modal-fields">
+                    <div class="cal-modal-row spa-modal-row">
+                        <span class="cal-modal-label spa-modal-label">Company/Asset Name</span>
+                        <span class="cal-modal-val cal-modal-val-name">{{ activeDividend.friendly_name || activeDividend.ticker }}</span>
+                    </div>
+                    <div class="cal-modal-row spa-modal-row">
+                        <span class="cal-modal-label spa-modal-label">Payment Date</span>
+                        <span class="cal-modal-val">{{ activeDividend.date }}</span>
+                    </div>
+                    <div class="cal-modal-row spa-modal-row">
+                        <span class="cal-modal-label spa-modal-label">Portfolio</span>
+                        <span class="cal-modal-val">{{ activeDividend.portfolio_name }}</span>
+                    </div>
+                    <div class="cal-modal-row spa-modal-row">
+                        <span class="cal-modal-label spa-modal-label">Gross Dividend</span>
+                        <div class="cal-div-gross-col spa-modal-gross-col">
+                            <span class="cal-modal-val">{{ formatCommas(activeDividend.gross_amount) }} {{ activeDividend.currency }}</span>
+                            <span class="cal-div-derivation spa-modal-derivation">{{ formatCommas(activeDividend.shares) }} shares x ${{ formatCommas(activeDividend.amount_per_share, false, 4) }}</span>
+                        </div>
+                    </div>
+                    <div class="cal-modal-row spa-modal-row">
+                        <span class="cal-modal-label spa-modal-label">Withholding Tax</span>
+                        <span class="cal-modal-val text-danger">{{ formatCommas(activeDividend.gross_amount - activeDividend.net_amount_foreign) }} {{ activeDividend.currency }}</span>
+                    </div>
+                    <div class="cal-modal-row spa-modal-row">
+                        <span class="cal-modal-label spa-modal-label">Expected Net</span>
+                        <span class="cal-modal-val">{{ formatCommas(activeDividend.net_amount_foreign) }} {{ activeDividend.currency }}</span>
+                    </div>
+                    <div class="cal-modal-row spa-modal-row-center">
+                        <span class="cal-modal-label spa-modal-label">Expected Net (SGD)</span>
+                        <span class="cal-div-net-sgd spa-modal-net-sgd">+SG${{ formatCommas(activeDividend.net_amount_sgd) }}</span>
+                    </div>
+                    <div class="cal-modal-row" style="display: flex; justify-content: space-between; padding-bottom: 8px;">
+                        <span class="cal-modal-label spa-modal-label">Estimated Yield on Cost</span>
+                        <span class="cal-modal-val text-accent spa-color-blue">{{ activeDividend.yield_pct ? activeDividend.yield_pct.toFixed(2) + '%' : '-' }}</span>
+                    </div>
+                </div>
+                
+                <div class="cal-div-modal-footer spa-modal-footer">
+                    <button v-if="activeDividend.status !== 'Paid'" class="btn cal-btn-received spa-modal-btn-success" @click="openMarkAsReceivedModal(activeDividend)">Mark as received</button>
+                    <button class="btn cal-btn-close spa-modal-btn-close" @click="activeDividend = null">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endraw %}
