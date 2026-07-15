@@ -156,16 +156,18 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
         cursor = conn.cursor()
         
         # 1. Query active tickers in the database (tickers with shares > 0 across portfolios)
-        cursor.execute("SELECT id FROM portfolios")
-        portfolios = cursor.fetchall()
-        active_ticker_ids = set()
-        
-        from core.calculations import calculate_holdings
-        for p in portfolios:
-            holdings = calculate_holdings(p['id'], conn)
-            for tid, h in holdings.items():
-                if h['shares'] > 0:
-                    active_ticker_ids.add(tid)
+        cursor.execute("""
+            SELECT ticker_id,
+                   SUM(CASE
+                       WHEN action IN ('BUY', 'SPLIT') THEN quantity
+                       WHEN action = 'SELL'            THEN -quantity
+                       ELSE 0
+                   END) AS net_qty
+            FROM transactions
+            GROUP BY ticker_id
+            HAVING net_qty > 0.0001
+        """)
+        active_ticker_ids = {row['ticker_id'] for row in cursor.fetchall()}
                     
         if not active_ticker_ids:
             return {"status": "success", "message": "No active holdings in database. No price fetch needed."}
@@ -234,10 +236,22 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
         if df.empty or 'Close' not in df:
             return {"status": "error", "message": "Empty response from yfinance"}
             
+        import pandas as pd
+        
+        # Detect tickers completely absent from the batch response (not NaN rows, but missing entirely)
+        if isinstance(df.columns, pd.MultiIndex):
+            returned_in_batch = set(df['Close'].columns.tolist())
+        else:
+            returned_in_batch = set(yf_symbols) if not df.empty else set()
+            
+        failed_symbols = []
+        absent_symbols = set(yf_symbols) - returned_in_batch
+        if absent_symbols:
+            logger.warning("[price] Tickers absent from batch response (possible rate-limit): %s", absent_symbols)
+            failed_symbols.extend(list(absent_symbols))
+
         # Identify tickers that failed to return a valid Close (NaN or missing)
         # or have any row with volume > 0 and NaN Close
-        import pandas as pd
-        failed_symbols = []
         for yf_sym in yf_symbols:
             close_series = pd.Series(dtype=float)
             vol_series = pd.Series(dtype=float)
@@ -308,7 +322,14 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
         
         # Get blacklisted tickers to skip fetching their info via Ticker.info (avoids repetitive 404 errors)
         blacklisted_tickers = get_blacklisted_tickers(conn)
-        symbols_to_info = [sym for sym in yf_symbols if sym not in blacklisted_tickers]
+        
+        # Skip fetch_info calls when all markets are closed (batch closed prices are authoritative)
+        any_market_open = any(is_exchange_in_session(yf_to_exchange.get(sym, "")) for sym in yf_symbols)
+        if any_market_open:
+            symbols_to_info = [sym for sym in yf_symbols if sym not in blacklisted_tickers]
+        else:
+            logger.info("[price] All exchanges closed — skipping fetch_info, using batch close prices.")
+            symbols_to_info = []
         
         def fetch_info(sym):
             logger.debug("Fetching info: %s", sym)
@@ -417,6 +438,12 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                     has_data = True
                 
                 if has_data:
+                    # 1. Zero/negative price guard
+                    if intraday_price <= 0:
+                        logger.warning("[price] Zero/negative price for %s (%s): %.4f — skipping update", db_symbol, yf_sym, intraday_price)
+                        has_data = False
+                        
+                if has_data:
                     # Determine latest closing price vs intraday price
                     if hasattr(last_date, "strftime"):
                         last_date_str = last_date.strftime("%Y-%m-%d")
@@ -426,11 +453,42 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                     # Override with full info metadata if available and valid
                     meta = info_metadata.get(yf_sym)
                     if meta:
-                        if meta.get('lastPrice') is not None and not pd.isna(meta['lastPrice']):
+                        if meta.get('lastPrice') is not None and not pd.isna(meta['lastPrice']) and float(meta['lastPrice']) > 0:
                             intraday_price = float(meta['lastPrice'])
-                        if meta.get('previousClose') is not None and not pd.isna(meta['previousClose']):
+                        if meta.get('previousClose') is not None and not pd.isna(meta['previousClose']) and float(meta['previousClose']) > 0:
                             prev_close = float(meta['previousClose'])
                     
+                    # 2. Staleness guard
+                    from datetime import date as _date
+                    last_date_dt = datetime.strptime(last_date_str, "%Y-%m-%d").date()
+                    days_stale = (datetime.utcnow().date() - last_date_dt).days
+                    local_weekday = True
+                    try:
+                        # Safely resolve wrapped helper check if exists
+                        local_weekday = is_exchange_in_session(exchange)
+                    except Exception:
+                        pass
+                    if days_stale > 5 and local_weekday:
+                        logger.warning("[price] Stale price for %s: last date %s is %d days old on weekday — keeping existing", db_symbol, last_date_str, days_stale)
+                        has_data = False
+
+                if has_data:
+                    # 3. Ratio bounds guard (extreme price move check)
+                    cursor.execute("SELECT intraday_price FROM ticker_prices WHERE ticker_id = ?", (ticker_id,))
+                    existing_row = cursor.fetchone()
+                    if existing_row and existing_row['intraday_price']:
+                        existing = float(existing_row['intraday_price'])
+                        if existing > 0:
+                            ratio = intraday_price / existing
+                            if ratio > 5.0 or ratio < 0.20:
+                                logger.warning("[price] Suspicious price move for %s: %.4f -> %.4f (%.2fx) — ignoring", db_symbol, existing, intraday_price, ratio)
+                                try:
+                                    log_ticker_api_error(conn, yf_sym)
+                                except Exception:
+                                    pass
+                                has_data = False
+
+                if has_data:
                     # --- Holiday and Midnight Reset Logic ---
                     # Resolve exchange timezone for local date/weekday checking
                     exchange_upper = (exchange or "").strip().upper()

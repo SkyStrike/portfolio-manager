@@ -1606,8 +1606,9 @@
                 }
                 document.body.style.cursor = "wait";
                 try {
-                    const res = await fetch("/api/dashboard/rebuild?sync=true", { method: "POST" });
+                    const res = await fetch("api/dashboard/rebuild-spa?sync=true", { method: "POST" });
                     if (res.ok) {
+                        await this.fetchPortfolioData();
                         await this.initializeDashboardCharts();
                     } else {
                         alert("Failed to rebuild dashboard.");
