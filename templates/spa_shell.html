@@ -486,6 +486,7 @@
 
     <div v-else>
         <!-- Tab selector controls styled exactly like standard TOC/chart buttons -->
+        <!--
         <div class="toc-controls spa-mb-25">
             <button class="view-btn" :class="{ active: currentView === 'dashboard' }" @click="currentView = 'dashboard'">Active Holdings</button>
             <button class="view-btn" :class="{ active: currentView === 'closed' }" @click="currentView = 'closed'">Closed Positions</button>
@@ -495,6 +496,7 @@
             <button class="view-btn" :class="{ active: currentView === 'performance' }" @click="currentView = 'performance'">Performance Report</button>
             <button class="view-btn" :class="{ active: currentView === 'fdComparison' }" @click="currentView = 'fdComparison'">vs Fixed Deposits</button>
         </div>
+        -->
 
 {% endraw %}
         <!-- SPA Views -->
@@ -1072,6 +1074,7 @@
         },
         watch: {
             currentView(newView) {
+                this.updateHeaderActiveLinks(newView);
                 // Sync URL with active view (enables bookmarks + browser back button)
                 const viewPathMap = {
                     'dashboard':    '/',
@@ -1119,6 +1122,56 @@
             }
         },
         methods: {
+            updateHeaderActiveLinks(view) {
+                const linkIds = [
+                    'nav-active-main',
+                    'nav-perf-main',
+                    'nav-charts-main',
+                    'nav-closed-main',
+                    'nav-history-main',
+                    'nav-fd-comparison',
+                    'nav-dividend-calendar',
+                    'nav-perf-toggle',
+                    'nav-tools-main'
+                ];
+                linkIds.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.classList.remove('active');
+                });
+
+                let activeId = null;
+                let parentId = null;
+
+                if (view === 'dashboard') {
+                    activeId = 'nav-active-main';
+                } else if (view === 'closed') {
+                    activeId = 'nav-closed-main';
+                    parentId = 'nav-perf-toggle';
+                } else if (view === 'transactions') {
+                    activeId = 'nav-history-main';
+                    parentId = 'nav-perf-toggle';
+                } else if (view === 'charts') {
+                    activeId = 'nav-charts-main';
+                    parentId = 'nav-perf-toggle';
+                } else if (view === 'performance') {
+                    activeId = 'nav-perf-main';
+                    parentId = 'nav-perf-toggle';
+                } else if (view === 'calendar') {
+                    activeId = 'nav-dividend-calendar';
+                } else if (view === 'fdComparison') {
+                    activeId = 'nav-fd-comparison';
+                    parentId = 'nav-perf-toggle';
+                }
+
+                if (activeId) {
+                    const el = document.getElementById(activeId);
+                    if (el) el.classList.add('active');
+                }
+                if (parentId) {
+                    const el = document.getElementById(parentId);
+                    if (el) el.classList.add('active');
+                }
+            },
             async fetchPortfolioData() {
                 try {
                     const headerSelector = document.querySelector(".price-btn.active");
@@ -1891,6 +1944,12 @@
             }
         },
         async mounted() {
+            // Load price mode from localStorage
+            const savedMode = localStorage.getItem("price_mode");
+            if (savedMode && (savedMode === 'intraday' || savedMode === 'closing')) {
+                this.priceMode = savedMode;
+            }
+
             // --- URL → view detection (deep-link support) ---
             // Allows navigating directly to /closed, /history, etc. from external pages.
             const pathViewMap = {
@@ -1912,6 +1971,7 @@
             if (viewFromUrl) {
                 this.currentView = viewFromUrl;
             }
+            this.updateHeaderActiveLinks(this.currentView);
 
             // Handle browser back/forward navigation
             window.addEventListener('popstate', (e) => {
