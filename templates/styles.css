@@ -2233,3 +2233,5 @@ body.mask-values .sensitive-value::after {
 
 /* Beta nav link highlight */
 .nav-beta-link { color: #f39c12 !important; }
+.nav-legacy-link { color: var(--text-secondary) !important; font-size: 0.9em; }
+.nav-legacy-link:hover { color: var(--text-primary) !important; }

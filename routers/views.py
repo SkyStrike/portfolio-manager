@@ -1,112 +1,118 @@
 import logging
 import os
 from fastapi import APIRouter, Form, File, UploadFile
-from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
+from fastapi.responses import HTMLResponse, FileResponse, JSONResponse, RedirectResponse
 from core.cache import serve_rebuilt_page, get_cached_view, base_path
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# HTML Page Routes (Static Dashboards)
+# Legacy HTML Page Routes (Static Dashboards Backup)
+@router.get("/legacy", response_class=HTMLResponse)
+@router.get("/legacy/active", response_class=HTMLResponse)
+@router.get("/legacy/portfolio_active.html", response_class=HTMLResponse)
+def get_legacy_active(price_mode: str = "intraday"):
+    logger.debug("GET /legacy (portfolio_active, price_mode=%s)", price_mode)
+    return serve_rebuilt_page("portfolio_active.html", price_mode)
+
+@router.get("/legacy/closed", response_class=HTMLResponse)
+@router.get("/legacy/portfolio_closed.html", response_class=HTMLResponse)
+def get_legacy_closed(price_mode: str = "intraday"):
+    logger.debug("GET /legacy/closed (price_mode=%s)", price_mode)
+    return serve_rebuilt_page("portfolio_closed.html", price_mode)
+
+@router.get("/legacy/history", response_class=HTMLResponse)
+@router.get("/legacy/transaction_history.html", response_class=HTMLResponse)
+def get_legacy_history(price_mode: str = "intraday"):
+    logger.debug("GET /legacy/history (price_mode=%s)", price_mode)
+    return serve_rebuilt_page("transaction_history.html", price_mode)
+
+@router.get("/legacy/charts.html", response_class=HTMLResponse)
+def get_legacy_charts(price_mode: str = "intraday"):
+    logger.debug("GET /legacy/charts.html (price_mode=%s)", price_mode)
+    return serve_rebuilt_page("charts.html", price_mode)
+
+@router.get("/legacy/performance_report.html", response_class=HTMLResponse)
+def get_legacy_performance_report_view(price_mode: str = "intraday"):
+    logger.debug("GET /legacy/performance_report.html (price_mode=%s)", price_mode)
+    return serve_rebuilt_page("performance_report.html", price_mode)
+
+@router.get("/legacy/dividend-calendar", response_class=HTMLResponse)
+@router.get("/legacy/dividend_calendar.html", response_class=HTMLResponse)
+def get_legacy_dividend_calendar(price_mode: str = "intraday"):
+    logger.debug("GET /legacy/dividend-calendar (price_mode=%s)", price_mode)
+    return serve_rebuilt_page("dividend_calendar.html", price_mode)
+
+@router.get("/legacy/portfolio_active_{slug}.html", response_class=HTMLResponse)
+def get_legacy_active_category(slug: str, price_mode: str = "intraday"):
+    logger.debug("GET /legacy/portfolio_active_%s.html (price_mode=%s)", slug, price_mode)
+    return serve_rebuilt_page(f"portfolio_active_{slug}.html", price_mode)
+
+@router.get("/legacy/portfolio_closed_{slug}.html", response_class=HTMLResponse)
+def get_legacy_closed_category(slug: str, price_mode: str = "intraday"):
+    logger.debug("GET /legacy/portfolio_closed_%s.html (price_mode=%s)", slug, price_mode)
+    return serve_rebuilt_page(f"portfolio_closed_{slug}.html", price_mode)
+
+@router.get("/legacy/transaction_history_{slug}.html", response_class=HTMLResponse)
+def get_legacy_history_category(slug: str, price_mode: str = "intraday"):
+    logger.debug("GET /legacy/transaction_history_%s.html (price_mode=%s)", slug, price_mode)
+    return serve_rebuilt_page(f"transaction_history_{slug}.html", price_mode)
+
+@router.get("/legacy/charts_{slug}.html", response_class=HTMLResponse)
+def get_legacy_charts_category(slug: str, price_mode: str = "intraday"):
+    logger.debug("GET /legacy/charts_%s.html (price_mode=%s)", slug, price_mode)
+    return serve_rebuilt_page(f"charts_{slug}.html", price_mode)
+
+@router.get("/legacy/performance_report_{slug}.html", response_class=HTMLResponse)
+def get_legacy_performance_category(slug: str, price_mode: str = "intraday"):
+    logger.debug("GET /legacy/performance_report_%s.html (price_mode=%s)", slug, price_mode)
+    return serve_rebuilt_page(f"performance_report_{slug}.html", price_mode)
+
+@router.get("/legacy/portfolio_active_port_{slug}.html", response_class=HTMLResponse)
+def get_legacy_active_portfolio(slug: str, price_mode: str = "intraday"):
+    logger.debug("GET /legacy/portfolio_active_port_%s.html (price_mode=%s)", slug, price_mode)
+    return serve_rebuilt_page(f"portfolio_active_port_{slug}.html", price_mode)
+
+@router.get("/legacy/portfolio_closed_port_{slug}.html", response_class=HTMLResponse)
+def get_legacy_closed_portfolio(slug: str, price_mode: str = "intraday"):
+    logger.debug("GET /legacy/portfolio_closed_port_%s.html (price_mode=%s)", slug, price_mode)
+    return serve_rebuilt_page(f"portfolio_closed_port_{slug}.html", price_mode)
+
+@router.get("/legacy/transaction_history_port_{slug}.html", response_class=HTMLResponse)
+def get_legacy_history_portfolio(slug: str, price_mode: str = "intraday"):
+    logger.debug("GET /legacy/transaction_history_port_%s.html (price_mode=%s)", slug, price_mode)
+    return serve_rebuilt_page(f"transaction_history_port_{slug}.html", price_mode)
+
+@router.get("/legacy/charts_port_{slug}.html", response_class=HTMLResponse)
+def get_legacy_charts_portfolio(slug: str, price_mode: str = "intraday"):
+    logger.debug("GET /legacy/charts_port_%s.html (price_mode=%s)", slug, price_mode)
+    return serve_rebuilt_page(f"charts_port_{slug}.html", price_mode)
+
+
+# Primary SPA Dashboard Routes
 @router.get("/", response_class=HTMLResponse)
 @router.get("/active", response_class=HTMLResponse)
 @router.get("/portfolio_active.html", response_class=HTMLResponse)
-def get_active(price_mode: str = "intraday"):
-    logger.debug("GET / (portfolio_active, price_mode=%s)", price_mode)
-    return serve_rebuilt_page("portfolio_active.html", price_mode)
-
 @router.get("/closed", response_class=HTMLResponse)
 @router.get("/portfolio_closed.html", response_class=HTMLResponse)
-def get_closed(price_mode: str = "intraday"):
-    logger.debug("GET /closed (price_mode=%s)", price_mode)
-    return serve_rebuilt_page("portfolio_closed.html", price_mode)
-
 @router.get("/history", response_class=HTMLResponse)
 @router.get("/transaction_history.html", response_class=HTMLResponse)
-def get_history(price_mode: str = "intraday"):
-    logger.debug("GET /history (price_mode=%s)", price_mode)
-    return serve_rebuilt_page("transaction_history.html", price_mode)
-
 @router.get("/charts.html", response_class=HTMLResponse)
-def get_charts(price_mode: str = "intraday"):
-    logger.debug("GET /charts.html (price_mode=%s)", price_mode)
-    return serve_rebuilt_page("charts.html", price_mode)
-
 @router.get("/performance_report.html", response_class=HTMLResponse)
-def get_performance_report_view(price_mode: str = "intraday"):
-    logger.debug("GET /performance_report.html (price_mode=%s)", price_mode)
-    return serve_rebuilt_page("performance_report.html", price_mode)
-
 @router.get("/dividend-calendar", response_class=HTMLResponse)
 @router.get("/dividend_calendar.html", response_class=HTMLResponse)
-def get_dividend_calendar(price_mode: str = "intraday"):
-    logger.debug("GET /dividend-calendar (price_mode=%s)", price_mode)
-    return serve_rebuilt_page("dividend_calendar.html", price_mode)
-
 @router.get("/portfolio_active_{slug}.html", response_class=HTMLResponse)
-def get_active_category(slug: str, price_mode: str = "intraday"):
-    logger.debug("GET /portfolio_active_%s.html (price_mode=%s)", slug, price_mode)
-    return serve_rebuilt_page(f"portfolio_active_{slug}.html", price_mode)
-
 @router.get("/portfolio_closed_{slug}.html", response_class=HTMLResponse)
-def get_closed_category(slug: str, price_mode: str = "intraday"):
-    logger.debug("GET /portfolio_closed_%s.html (price_mode=%s)", slug, price_mode)
-    return serve_rebuilt_page(f"portfolio_closed_{slug}.html", price_mode)
-
 @router.get("/transaction_history_{slug}.html", response_class=HTMLResponse)
-def get_history_category(slug: str, price_mode: str = "intraday"):
-    logger.debug("GET /transaction_history_%s.html (price_mode=%s)", slug, price_mode)
-    return serve_rebuilt_page(f"transaction_history_{slug}.html", price_mode)
-
 @router.get("/charts_{slug}.html", response_class=HTMLResponse)
-def get_charts_category(slug: str, price_mode: str = "intraday"):
-    logger.debug("GET /charts_%s.html (price_mode=%s)", slug, price_mode)
-    return serve_rebuilt_page(f"charts_{slug}.html", price_mode)
-
 @router.get("/performance_report_{slug}.html", response_class=HTMLResponse)
-def get_performance_category(slug: str, price_mode: str = "intraday"):
-    logger.debug("GET /performance_report_%s.html (price_mode=%s)", slug, price_mode)
-    return serve_rebuilt_page(f"performance_report_{slug}.html", price_mode)
-
 @router.get("/portfolio_active_port_{slug}.html", response_class=HTMLResponse)
-def get_active_portfolio(slug: str, price_mode: str = "intraday"):
-    logger.debug("GET /portfolio_active_port_%s.html (price_mode=%s)", slug, price_mode)
-    return serve_rebuilt_page(f"portfolio_active_port_{slug}.html", price_mode)
-
 @router.get("/portfolio_closed_port_{slug}.html", response_class=HTMLResponse)
-def get_closed_portfolio(slug: str, price_mode: str = "intraday"):
-    logger.debug("GET /portfolio_closed_port_%s.html (price_mode=%s)", slug, price_mode)
-    return serve_rebuilt_page(f"portfolio_closed_port_{slug}.html", price_mode)
-
 @router.get("/transaction_history_port_{slug}.html", response_class=HTMLResponse)
-def get_history_portfolio(slug: str, price_mode: str = "intraday"):
-    logger.debug("GET /transaction_history_port_%s.html (price_mode=%s)", slug, price_mode)
-    return serve_rebuilt_page(f"transaction_history_port_{slug}.html", price_mode)
-
 @router.get("/charts_port_{slug}.html", response_class=HTMLResponse)
-def get_charts_portfolio(slug: str, price_mode: str = "intraday"):
-    logger.debug("GET /charts_port_%s.html (price_mode=%s)", slug, price_mode)
-    return serve_rebuilt_page(f"charts_port_{slug}.html", price_mode)
-
-# Dynamic source JSON routing
-@router.get("/static/generated/src/{filename}")
-@router.get("/src/{filename}")
-def get_json_file(filename: str, price_mode: str = "intraday"):
-    logger.debug("GET /src/%s (price_mode=%s)", filename, price_mode)
-    base, ext = os.path.splitext(filename)
-    for m in ("intraday", "closing"):
-        if base.endswith(f"_{m}"):
-            price_mode = m
-            base = base[:-len(f"_{m}")]
-            
-    normalized_key = f"src/{base}{ext}"
-    return get_cached_view(normalized_key, price_mode)
-
-# Beta SPA Route
-@router.get("/beta", response_class=HTMLResponse)
-def get_beta_dashboard():
-    logger.info("GET /beta - serving beta SPA dashboard wrapped in base.html")
+def get_spa_dashboard():
+    logger.info("GET SPA Dashboard - serving SPA shell wrapped in base.html")
     if os.path.exists("templates/spa_shell.html"):
         from jinja2 import Environment, FileSystemLoader
         from services.rebuild_dashboard import load_config
@@ -177,7 +183,7 @@ def get_beta_dashboard():
         
         wrapped = renderer._wrap_body(
             content=spa_content,
-            title="Beta SPA Dashboard",
+            title="Dashboard",
             is_closed=False,
             nav_items=nav_items,
             cat_nav=category_nav,
@@ -186,6 +192,26 @@ def get_beta_dashboard():
         )
         return HTMLResponse(content=wrapped)
     return HTMLResponse("<h3>Please create templates/spa_shell.html</h3>")
+
+# Dynamic source JSON routing
+@router.get("/static/generated/src/{filename}")
+@router.get("/src/{filename}")
+def get_json_file(filename: str, price_mode: str = "intraday"):
+    logger.debug("GET /src/%s (price_mode=%s)", filename, price_mode)
+    base, ext = os.path.splitext(filename)
+    for m in ("intraday", "closing"):
+        if base.endswith(f"_{m}"):
+            price_mode = m
+            base = base[:-len(f"_{m}")]
+            
+    normalized_key = f"src/{base}{ext}"
+    return get_cached_view(normalized_key, price_mode)
+
+# Beta SPA Route (Redirected to Root)
+@router.get("/beta")
+def redirect_beta():
+    logger.info("GET /beta - redirecting to primary SPA dashboard root /")
+    return RedirectResponse(url=f"{base_path}/", status_code=307)
 
 # Trades Ledger SPA Route
 @router.get("/trades", response_class=HTMLResponse)
