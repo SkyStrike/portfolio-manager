@@ -7,6 +7,24 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
+# ==============================================================================
+# TICKER PRICES SCHEMA DOCUMENTATION (Option 1)
+# ==============================================================================
+# The `ticker_prices` table contains several price/close columns to correctly
+# support both Intraday and Closing price modes without daily change collisions:
+#
+# 1. `intraday_price`     -> Current active price (e.g. Wednesday Live).
+#                            Maps to 'price' for backward compatibility.
+# 2. `prev_close`         -> The base price for Intraday mode daily change
+#                            calculations: (intraday_price - prev_close).
+#                            Holds yesterday's close (e.g. Tuesday Close).
+# 3. `closing_price`      -> The price of the latest completed session
+#                            (e.g. Tuesday Close during Wednesday trading).
+# 4. `prev_closing_price` -> The base price for Closing mode daily change
+#                            calculations: (closing_price - prev_closing_price).
+#                            Holds day-before-yesterday's close (e.g. Monday Close).
+# ==============================================================================
+
 # Silence yfinance logger to suppress verbose 404 errors for ETFs and trusts
 logging.getLogger('yfinance').setLevel(logging.CRITICAL)
 
@@ -527,12 +545,23 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                                 market_closed = False
                             
                     today_str = local_date_str
-                    if last_date_str == today_str and not market_closed:
-                        # Today is active/trading and market is still open, so yesterday is the latest completed daily close price
-                        closing_price = prev_close
+                    if last_date_str == today_str:
+                        if not market_closed:
+                            # Today is active/trading and market is still open, so yesterday is the latest completed daily close price
+                            closing_price = prev_close
+                            prev_closing_price = float(series.iloc[-3]) if len(series) >= 3 else prev_close
+                        else:
+                            # Market is closed today, so today's completed close is today's price
+                            closing_price = intraday_price
+                            prev_closing_price = prev_close
                     else:
-                        # Market is closed today or it's a weekend, so today's/latest bar is the latest completed daily close price
-                        closing_price = intraday_price
+                        # Today's daily bar is not yet in history, so the latest completed close is the last bar in the main df history
+                        if not series.empty:
+                            closing_price = float(series.iloc[-1])
+                            prev_closing_price = float(series.iloc[-2]) if len(series) >= 2 else closing_price
+                        else:
+                            closing_price = intraday_price
+                            prev_closing_price = intraday_price
                     
                     # Store currency (yfinance info isn't bulk-downloadable via history,
                     # so we preserve the existing currency or default from transactions)
@@ -540,7 +569,7 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                     tx_currency = cursor.fetchone()
                     currency = tx_currency['currency'] if tx_currency else "USD"
                     
-                    updated_records.append((ticker_id, intraday_price, prev_close, closing_price, intraday_price, currency, now_str))
+                    updated_records.append((ticker_id, intraday_price, prev_close, closing_price, prev_closing_price, intraday_price, currency, now_str))
             except Exception as ex:
                 logger.error("Error parsing price for %s: %s", yf_sym, ex)
                 
@@ -548,12 +577,13 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
         if updated_records:
             with conn:
                 conn.executemany("""
-                    INSERT INTO ticker_prices (ticker_id, price, prev_close, closing_price, intraday_price, currency, last_updated)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO ticker_prices (ticker_id, price, prev_close, closing_price, prev_closing_price, intraday_price, currency, last_updated)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(ticker_id) DO UPDATE SET
                         price = excluded.price,
                         prev_close = excluded.prev_close,
                         closing_price = excluded.closing_price,
+                        prev_closing_price = excluded.prev_closing_price,
                         intraday_price = excluded.intraday_price,
                         currency = excluded.currency,
                         last_updated = excluded.last_updated

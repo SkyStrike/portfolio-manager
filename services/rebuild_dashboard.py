@@ -343,10 +343,14 @@ def generate_views_in_memory(conn=None, price_mode="intraday", generate_mode="al
             
         # 2. Query all tickers and price details based on price_mode
         logger.info("[generate_views] Querying tickers, transactions and dividends from DB...")
+        # Intraday mode uses intraday_price vs prev_close (Tuesday Live vs Monday Close).
+        # Closing mode uses closing_price vs prev_closing_price (Tuesday Close vs Monday Close)
+        # to ensure the daily change is not stuck at 0% when the market is actively open today.
         price_col = "tp.closing_price" if price_mode == "closing" else "tp.intraday_price"
+        prev_close_col = "COALESCE(tp.prev_closing_price, tp.prev_close)" if price_mode == "closing" else "tp.prev_close"
         cursor.execute(f"""
             SELECT t.id, t.symbol, t.friendly_name, t.underlying, t.category, t.tax_rate, t.exchange,
-                   COALESCE({price_col}, tp.price) as current_price, tp.prev_close, tp.currency
+                   COALESCE({price_col}, tp.price) as current_price, {prev_close_col} as prev_close, tp.currency
             FROM tickers t
             LEFT JOIN ticker_prices tp ON t.id = tp.ticker_id
         """)

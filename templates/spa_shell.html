@@ -1566,7 +1566,7 @@
             },
             handlePriceModeChange() {
                 localStorage.setItem("price_mode", this.priceMode);
-                this.initializeDashboardCharts();
+                this.initializeDashboardCharts(true);
             },
             async handleForceRefresh() {
                 const refreshIcon = document.getElementById("refresh-icon");
@@ -1655,11 +1655,15 @@
                     window.openTxVisualizer(event.currentTarget);
                 }
             },
-            async initializeDashboardCharts() {
-                this.loading = true;
+            async initializeDashboardCharts(skipLoading = false) {
+                if (!skipLoading) {
+                    this.loading = true;
+                }
                 await this.fetchPortfolioData();
                 await this.fetchCalendarData();
-                this.loading = false;
+                if (!skipLoading) {
+                    this.loading = false;
+                }
                 
                 this.$nextTick(() => {
                     // Destroy any previous instances
@@ -2028,7 +2032,8 @@
             document.querySelectorAll(".price-btn").forEach(btn => {
                 btn.addEventListener("click", async () => {
                     setTimeout(async () => {
-                        await this.initializeDashboardCharts();
+                        // Pass true to skip loading spinner state
+                        await this.initializeDashboardCharts(true);
                         if (this.currentView === 'charts') {
                             this.initGlobalCharts();
                         }
