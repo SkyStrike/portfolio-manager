@@ -1580,7 +1580,7 @@
                 try {
                     const res = await fetch("/api/prices/refresh?force=true", { method: "POST" });
                     if (res.ok) {
-                        await this.initializeDashboardCharts();
+                        await this.initializeDashboardCharts(true);
                     } else {
                         alert("Failed to refresh prices. Cooldown may be active.");
                     }
@@ -1608,8 +1608,7 @@
                 try {
                     const res = await fetch("api/dashboard/rebuild-spa?sync=true", { method: "POST" });
                     if (res.ok) {
-                        await this.fetchPortfolioData();
-                        await this.initializeDashboardCharts();
+                        await this.initializeDashboardCharts(true);
                     } else {
                         alert("Failed to rebuild dashboard.");
                     }
