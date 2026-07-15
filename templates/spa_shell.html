@@ -1072,6 +1072,26 @@
         },
         watch: {
             currentView(newView) {
+                // Sync URL with active view (enables bookmarks + browser back button)
+                const viewPathMap = {
+                    'dashboard':    '/',
+                    'closed':       '/closed',
+                    'transactions': '/history',
+                    'charts':       '/charts.html',
+                    'performance':  '/performance_report.html',
+                    'calendar':     '/dividend-calendar',
+                    'fdComparison': '/analytics/fd-comparison',
+                };
+                // Derive basePath from the rendered Dashboard link (evaluated by Jinja2 outside {% raw %})
+                const dashLink = document.getElementById('nav-active-main');
+                const basePath = dashLink
+                    ? new URL(dashLink.href).pathname.replace(/\/$/, '')
+                    : '';
+                const targetPath = viewPathMap[newView];
+                if (targetPath) {
+                    history.pushState({ view: newView }, '', basePath + targetPath);
+                }
+
                 if (newView === 'calendar') {
                     this.$nextTick(() => {
                         this.initCalendarChart();
@@ -1867,8 +1887,38 @@
             }
         },
         async mounted() {
+            // --- URL → view detection (deep-link support) ---
+            // Allows navigating directly to /closed, /history, etc. from external pages.
+            const pathViewMap = {
+                '/closed':                   'closed',
+                '/history':                  'transactions',
+                '/charts.html':              'charts',
+                '/performance_report.html':  'performance',
+                '/dividend-calendar':        'calendar',
+                '/analytics/fd-comparison':  'fdComparison',
+            };
+            // Derive basePath from the rendered Dashboard link (evaluated by Jinja2 outside {% raw %})
+            const dashLink = document.getElementById('nav-active-main');
+            const basePath = dashLink
+                ? new URL(dashLink.href).pathname.replace(/\/$/, '')
+                : '';
+            const rawPath = window.location.pathname;
+            const normalizedPath = basePath ? rawPath.replace(basePath, '') : rawPath;
+            const viewFromUrl = pathViewMap[normalizedPath] || pathViewMap[rawPath];
+            if (viewFromUrl) {
+                this.currentView = viewFromUrl;
+            }
+
+            // Handle browser back/forward navigation
+            window.addEventListener('popstate', (e) => {
+                const path = window.location.pathname;
+                const norm = basePath ? path.replace(basePath, '') : path;
+                const view = pathViewMap[norm] || pathViewMap[path] || 'dashboard';
+                this.currentView = view;
+            });
+
             await this.initializeDashboardCharts();
-            
+
             // Intercept global navigation header links to switch views inline in the SPA
             const navActive = document.getElementById("nav-active-main");
             if (navActive) {
