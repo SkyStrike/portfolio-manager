@@ -111,7 +111,7 @@
                         <span class="stat-value" :class="getValClass(summary.options_profit_sgd)" v-text="formatCommas(summary.options_profit_sgd, true) + ' SGD'"></span>
                     </div>
                     <div class="stat-item">
- <span class="stat-label tooltip-trigger spa-valign-middle" data-tooltip="Total gains including dividends, sale of stock, and closed options. Varies against actual due to floating rates calculation.">Total Returns (Lifetime) <span >📊</span></span>
+                        <span class="stat-label tooltip-trigger spa-valign-middle" data-tooltip="Total gains including dividends, sale of stock, and closed options. Varies against actual due to floating rates calculation.">Total Returns (Lifetime) <span >📊</span></span>
                         <span class="stat-value" :class="getValClass(summary.lifetime_profit_sgd)" v-text="formatCommas(summary.lifetime_profit_sgd, true) + ' SGD'"></span>
                         <span class="stat-subvalue" :class="getValClass(summary.lifetime_profit_sgd)" v-text="'(' + formatPct((summary.lifetime_profit_sgd / summary.total_invested_active_sgd * 100), true) + ')'"></span>
                     </div>
@@ -334,9 +334,9 @@
                         <summary class="week-details-summary">
                             <span class="week-summary-center">Week: {{ week.range }}</span>
                             <div class="week-summary-right">
- <span class="week-col-net bold-text" >Net: <span :class="getValClass(week.flow)">{{ formatCommas(week.flow, true) }}</span></span>
- <span class="week-col-buy neg-val" >Buys: <span >{{ formatCommas(week.buy_flow) }}</span></span>
- <span class="week-col-sell pos-val" >Sells: <span >{{ formatCommas(Math.abs(week.sell_flow)) }}</span></span>
+                                <span class="week-col-net bold-text" >Net: <span :class="getValClass(week.flow)">{{ formatCommas(week.flow, true) }}</span></span>
+                                <span class="week-col-buy neg-val" >Buys: <span >{{ formatCommas(week.buy_flow) }}</span></span>
+                                <span class="week-col-sell pos-val" >Sells: <span >{{ formatCommas(Math.abs(week.sell_flow)) }}</span></span>
                             </div>
                         </summary>
                         <div class="week-details-content">

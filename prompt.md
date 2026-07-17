@@ -1,5 +1,15 @@
-continue.
+Note to self:
+currently in the midst of user verification of the newly promoted beta > release of the SPA dashboard and pages.
 
-# current status
-- enquiry: if coming from control center and trades and clicking into a SPA page that is not the dashboard, how does the active page/tab gets loaded?
-- test until stable then promote beta to main.
+Noticed alot of missing features and bugs.
+- services\portfolio-manager\tasks\bugs\open\bug-011_dashboard-chart-glitch\main.md
+- services\portfolio-manager\tasks\bugs\open\bug-012_database-is-locked\main.md
+- services\portfolio-manager\tasks\bugs\open\bug-013_dividend-calendar\main.md
+- services\portfolio-manager\tasks\bugs\open\bug-014_fd-comparison\main.md
+- services\portfolio-manager\tasks\bugs\open\bug-015_portfolio-selection-404\main.md
+- services\portfolio-manager\tasks\bugs\open\bug-016_spa-missing-charts\main.md
+- services\portfolio-manager\tasks\bugs\open\bug-017_total-returns-breakdown\main.md
+
+once the bugs are fixed,
+- services\portfolio-manager\tasks\features\backlog\feat-035_[priority] ticker price table\main.md
+- services\portfolio-manager\tasks\features\backlog\feat-038_window-location-price-mode\main.md
