@@ -4,33 +4,20 @@
     const headerLinks = document.querySelectorAll('.header-nav a');
 
     // Get current price mode context
+    // ?price_mode= in the URL acts as a one-time override (e.g. shared links);
+    // normal navigation relies solely on localStorage.
     const urlParams = new URLSearchParams(window.location.search);
     const urlMode = urlParams.get('price_mode');
     const storedMode = localStorage.getItem("price_mode") || "intraday";
     const currentMode = urlMode || storedMode;
 
     if (urlMode && urlMode !== storedMode) {
+        // Persist the URL override to storage, then strip the param from the address bar
         localStorage.setItem("price_mode", urlMode);
-    } else if (!urlMode) {
-        // Redirect/reload with the price_mode param to ensure it is in context
-        const newUrl = new URL(window.location.href);
-        newUrl.searchParams.set("price_mode", currentMode);
-        window.history.replaceState(null, "", newUrl.toString());
+        const cleanUrl = new URL(window.location.href);
+        cleanUrl.searchParams.delete("price_mode");
+        window.history.replaceState(null, "", cleanUrl.toString());
     }
-
-
-
-    // Propagate ?price_mode=currentMode to all local links
-    document.querySelectorAll("a").forEach(link => {
-        let href = link.getAttribute("href");
-        if (href && (href.startsWith("/") || href.startsWith("portfolio_") || href.startsWith("charts") || href.startsWith("performance") || href.startsWith("transaction"))) {
-            try {
-                const url = new URL(href, window.location.origin);
-                url.searchParams.set("price_mode", currentMode);
-                link.setAttribute("href", url.pathname + url.search);
-            } catch (e) {}
-        }
-    });
 
     // Setup Price Mode select and Force Refresh button listeners
     const priceModeSelect = document.getElementById("price-mode-select");
@@ -39,9 +26,7 @@
         priceModeSelect.addEventListener("change", (e) => {
             const newMode = e.target.value;
             localStorage.setItem("price_mode", newMode);
-            const newUrl = new URL(window.location.href);
-            newUrl.searchParams.set("price_mode", newMode);
-            window.location.href = newUrl.toString();
+            window.location.reload();
         });
     }
 
@@ -282,7 +267,7 @@
             let newHref = '';
             if (pageType === 'performance_report') {
                 newHref = `${basePath}/performance_report.html?filter=${slug}`;
-                link.setAttribute('href', `${newHref}&price_mode=${currentMode}`);
+                link.setAttribute('href', newHref);
             } else {
                 if (slug === 'all') {
                     newHref = `${basePath}/${pageType}.html`;
@@ -293,7 +278,7 @@
                 } else {
                     newHref = `${basePath}/${pageType}_${slug}.html`;
                 }
-                link.setAttribute('href', `${newHref}?price_mode=${currentMode}`);
+                link.setAttribute('href', newHref);
             }
         });
     }
@@ -317,14 +302,14 @@
                 } else if (href.includes('performance_report.html') || href.includes('performance')) {
                     newHref = `${basePath}/performance_report.html?filter=${currentSlug}`;
                 }
-                link.setAttribute('href', `${newHref}?price_mode=${currentMode}`);
+                link.setAttribute('href', newHref);
             }
         });
 
         // Update logo section behavior to preserve classification
         const logoSection = document.querySelector('.logo-section');
         if (logoSection) {
-            logoSection.setAttribute('onclick', `window.location.href='${basePath}/portfolio_active_${fileSlug}.html?price_mode=${currentMode}'`);
+            logoSection.setAttribute('onclick', `window.location.href='${basePath}/portfolio_active_${fileSlug}.html'`);
         }
     }
 
