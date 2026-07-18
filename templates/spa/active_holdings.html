@@ -309,6 +309,55 @@
                 </div>
             </template>
 
+            <!-- Daily Performance & Top Performers Charts -->
+            <div id="performance-charts" class="dashboard-section-spacer spa-mb-40">
+                <!-- Daily Performance Charts -->
+                <div class="dashboard-grid spa-mb-30" v-if="dashboard && dashboard.daily_performance">
+                    <div v-for="(dp, slug) in dashboard.daily_performance" :key="slug" class="chart-container full-width">
+                        <div class="chart-controls">
+                            <div>
+                                <h4>Daily Performance: {{ dp.name || slug.replace('-', ' ').toUpperCase() }}</h4>
+                                <div class="dashboard-sub-header">
+                                    Total Change: 
+                                    <span :class="getValClass(dp.summary.val)" class="bold-text">
+                                        {{ formatCommas(dp.summary.val, true) }} SGD ({{ formatPct(dp.summary.pct, true) }})
+                                    </span>
+                                </div>
+                            </div>
+                            <div>
+                                <button class="toggle-btn" @click="triggerDailyChartToggle(slug, 'val', $event)">Value</button>
+                                <button class="toggle-btn active" @click="triggerDailyChartToggle(slug, 'pct', $event)">Percentage</button>
+                            </div>
+                        </div>
+                        <div :id="'chart-daily-perf-' + slug"></div>
+                    </div>
+                </div>
+
+                <!-- Top Performers (Gainers / Losers) -->
+                <div class="dashboard-grid" v-if="dashboard && dashboard.top_performers">
+                    <div class="chart-container">
+                        <div class="chart-controls">
+                            <h4>Top Gainers</h4>
+                            <div>
+                                <button class="toggle-btn" @click="triggerTopPerformersToggle('gainers', 'val', $event)">Value</button>
+                                <button class="toggle-btn active" @click="triggerTopPerformersToggle('gainers', 'pct', $event)">Percentage</button>
+                            </div>
+                        </div>
+                        <div id="chart-top-gainers"></div>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-controls">
+                            <h4>Top Losers</h4>
+                            <div>
+                                <button class="toggle-btn" @click="triggerTopPerformersToggle('losers', 'val', $event)">Value</button>
+                                <button class="toggle-btn active" @click="triggerTopPerformersToggle('losers', 'pct', $event)">Percentage</button>
+                            </div>
+                        </div>
+                        <div id="chart-top-losers"></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Recent Transactions (Past 4 Weeks Accordion) -->
             <div v-if="recentTx" id="recent-transactions" class="recent-transactions-section dashboard-section-spacer spa-mb-40">
                 <h2 class="flex-between-center">
