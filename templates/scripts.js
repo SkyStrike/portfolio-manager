@@ -1,4 +1,5 @@
 const chartInstances = {};
+window.chartInstances = chartInstances;
 const chartDataStore = {};
 const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -7,6 +8,7 @@ function collapseAll() { document.querySelectorAll('details').forEach(d => d.ope
 
 const desktopFontSize = '{{UI_FONT_SIZE}}';
 const mobileFontSize = '{{UI_MOBILE_FONT_SIZE}}';
+
 
 /**
  * Unified Y-Axis configuration to ensure desktop/mobile alignment.
@@ -722,6 +724,7 @@ function processAggregatedTimeSeries(symbols, type, grouping) {
 }
 
 const symbolCharts = {};
+window.symbolCharts = symbolCharts;
 
 /**
  * Shared logic to process transactions or income into time-series data for charts.
