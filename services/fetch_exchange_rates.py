@@ -184,21 +184,29 @@ def get_historical_exchange_rate(date_str: str, currency: str, conn=None) -> flo
                 # 1 SGD = X USD/CAD => 1 USD/CAD = 1/X SGD
                 rate = round(1.0 / data["rates"][currency], 4)
                 
-                # Write to database using a separate connection/transaction
-                # so it does not interfere with the caller's transaction.
+                # Write to the database.
+                # If the caller already holds a connection (and likely an open write
+                # transaction), reuse it to avoid "database is locked" from a competing
+                # second write connection. Only open a fresh connection when none exists.
                 write_conn = None
+                close_write_conn = False
                 try:
-                    write_conn = _get_db_connection()
-                    with write_conn:
-                        write_conn.execute("""
-                            INSERT INTO exchange_rates (date, currency, rate, last_updated)
-                            VALUES (?, ?, ?, ?)
-                            ON CONFLICT(date, currency) DO UPDATE SET rate=excluded.rate, last_updated=excluded.last_updated
-                        """, (date_part, currency, rate, datetime.now().isoformat()))
+                    if conn is not None:
+                        write_conn = conn
+                    else:
+                        write_conn = _get_db_connection()
+                        close_write_conn = True
+                    write_conn.execute("""
+                        INSERT INTO exchange_rates (date, currency, rate, last_updated)
+                        VALUES (?, ?, ?, ?)
+                        ON CONFLICT(date, currency) DO UPDATE SET rate=excluded.rate, last_updated=excluded.last_updated
+                    """, (date_part, currency, rate, datetime.now().isoformat()))
+                    if close_write_conn:
+                        write_conn.commit()
                 except Exception as db_err:
                     logger.error("Error saving historical rate to DB: %s", db_err)
                 finally:
-                    if write_conn:
+                    if close_write_conn and write_conn:
                         write_conn.close()
                         
                 # Update in-memory cache
