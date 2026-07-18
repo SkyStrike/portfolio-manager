@@ -352,7 +352,7 @@
     .spa-monthly-table { width: 100%; min-width: 1100px; border-collapse: collapse; text-align: right; font-family: monospace; }
     .spa-monthly-table-header { background: rgba(255,255,255,0.03); border-bottom: 2px solid var(--card-border); }
     .spa-monthly-th-left { text-align: left; padding: 12px; font-family: sans-serif; }
-    .spa-monthly-th-right { padding: 12px; text-align: right; }
+    .spa-monthly-th-right { padding: 12px; text-align: right; width: 7%; }
     .spa-monthly-td-label { text-align: left; font-weight: bold; background: rgba(255,255,255,0.02); }
     .spa-monthly-sub-header { background: rgba(255, 255, 255, 0.04); font-weight: bold; }
     .spa-monthly-sub-header-td { text-align: left; padding: 10px 12px; }
@@ -473,6 +473,32 @@
     .spa-symbol-card { margin-bottom: 45px; background: rgba(22, 28, 45, 0.15); border: 1px solid var(--card-border); border-radius: 12px; padding: 25px; }
     .spa-symbol-ticker { font-size: 1.4rem; font-family: 'Outfit', sans-serif; font-weight: bold; color: var(--text-primary); }
     .spa-badge-closed { background: rgba(142, 68, 173, 0.12); color: #9b59b6; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; }
+
+    .ytd-summary-container {
+        margin-bottom: 30px;
+    }
+    .ytd-block h3 {
+        margin-top: 0;
+        margin-bottom: 10px;
+    }
+    .ytd-table-scroll-wrapper {
+        overflow-x: auto;
+        margin-bottom: 20px;
+        background: rgba(255,255,255,0.01);
+        border: 1px solid var(--border-color, rgba(255,255,255,0.08));
+        border-radius: 8px;
+        max-width: fit-content;
+    }
+    .monthly-table-scroll-wrapper {
+        overflow-x: auto;
+        margin-bottom: 30px;
+        background: rgba(255,255,255,0.01);
+        border: 1px solid var(--border-color, rgba(255,255,255,0.08));
+        border-radius: 8px;
+    }
+    .perf-table th.perf-th {
+        width: 150px;
+    }
 </style>
 
 {% raw %}
