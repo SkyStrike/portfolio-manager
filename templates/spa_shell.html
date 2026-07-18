@@ -1385,7 +1385,7 @@
             },
             async fetchCalendarData() {
                 try {
-                    const res = await fetch('src/dividend_calendar_data.json');
+                    const res = await fetch(`src/dividend_calendar_data.json?price_mode=${this.priceMode}`);
                     if (!res.ok) throw new Error("Calendar API failed");
                     this.calendarData = await res.json();
                 } catch (error) {
@@ -1731,6 +1731,11 @@
                     // 1. Re-render dashboard level performance, gainers/losers, and underlying stats charts
                     if (window.initCharts && this.dashboard) {
                         window.initCharts(this.dashboard);
+                    }
+
+                    // Re-render dividend calendar chart if we are currently on the calendar view
+                    if (this.currentView === 'calendar') {
+                        this.initCalendarChart();
                     }
                     
                     // 2. Set up memory-efficient observer for individual symbol charts
@@ -2104,6 +2109,72 @@
             window.addEventListener("click", () => {
                 this.activeMenu = null;
             });
+
+            // Bind transaction save button listener for "mark as received"
+            const saveBtn = document.getElementById("btn-save-transaction");
+            if (saveBtn) {
+                // Remove any pre-existing listeners by replacing the element or overriding onclick
+                saveBtn.onclick = async () => {
+                    const tabInput = document.getElementById("tx-tab");
+                    if (!tabInput || tabInput.value !== "incomes") return;
+
+                    const portfolioId = document.getElementById("tx-portfolio").value;
+                    const ticker = document.getElementById("div-ticker").value;
+                    const date = document.getElementById("div-date").value;
+                    const amount = parseFloat(document.getElementById("div-amount").value);
+                    const currency = document.getElementById("div-currency").value;
+                    const taxVal = document.getElementById("div-tax").value;
+                    const tax = taxVal ? parseFloat(taxVal) : null;
+                    const qtyVal = document.getElementById("div-qty").value;
+                    const qty = qtyVal ? parseFloat(qtyVal) : null;
+                    const notes = document.getElementById("tx-notes").value;
+
+                    if (!portfolioId || !ticker || !date || isNaN(amount)) {
+                        alert("Please fill in all required fields.");
+                        return;
+                    }
+
+                    const payload = {
+                        portfolio_id: parseInt(portfolioId),
+                        ticker: ticker,
+                        date: date,
+                        amount: amount,
+                        currency: currency,
+                        tax: tax,
+                        qty: qty,
+                        notes: notes
+                    };
+
+                    saveBtn.disabled = true;
+                    try {
+                        const res = await fetch("/api/dividends", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(payload)
+                        });
+                        if (res.ok) {
+                            if (window.closeModal) {
+                                window.closeModal("transaction-modal");
+                            } else {
+                                const m = document.getElementById("transaction-modal");
+                                if (m) m.classList.remove("show");
+                            }
+                            // Refresh data inside SPA
+                            await this.fetchCalendarData();
+                            await this.fetchPortfolioData();
+                            await this.initializeDashboardCharts(true);
+                        } else {
+                            const err = await res.json();
+                            alert("Error saving dividend: " + (err.detail || "Unknown error"));
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        alert("Failed to save dividend.");
+                    } finally {
+                        saveBtn.disabled = false;
+                    }
+                };
+            }
         }
     }).mount('#spa-app');
 </script>
