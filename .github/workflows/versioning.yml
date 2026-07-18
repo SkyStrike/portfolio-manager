@@ -25,3 +25,11 @@ jobs:
           DEFAULT_BUMP: patch
           INITIAL_VERSION: 1.0.0
           WITH_V: true
+
+      # disabled until the SPA version is completed.
+      # - name: Create GitHub Release
+      #   uses: softprops/action-gh-release@v3
+      #   with:
+      #     generate_release_notes: true # GitHub will automatically list your commits since the last tag
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

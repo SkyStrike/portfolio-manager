@@ -279,6 +279,22 @@ def fetch_historical_rates_range(start_date_str: str, end_date_str: str, target_
         logger.error("Error fetching historical exchange rates for range %s..%s: %s", start_date, end_date, e)
         return False
 
+def warm_today_exchange_rates(conn=None) -> None:
+    """
+    Pre-fetches today's exchange rates for all tracked foreign currencies into
+    the in-memory cache.  Call this on startup and from the daily cron so that
+    transaction inserts for today's date skip the synchronous API round-trip.
+    """
+    from datetime import date
+    today = str(date.today())
+    currencies = [c.strip() for c in TO_CURRENCIES.split(",") if c.strip()]
+    logger.info("[exchange_rate] Warming today's exchange rates (%s) for %s", today, currencies)
+    for currency in currencies:
+        try:
+            get_historical_exchange_rate(today, currency, conn=conn)
+        except Exception as e:
+            logger.warning("[exchange_rate] Failed to warm rate for %s on %s: %s", currency, today, e)
+
 if __name__ == "__main__":
     rates = get_exchange_rates()
     logger.info("Latest rates: %s", rates)

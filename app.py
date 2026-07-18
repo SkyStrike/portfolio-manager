@@ -71,8 +71,13 @@ async def daily_weekday_metrics_job():
                     now_sgt.date(), target_hour
                 )
 
-                # Perform price fetch, update cash reports, and rebuild views (which records metrics to DB)
+                # Warm today's exchange rates into the in-memory cache before
+                # any transaction writes can trigger on-demand API fetches.
+                from services.fetch_exchange_rates import warm_today_exchange_rates
                 loop = asyncio.get_event_loop()
+                await loop.run_in_executor(None, warm_today_exchange_rates)
+
+                # Perform price fetch, update cash reports, and rebuild views (which records metrics to DB)
                 await loop.run_in_executor(None, lambda: update_prices_and_rebuild(ingest_ibkr_cash=True))
                 logger.info("[cron/daily] Automated daily metrics job complete for %s.", now_sgt.date())
 
@@ -91,6 +96,8 @@ async def daily_weekday_metrics_job():
 def prewarm_cache():
     logger.info("[startup] Prewarming dashboard cache (intraday + closing)...")
     try:
+        from services.fetch_exchange_rates import warm_today_exchange_rates
+        warm_today_exchange_rates()
         clear_dashboard_cache()
         get_cached_view("portfolio_active.html", "intraday")
         get_cached_view("portfolio_active.html", "closing")

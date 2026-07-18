@@ -24,6 +24,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.event.inputs.tag_name }}
-          generate_release_notes: true # Auto-bundles all commits since the last release
+          generate_release_notes: true # Auto-bundles all commits since the last tag into the release notes
+          draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
