@@ -377,7 +377,7 @@ function triggerRecalculation() {
         formData.append("file", fileInput.files[0]);
     }
 
-    fetch('/api/analytics/fd-comparison', {
+    fetch('/api/fd-comparison', {
         method: 'POST',
         body: formData
     })

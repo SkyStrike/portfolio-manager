@@ -272,9 +272,9 @@ def get_control_center():
     return HTMLResponse("<h3>Please place templates/control_center.html</h3>")
 
 # Fixed Deposit Comparison view
-@router.get("/analytics/fd-comparison", response_class=HTMLResponse)
+@router.get("/fd-comparison", response_class=HTMLResponse)
 def get_fd_comparison():
-    logger.info("GET /analytics/fd-comparison - serving FD comparison page")
+    logger.info("GET /fd-comparison - serving FD comparison page")
     
     # 1. Load active portfolio data from in-memory cache
     from core.cache import _dashboard_cache, get_cached_view
@@ -344,14 +344,20 @@ def get_fd_comparison():
         return HTMLResponse(content=wrapped)
     return HTMLResponse("<h3>Please place templates/fixed_deposit_comparison.html</h3>")
 
+@router.get("/analytics/fd-comparison")
+def redirect_fd_comparison_legacy():
+    """Legacy redirect — keep old deep-links working."""
+    logger.info("GET /analytics/fd-comparison - redirecting to /fd-comparison")
+    return RedirectResponse(url=f"{base_path}/fd-comparison", status_code=301)
+
 # Fixed Deposit Simulation API
-@router.post("/api/analytics/fd-comparison")
+@router.post("/api/fd-comparison")
 async def post_fd_comparison(
     rate_mode: str = Form("fixed"),
     fixed_rate: float = Form(2.0),
     file: UploadFile = File(None)
 ):
-    logger.info("POST /api/analytics/fd-comparison - running FD simulation (rate_mode=%s, fixed_rate=%s)", rate_mode, fixed_rate)
+    logger.info("POST /api/fd-comparison - running FD simulation (rate_mode=%s, fixed_rate=%s)", rate_mode, fixed_rate)
     from services.fd_simulator import run_fd_simulation
     
     csv_content = None

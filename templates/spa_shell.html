@@ -1083,7 +1083,7 @@
                     'charts':       '/charts.html',
                     'performance':  '/performance_report.html',
                     'calendar':     '/dividend-calendar',
-                    'fdComparison': '/analytics/fd-comparison',
+                    'fdComparison': '/fd-comparison',
                 };
                 // Derive basePath from the rendered Dashboard link (evaluated by Jinja2 outside {% raw %})
                 const dashLink = document.getElementById('nav-active-main');
@@ -1206,7 +1206,7 @@
                     formData.append("file", this.fdFile);
                 }
                 try {
-                    const res = await fetch('api/analytics/fd-comparison', {
+                    const res = await fetch('api/fd-comparison', {
                         method: 'POST',
                         body: formData
                     });
@@ -1958,7 +1958,7 @@
                 '/charts.html':              'charts',
                 '/performance_report.html':  'performance',
                 '/dividend-calendar':        'calendar',
-                '/analytics/fd-comparison':  'fdComparison',
+                '/fd-comparison':  'fdComparison',
             };
             // Derive basePath from the rendered Dashboard link (evaluated by Jinja2 outside {% raw %})
             const dashLink = document.getElementById('nav-active-main');
