@@ -110,11 +110,52 @@
                         <span class="stat-label tooltip-trigger" data-tooltip="Lifetime profit from options trading">Options Profit</span>
                         <span class="stat-value" :class="getValClass(summary.options_profit_sgd)" v-text="formatCommas(summary.options_profit_sgd, true) + ' SGD'"></span>
                     </div>
-                    <div class="stat-item">
+                    <div class="stat-item" style="cursor: pointer;" @click="openReturnBreakdownModal" title="Click to view breakdown">
                         <span class="stat-label tooltip-trigger spa-valign-middle" data-tooltip="Total gains including dividends, sale of stock, and closed options. Varies against actual due to floating rates calculation.">Total Returns (Lifetime) <span >📊</span></span>
                         <span class="stat-value" :class="getValClass(summary.lifetime_profit_sgd)" v-text="formatCommas(summary.lifetime_profit_sgd, true) + ' SGD'"></span>
                         <span class="stat-subvalue" :class="getValClass(summary.lifetime_profit_sgd)" v-text="'(' + formatPct((summary.lifetime_profit_sgd / summary.total_invested_active_sgd * 100), true) + ')'"></span>
                     </div>
+                </div>
+
+                <!-- Return Breakdown Modal -->
+                <div class="modal-overlay" id="return-breakdown-modal" @click.self="closeReturnBreakdownModal">
+                    <div class="modal-content return-breakdown-modal-content">
+                        <div class="modal-header flex-between-center">
+                            <span>Return Breakdown</span>
+                            <button class="modal-close-btn" @click="closeReturnBreakdownModal">&times;</button>
+                        </div>
+                        <div class="return-breakdown-detail-container">
+                            <div class="flex-between-center">
+                                <span class="text-secondary">Cap Gain:</span>
+                                <span :class="getValClass(summary.total_capital_gains_sgd)">{{ formatCommas(summary.total_capital_gains_sgd, true) }} SGD</span>
+                            </div>
+                            <div class="flex-between-center">
+                                <span class="text-secondary">Realized PnL:</span>
+                                <span :class="getValClass(summary.total_realized_pnl_sgd)">{{ formatCommas(summary.total_realized_pnl_sgd, true) }} SGD</span>
+                            </div>
+                            <div class="flex-between-center">
+                                <span class="text-secondary">Dividends (Net):</span>
+                                <span class="pos-val">+{{ formatCommas(summary.total_dividends_net_sgd) }} SGD</span>
+                            </div>
+                            <div v-if="summary.total_dividends_tax_sgd > 0" class="return-breakdown-row-indented">
+                                <span class="text-secondary">Gross:</span>
+                                <span>+{{ formatCommas(summary.total_dividends_gross_sgd) }} SGD</span>
+                            </div>
+                            <div v-if="summary.total_dividends_tax_sgd > 0" class="return-breakdown-row-indented">
+                                <span class="text-secondary">Tax Paid:</span>
+                                <span class="neg-val">-{{ formatCommas(summary.total_dividends_tax_sgd) }} SGD</span>
+                            </div>
+                            <div v-if="summary.options_profit_sgd && summary.options_profit_sgd != 0" class="flex-between-center">
+                                <span class="text-secondary">Options PnL:</span>
+                                <span :class="getValClass(summary.options_profit_sgd)">{{ formatCommas(summary.options_profit_sgd, true) }} SGD</span>
+                            </div>
+                            <div class="return-breakdown-row-total">
+                                <span class="text-secondary">Fees Paid:</span>
+                                <span class="neg-val">-{{ formatCommas(summary.total_fees_sgd) }} SGD</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 </div>
             </div>
 

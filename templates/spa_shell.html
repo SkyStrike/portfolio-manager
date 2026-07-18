@@ -1707,6 +1707,14 @@
                     window.openTxVisualizer(event.currentTarget);
                 }
             },
+            openReturnBreakdownModal() {
+                const el = document.getElementById("return-breakdown-modal");
+                if (el) el.classList.add("show");
+            },
+            closeReturnBreakdownModal() {
+                const el = document.getElementById("return-breakdown-modal");
+                if (el) el.classList.remove("show");
+            },
             async initializeDashboardCharts(skipLoading = false) {
                 if (!skipLoading) {
                     this.loading = true;

@@ -662,6 +662,38 @@ select option {
     line-height: 1;
 }
 
+/* Return Breakdown Modal Specific Layout */
+.return-breakdown-modal-content {
+    max-width: 420px;
+}
+.return-breakdown-detail-container {
+    font-family: monospace;
+    font-size: 0.95rem;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    line-height: 1.4;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 1.25rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.04);
+}
+.return-breakdown-row-indented {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    padding-left: 12px;
+    opacity: 0.85;
+    border-left: 2px solid rgba(255,255,255,0.08);
+}
+.return-breakdown-row-total {
+    display: flex;
+    justify-content: space-between;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding-top: 10px;
+    margin-top: 4px;
+}
+
 .modal-close-btn:hover {
     color: var(--text-primary);
 }
