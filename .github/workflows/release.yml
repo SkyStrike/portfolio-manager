@@ -1,0 +1,29 @@
+name: Manual GitHub Release
+
+# This turns on the manual "Run workflow" button in the GitHub UI
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'The tag version to release (e.g., v2.0.0)'
+        required: true
+        type: string
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required to let the token create a release page
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetches full history so GitHub can generate the log between tags
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ github.event.inputs.tag_name }}
+          generate_release_notes: true # Auto-bundles all commits since the last release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
