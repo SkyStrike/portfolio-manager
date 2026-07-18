@@ -25,7 +25,8 @@ def list_tickers():
                 ticker_shares[tid] = ticker_shares.get(tid, 0.0) + h['shares']
                 
         cursor.execute("""
-            SELECT t.id, t.symbol, t.friendly_name, t.tax_rate, t.notes, t.exchange, t.underlying, t.category, tp.currency, tp.price
+            SELECT t.id, t.symbol, t.friendly_name, t.tax_rate, t.notes, t.exchange, t.underlying, t.category,
+                   tp.currency, COALESCE(tp.intraday_current, tp.price) as price
             FROM tickers t
             LEFT JOIN ticker_prices tp ON t.id = tp.ticker_id
             ORDER BY t.symbol

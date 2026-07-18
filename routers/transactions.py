@@ -71,7 +71,7 @@ def create_transaction(tx: TransactionCreate):
             cursor.execute("INSERT INTO tickers (symbol, friendly_name, tax_rate, exchange) VALUES (?, ?, ?, ?)", (symbol, symbol, 0.30 if tx.currency == "USD" else (0.15 if tx.currency == "CAD" else 0.0), exchange))
             ticker_id = cursor.lastrowid
             # Seed ticker price initially
-            cursor.execute("INSERT OR IGNORE INTO ticker_prices (ticker_id, price, prev_close, currency, last_updated) VALUES (?, ?, ?, ?, datetime('now'))", (ticker_id, tx.price, tx.price, tx.currency))
+            cursor.execute("INSERT OR IGNORE INTO ticker_prices (ticker_id, price, intraday_current, intraday_prev_close, currency, last_updated) VALUES (?, ?, ?, ?, ?, datetime('now'))", (ticker_id, tx.price, tx.price, tx.price, tx.currency))
         else:
             ticker_id = ticker_row['id']
             if tx.exchange and not ticker_row['exchange']:

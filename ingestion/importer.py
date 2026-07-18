@@ -134,13 +134,14 @@ def import_portfolio_data(portfolio_name: str, holdings_file_path: str, transact
             
             # Seed ticker price (initial reference value)
             cursor.execute("""
-                INSERT INTO ticker_prices (ticker_id, price, prev_close, currency, last_updated)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO ticker_prices (ticker_id, price, intraday_current, intraday_prev_close, currency, last_updated)
+                VALUES (?, ?, ?, ?, ?, ?)
                 ON CONFLICT(ticker_id) DO UPDATE SET
                     price = excluded.price,
+                    intraday_current = excluded.intraday_current,
                     currency = excluded.currency,
                     last_updated = excluded.last_updated
-            """, (ticker_id, share_price, share_price, currency, datetime.now().isoformat()))
+            """, (ticker_id, share_price, share_price, share_price, currency, datetime.now().isoformat()))
             
     # 3. Parse Transactions CSV
     # Columns expected: Event, Date, Symbol, Price, Quantity, Currency, FeeTax, Exchange, Note

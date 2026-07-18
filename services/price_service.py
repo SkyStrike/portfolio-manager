@@ -8,21 +8,27 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 # ==============================================================================
-# TICKER PRICES SCHEMA DOCUMENTATION (Option 1)
+# TICKER PRICES SCHEMA DOCUMENTATION
 # ==============================================================================
-# The `ticker_prices` table contains several price/close columns to correctly
-# support both Intraday and Closing price modes without daily change collisions:
+# The `ticker_prices` table uses the following canonical price columns:
 #
-# 1. `intraday_price`     -> Current active price (e.g. Wednesday Live).
-#                            Maps to 'price' for backward compatibility.
-# 2. `prev_close`         -> The base price for Intraday mode daily change
-#                            calculations: (intraday_price - prev_close).
+# INTRADAY MODE
+#   intraday_current      -- Current live/intraday price (e.g. Wednesday Live).
+#   intraday_prev_close   -- Base for intraday daily-change: (intraday_current - intraday_prev_close).
 #                            Holds yesterday's close (e.g. Tuesday Close).
-# 3. `closing_price`      -> The price of the latest completed session
-#                            (e.g. Tuesday Close during Wednesday trading).
-# 4. `prev_closing_price` -> The base price for Closing mode daily change
-#                            calculations: (closing_price - prev_closing_price).
+#   intraday_current_at   -- Datetime of the last live price fetch (UTC).
+#   intraday_prev_close_date -- Date of the intraday_prev_close bar (YYYY-MM-DD).
+#
+# CLOSING MODE
+#   daily_close           -- Latest completed session close (e.g. Tuesday Close on Wed).
+#   daily_prev_close      -- Base for closing daily-change: (daily_close - daily_prev_close).
 #                            Holds day-before-yesterday's close (e.g. Monday Close).
+#   daily_close_date      -- Date of the daily_close bar (YYYY-MM-DD).
+#   daily_prev_close_date -- Date of the daily_prev_close bar (YYYY-MM-DD).
+#
+# LEGACY
+#   price                 -- Preserved alias; always mirrors intraday_current.
+#                            Used by seed inserts in importer.py / transactions.py.
 # ==============================================================================
 
 # Silence yfinance logger to suppress verbose 404 errors for ETFs and trusts
@@ -440,25 +446,25 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                 has_data = False
                 if not series_retry.empty:
                     # Use retry data for the latest price (e.g. today's 19.96)
-                    intraday_price = float(series_retry.iloc[-1])
-                    # For prev_close, use the latest valid price from df, fallback to retry's second-to-last or same price
+                    intraday_current = float(series_retry.iloc[-1])
+                    # For intraday_prev_close, use the latest valid price from df, fallback to retry's second-to-last or same price
                     if not series.empty:
-                        prev_close = float(series.iloc[-1])
+                        intraday_prev_close = float(series.iloc[-1])
                     else:
-                        prev_close = float(series_retry.iloc[-2]) if len(series_retry) >= 2 else intraday_price
+                        intraday_prev_close = float(series_retry.iloc[-2]) if len(series_retry) >= 2 else intraday_current
                     last_date = series_retry.index[-1]
                     has_data = True
                 elif not series.empty:
                     # Normal flow using main df
-                    intraday_price = float(series.iloc[-1])
-                    prev_close = float(series.iloc[-2]) if len(series) >= 2 else intraday_price
+                    intraday_current = float(series.iloc[-1])
+                    intraday_prev_close = float(series.iloc[-2]) if len(series) >= 2 else intraday_current
                     last_date = series.index[-1]
                     has_data = True
                 
                 if has_data:
                     # 1. Zero/negative price guard
-                    if intraday_price <= 0:
-                        logger.warning("[price] Zero/negative price for %s (%s): %.4f — skipping update", db_symbol, yf_sym, intraday_price)
+                    if intraday_current <= 0:
+                        logger.warning("[price] Zero/negative price for %s (%s): %.4f — skipping update", db_symbol, yf_sym, intraday_current)
                         has_data = False
                         
                 if has_data:
@@ -467,14 +473,27 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                         last_date_str = last_date.strftime("%Y-%m-%d")
                     else:
                         last_date_str = str(last_date).split()[0]
-                    
+
+                    # Determine the date of the previous bar (used for intraday_prev_close_date)
+                    if not series_retry.empty and len(series_retry) >= 2:
+                        prev_bar_date = series_retry.index[-2]
+                    elif not series.empty and len(series) >= 2:
+                        prev_bar_date = series.index[-2]
+                    else:
+                        prev_bar_date = last_date
+                    if hasattr(prev_bar_date, "strftime"):
+                        intraday_prev_close_date = prev_bar_date.strftime("%Y-%m-%d")
+                    else:
+                        intraday_prev_close_date = str(prev_bar_date).split()[0]
+
                     # Override with full info metadata if available and valid
                     meta = info_metadata.get(yf_sym)
                     if meta:
                         if meta.get('lastPrice') is not None and not pd.isna(meta['lastPrice']) and float(meta['lastPrice']) > 0:
-                            intraday_price = float(meta['lastPrice'])
+                            intraday_current = float(meta['lastPrice'])
                         if meta.get('previousClose') is not None and not pd.isna(meta['previousClose']) and float(meta['previousClose']) > 0:
-                            prev_close = float(meta['previousClose'])
+                            intraday_prev_close = float(meta['previousClose'])
+
                     
                     # 2. Staleness guard
                     from datetime import date as _date
@@ -492,14 +511,14 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
 
                 if has_data:
                     # 3. Ratio bounds guard (extreme price move check)
-                    cursor.execute("SELECT intraday_price FROM ticker_prices WHERE ticker_id = ?", (ticker_id,))
+                    cursor.execute("SELECT intraday_current FROM ticker_prices WHERE ticker_id = ?", (ticker_id,))
                     existing_row = cursor.fetchone()
-                    if existing_row and existing_row['intraday_price']:
-                        existing = float(existing_row['intraday_price'])
+                    if existing_row and existing_row['intraday_current']:
+                        existing = float(existing_row['intraday_current'])
                         if existing > 0:
-                            ratio = intraday_price / existing
+                            ratio = intraday_current / existing
                             if ratio > 5.0 or ratio < 0.20:
-                                logger.warning("[price] Suspicious price move for %s: %.4f -> %.4f (%.2fx) — ignoring", db_symbol, existing, intraday_price, ratio)
+                                logger.warning("[price] Suspicious price move for %s: %.4f -> %.4f (%.2fx) — ignoring", db_symbol, existing, intraday_current, ratio)
                                 try:
                                     log_ticker_api_error(conn, yf_sym)
                                 except Exception:
@@ -527,7 +546,7 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                         reset_pnl = True
 
                     if reset_pnl:
-                        prev_close = intraday_price
+                        intraday_prev_close = intraday_current
                     # -----------------------------------------
 
                     # Determine if the market is open today for this exchange (using local exchange time)
@@ -547,21 +566,31 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                     today_str = local_date_str
                     if last_date_str == today_str:
                         if not market_closed:
-                            # Today is active/trading and market is still open, so yesterday is the latest completed daily close price
-                            closing_price = prev_close
-                            prev_closing_price = float(series.iloc[-3]) if len(series) >= 3 else prev_close
+                            # Today is active/trading and market is still open,
+                            # so yesterday is the latest completed daily close price
+                            daily_close = intraday_prev_close
+                            daily_close_date = intraday_prev_close_date
+                            daily_prev_close = float(series.iloc[-3]) if len(series) >= 3 else intraday_prev_close
+                            daily_prev_close_date = series.index[-3].strftime("%Y-%m-%d") if len(series) >= 3 else intraday_prev_close_date
                         else:
                             # Market is closed today, so today's completed close is today's price
-                            closing_price = intraday_price
-                            prev_closing_price = prev_close
+                            daily_close = intraday_current
+                            daily_close_date = last_date_str
+                            daily_prev_close = intraday_prev_close
+                            daily_prev_close_date = intraday_prev_close_date
                     else:
-                        # Today's daily bar is not yet in history, so the latest completed close is the last bar in the main df history
+                        # Today's daily bar is not yet in history,
+                        # so the latest completed close is the last bar in the main df history
                         if not series.empty:
-                            closing_price = float(series.iloc[-1])
-                            prev_closing_price = float(series.iloc[-2]) if len(series) >= 2 else closing_price
+                            daily_close = float(series.iloc[-1])
+                            daily_close_date = series.index[-1].strftime("%Y-%m-%d") if hasattr(series.index[-1], 'strftime') else str(series.index[-1]).split()[0]
+                            daily_prev_close = float(series.iloc[-2]) if len(series) >= 2 else daily_close
+                            daily_prev_close_date = series.index[-2].strftime("%Y-%m-%d") if len(series) >= 2 and hasattr(series.index[-2], 'strftime') else daily_close_date
                         else:
-                            closing_price = intraday_price
-                            prev_closing_price = intraday_price
+                            daily_close = intraday_current
+                            daily_close_date = last_date_str
+                            daily_prev_close = intraday_current
+                            daily_prev_close_date = last_date_str
                     
                     # Store currency (yfinance info isn't bulk-downloadable via history,
                     # so we preserve the existing currency or default from transactions)
@@ -569,7 +598,20 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                     tx_currency = cursor.fetchone()
                     currency = tx_currency['currency'] if tx_currency else "USD"
                     
-                    updated_records.append((ticker_id, intraday_price, prev_close, closing_price, prev_closing_price, intraday_price, currency, now_str))
+                    updated_records.append((
+                        ticker_id,
+                        intraday_current,       # price (legacy alias)
+                        intraday_current,       # intraday_current
+                        intraday_prev_close,    # intraday_prev_close
+                        daily_close,            # daily_close
+                        daily_prev_close,       # daily_prev_close
+                        now_str,                # intraday_current_at
+                        intraday_prev_close_date,  # intraday_prev_close_date
+                        daily_close_date,       # daily_close_date
+                        daily_prev_close_date,  # daily_prev_close_date
+                        currency,
+                        now_str                 # last_updated
+                    ))
             except Exception as ex:
                 logger.error("Error parsing price for %s: %s", yf_sym, ex)
                 
@@ -577,16 +619,26 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
         if updated_records:
             with conn:
                 conn.executemany("""
-                    INSERT INTO ticker_prices (ticker_id, price, prev_close, closing_price, prev_closing_price, intraday_price, currency, last_updated)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO ticker_prices (
+                        ticker_id, price, intraday_current, intraday_prev_close,
+                        daily_close, daily_prev_close,
+                        intraday_current_at, intraday_prev_close_date,
+                        daily_close_date, daily_prev_close_date,
+                        currency, last_updated
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(ticker_id) DO UPDATE SET
-                        price = excluded.price,
-                        prev_close = excluded.prev_close,
-                        closing_price = excluded.closing_price,
-                        prev_closing_price = excluded.prev_closing_price,
-                        intraday_price = excluded.intraday_price,
-                        currency = excluded.currency,
-                        last_updated = excluded.last_updated
+                        price                  = excluded.price,
+                        intraday_current       = excluded.intraday_current,
+                        intraday_prev_close    = excluded.intraday_prev_close,
+                        daily_close            = excluded.daily_close,
+                        daily_prev_close       = excluded.daily_prev_close,
+                        intraday_current_at    = excluded.intraday_current_at,
+                        intraday_prev_close_date = excluded.intraday_prev_close_date,
+                        daily_close_date       = excluded.daily_close_date,
+                        daily_prev_close_date  = excluded.daily_prev_close_date,
+                        currency               = excluded.currency,
+                        last_updated           = excluded.last_updated
                 """, updated_records)
                 
             return {"status": "success", "message": f"Successfully updated {len(updated_records)} ticker prices."}

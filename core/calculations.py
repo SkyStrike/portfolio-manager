@@ -144,14 +144,14 @@ def get_portfolio_summary(portfolio_id: int | None, conn: sqlite3.Connection, ex
     
     # 1. Fetch active tickers and their latest prices/prev_closes
     cursor.execute("""
-        SELECT tp.ticker_id, tp.price, tp.prev_close, tp.currency, t.symbol, t.friendly_name, t.underlying
+        SELECT tp.ticker_id, tp.price, tp.intraday_current, tp.intraday_prev_close, tp.currency, t.symbol, t.friendly_name, t.underlying
         FROM ticker_prices tp
         JOIN tickers t ON tp.ticker_id = t.id
     """)
     price_rows = cursor.fetchall()
     prices = {row['ticker_id']: {
-        "price": row['price'],
-        "prev_close": row['prev_close'] or row['price'],
+        "price": row['intraday_current'] or row['price'],
+        "prev_close": row['intraday_prev_close'] or row['intraday_current'] or row['price'],
         "currency": row['currency'],
         "underlying": row['underlying']
     } for row in price_rows}

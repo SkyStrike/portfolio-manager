@@ -87,11 +87,16 @@ def init_db():
 
     CREATE TABLE IF NOT EXISTS ticker_prices (
         ticker_id INTEGER PRIMARY KEY,
-        price REAL NOT NULL,          -- Current price (or latest closing price)
-        prev_close REAL,              -- Previous day's closing price
-        closing_price REAL,           -- Cached closing price
-        intraday_price REAL,          -- Cached intraday price
-        last_price_mode TEXT,         -- Last price mode used ('intraday' or 'closing')
+        price REAL NOT NULL,              -- Legacy alias; mirrors intraday_current (kept for seed-insert compat)
+        intraday_current REAL,            -- Current live/intraday price
+        intraday_prev_close REAL,         -- Yesterday's close (intraday daily-change base)
+        daily_close REAL,                 -- Latest completed session close
+        daily_prev_close REAL,            -- Day-before-yesterday's close (closing daily-change base)
+        intraday_current_at TEXT,         -- UTC datetime of last live price fetch
+        intraday_prev_close_date TEXT,    -- YYYY-MM-DD date of intraday_prev_close bar
+        daily_close_date TEXT,            -- YYYY-MM-DD date of daily_close bar
+        daily_prev_close_date TEXT,       -- YYYY-MM-DD date of daily_prev_close bar
+        last_price_mode TEXT,             -- Last price mode used ('intraday' or 'closing')
         currency TEXT NOT NULL,
         last_updated TEXT NOT NULL,
         FOREIGN KEY(ticker_id) REFERENCES tickers(id) ON DELETE CASCADE

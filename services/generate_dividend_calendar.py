@@ -95,8 +95,8 @@ class DividendCalendarGenerator:
         # 1. Fetch ticker metadata (tax_rate, friendly_name, yield)
         cursor.execute("""
             SELECT t.id, t.symbol, t.friendly_name, t.tax_rate,
-                   COALESCE(tp.prev_close, 0.0) as prev_close,
-                   COALESCE(tp.price, 0.0) as price,
+                   COALESCE(tp.intraday_prev_close, 0.0) as prev_close,
+                   COALESCE(tp.intraday_current, tp.price, 0.0) as price,
                    tp.currency
             FROM tickers t
             LEFT JOIN ticker_prices tp ON t.id = tp.ticker_id
