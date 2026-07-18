@@ -135,8 +135,9 @@ def get_spa_dashboard():
                 except ValueError: return (100, c_name)
             classifications.sort(key=class_sort_key)
             
+            from core.models import slugify
             for c in classifications:
-                c_slug = c.lower().replace(" ", "-")
+                c_slug = slugify(c)
                 category_nav.append({
                     "name": c,
                     "url": f"{base_path}/portfolio_active_{c_slug}.html",
