@@ -97,17 +97,6 @@ async def daily_weekday_metrics_job():
             logger.error("Error in automated daily job: %s", e)
             await asyncio.sleep(300)
 
-def prewarm_cache():
-    logger.info("[startup] Prewarming dashboard cache (intraday + closing)...")
-    try:
-        from services.fetch_exchange_rates import warm_today_exchange_rates
-        warm_today_exchange_rates()
-        clear_dashboard_cache()
-        get_cached_view("portfolio_active.html", "intraday")
-        get_cached_view("portfolio_active.html", "closing")
-        logger.info("[startup] Cache prewarm complete.")
-    except Exception as e:
-        logger.error("Initial startup prewarm failed: %s", e)
 
 # Mount static folders
 os.makedirs("static/css", exist_ok=True)
@@ -144,15 +133,12 @@ async def startup_event():
     from core.logging_config import configure_logging
     configure_logging()
     logger.info("[startup] Portfolio Manager starting up...")
+    try:
+        from services.fetch_exchange_rates import warm_today_exchange_rates
+        warm_today_exchange_rates()
+    except Exception as e:
+        logger.warning("[startup] Could not warm exchange rates: %s", e)
 
-
-
-
-
-    import threading
-    t = threading.Thread(target=prewarm_cache)
-    t.daemon = True
-    t.start()
     asyncio.create_task(hourly_rebuild_loop())
     asyncio.create_task(daily_weekday_metrics_job())
 
