@@ -42,14 +42,16 @@ def get_positions(
 
 @router.get("/portfolios/summary")
 def get_summary_kpis(price_mode: str = Query("closing")):
-    """Fetch high-level KPIs (Total MV, Invested, Lifetime PnL) and config."""
+    """Fetch high-level KPIs (Total MV, Invested, Lifetime PnL), config, and update datetimes."""
     logger.info("GET /api/v1/portfolios/summary (price_mode=%s)", price_mode)
     data = _get_raw_data(price_mode)
     metadata = data.get("metadata", {})
     return {
         "price_mode": price_mode,
         "summary": metadata.get("summary", {}),
-        "config": metadata.get("config", {})
+        "config": metadata.get("config", {}),
+        "quotes_last_updated_sgt": metadata.get("quotes_last_updated_sgt"),
+        "ib_report_datetime_sgt": metadata.get("ib_report_datetime_sgt")
     }
 
 @router.get("/reports/performance")

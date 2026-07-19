@@ -1246,9 +1246,14 @@
                         dashboard: posData.dashboard || {},
                         metadata: {
                             summary: summaryData.summary || {},
-                            config: summaryData.config || {}
+                            config: summaryData.config || {},
+                            quotes_last_updated_sgt: summaryData.quotes_last_updated_sgt || null,
+                            ib_report_datetime_sgt: summaryData.ib_report_datetime_sgt || null
                         }
                     };
+                    this.$nextTick(() => {
+                        if (window.updateTimeAgos) window.updateTimeAgos();
+                    });
                 } catch (error) {
                     console.error("Error loading portfolio data:", error);
                 }
