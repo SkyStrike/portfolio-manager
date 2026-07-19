@@ -37,7 +37,10 @@ def get_positions(
         "price_mode": price_mode,
         "count": len(positions),
         "positions": positions,
-        "dashboard": data.get("dashboard", {})
+        "dashboard": data.get("dashboard", {}),
+        "cash_report": data.get("cash_report", {}),
+        "open_options": data.get("open_options", []),
+        "recent_closed_options": data.get("recent_closed_options", {})
     }
 
 @router.get("/portfolios/summary")
