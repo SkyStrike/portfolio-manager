@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException
 from core.database import get_connection
 from core.calculations import calculate_holdings
 from core.schemas import TickerUpdate
+from core.cache import clear_dashboard_cache
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,9 @@ def list_tickers():
                 
         cursor.execute("""
             SELECT t.id, t.symbol, t.friendly_name, t.tax_rate, t.notes, t.exchange, t.underlying, t.category,
-                   tp.currency, COALESCE(tp.intraday_current, tp.price) as price
+                   tp.currency, COALESCE(tp.intraday_current, tp.price) as price,
+                   (SELECT COUNT(*) FROM transactions WHERE ticker_id = t.id) +
+                   (SELECT COUNT(*) FROM dividends WHERE ticker_id = t.id) as ref_count
             FROM tickers t
             LEFT JOIN ticker_prices tp ON t.id = tp.ticker_id
             ORDER BY t.symbol
@@ -62,6 +65,7 @@ def update_ticker(id: int, ticker: TickerUpdate):
             WHERE id = ?
         """, (ticker.friendly_name, ticker.tax_rate, ticker.notes, ticker.underlying, cat_val, ticker.exchange, id))
         conn.commit()
+        clear_dashboard_cache()
         return {"status": "success"}
     finally:
         conn.close()
@@ -84,6 +88,7 @@ def delete_ticker(id: int):
         cursor.execute("DELETE FROM ticker_prices WHERE ticker_id = ?", (id,))
         cursor.execute("DELETE FROM tickers WHERE id = ?", (id,))
         conn.commit()
+        clear_dashboard_cache()
         return {"status": "success"}
     finally:
         conn.close()

@@ -540,7 +540,7 @@
 <script>
     const { createApp } = Vue;
 
-    createApp({
+    const app = createApp({
         data() {
             const today = new Date();
             return {
@@ -1662,8 +1662,32 @@
                 });
                 return list.sort((a, b) => b.value - a.value);
             },
+            prepareCategoryBreakdown() {
+                if (!this.portfolioData || !this.portfolioData.positions) return [];
+                const catVals = {};
+                this.portfolioData.positions.forEach(p => {
+                    if (p.is_closed) return;
+                    const catName = p.subclass || p.category || "Other";
+                    if (!catVals[catName]) {
+                        catVals[catName] = { inv: 0, curr: 0 };
+                    }
+                    catVals[catName].inv += (p.sgd_metrics?.invested_sgd || 0);
+                    catVals[catName].curr += (p.sgd_metrics?.current_sgd || 0);
+                });
+                const list = [];
+                Object.keys(catVals).forEach(name => {
+                    list.push({
+                        name: name,
+                        inv: catVals[name].inv,
+                        curr: catVals[name].curr
+                    });
+                });
+                return list.sort((a, b) => b.curr - a.curr);
+            },
             initGlobalCharts() {
-                if (!this.portfolioData || !this.portfolioData.dashboard) return;
+                if (!this.portfolioData) return;
+                if (!this.portfolioData.dashboard) this.portfolioData.dashboard = {};
+                this.portfolioData.dashboard.categories = this.prepareCategoryBreakdown();
                 this.portfolioData.dashboard.countries = this.prepareCountryBreakdown();
                 
                 if (window.chartInstances) {
@@ -1711,7 +1735,7 @@
             },
             async fetchCalendarData() {
                 try {
-                    const res = await fetch(`src/dividend_calendar_data.json?price_mode=${this.priceMode}`);
+                    const res = await fetch(`/api/v1/reports/dividend-calendar?price_mode=${this.priceMode}`);
                     if (!res.ok) throw new Error("Calendar API failed");
                     this.calendarData = await res.json();
                 } catch (error) {
@@ -2510,6 +2534,7 @@
                 };
             }
         }
-    }).mount('#spa-app');
+    });
+    window.portfolioApp = app.mount('#spa-app');
 </script>
 {% endraw %}

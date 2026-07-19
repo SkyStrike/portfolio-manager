@@ -1533,6 +1533,12 @@ function setupFormSubmissions() {
                     showToast("Ticker settings updated.");
                     closeModal("ticker-modal");
                     loadTickers();
+                    if (window.portfolioApp && window.portfolioApp.fetchPortfolioData) {
+                        await window.portfolioApp.fetchPortfolioData();
+                        if (window.portfolioApp.currentView === 'charts') {
+                            window.portfolioApp.initGlobalCharts();
+                        }
+                    }
                 }
             } catch (err) {
                 showToast("Update failed: " + err.message, "error");

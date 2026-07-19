@@ -81,3 +81,16 @@ def get_performance_report(price_mode: str = Query("closing")):
         "broker_cash_ytd": data.get("broker_cash_ytd", {}),
         "chart_data": chart_data
     }
+
+@router.get("/reports/dividend-calendar")
+def get_dividend_calendar_report(price_mode: str = Query("closing")):
+    """Fetch dividend calendar data and metrics dynamically."""
+    logger.info("GET /api/v1/reports/dividend-calendar (price_mode=%s)", price_mode)
+    from core.cache import _dashboard_cache, get_cached_view
+    cache_key = "closing" if price_mode == "closing" else "intraday"
+    if not _dashboard_cache[cache_key]:
+        get_cached_view("portfolio_active.html", cache_key)
+    cal_data = _dashboard_cache[cache_key].get("src/dividend_calendar_data.json")
+    if not cal_data:
+        raise HTTPException(status_code=500, detail="Dividend calendar data empty")
+    return cal_data

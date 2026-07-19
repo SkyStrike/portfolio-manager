@@ -137,11 +137,12 @@ def get_cached_view(filename: str, price_mode: str, force: bool = False, ingest_
                     
     return HTMLResponse("<h3>Page not found.</h3>", status_code=404)
 
-def rebuild_dashboard_sync(conn=None, price_mode="intraday", ingest_ibkr_cash=False):
-    logger.info("[rebuild_dashboard_sync] Clearing cache and rebuilding (price_mode=%s)...", price_mode)
-    clear_dashboard_cache(price_mode)
-    get_cached_view("portfolio_active.html", price_mode, force=True, ingest_ibkr_cash=ingest_ibkr_cash)
-    logger.info("[rebuild_dashboard_sync] Done (price_mode=%s).", price_mode)
+def rebuild_dashboard_sync(conn=None, price_mode=None, ingest_ibkr_cash=False):
+    logger.info("[rebuild_dashboard_sync] Clearing cache and rebuilding...")
+    clear_dashboard_cache()
+    if price_mode:
+        get_cached_view("portfolio_active.html", price_mode, force=True, ingest_ibkr_cash=ingest_ibkr_cash)
+    logger.info("[rebuild_dashboard_sync] Done.")
 
 def update_prices_and_rebuild(ingest_ibkr_cash=False):
     logger.info("[update_prices_and_rebuild] Starting price update and full dashboard rebuild (ingest_ibkr_cash=%s)...", ingest_ibkr_cash)
