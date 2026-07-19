@@ -577,6 +577,8 @@
                 perfActiveTab: 'cash',
                 perfSelectedYear: null,
                 perfSelectedClassification: null,
+                spaCashChartModes: {},
+                spaPortfolioChartModes: {},
 
                 // Fixed Deposit Comparison fields
                 fdData: null,
@@ -1132,6 +1134,8 @@
                 } else if (newView === 'performance') {
                     if (!this.perfData) {
                         this.fetchPerformanceReport();
+                    } else {
+                        this.initSpaPerformanceCharts();
                     }
                 } else if (newView === 'fdComparison') {
                     if (!this.fdData) {
@@ -1145,9 +1149,35 @@
                         this.renderTxChart();
                     });
                 }
+            },
+            perfActiveTab() {
+                this.initSpaPerformanceCharts();
+            },
+            perfSelectedYear() {
+                this.initSpaPerformanceCharts();
+            },
+            perfSelectedClassification() {
+                this.initSpaPerformanceCharts();
             }
         },
         methods: {
+            safeFormatChartVal(v, mode) {
+                try {
+                    if (v === null || v === undefined) return '';
+                    let num = parseFloat(v);
+                    if (isNaN(num)) return v;
+                    const rounded = Math.round(num);
+                    if (mode === 'pct') {
+                        return rounded + '%';
+                    } else {
+                        const absVal = Math.abs(rounded).toLocaleString();
+                        return rounded < 0 ? '-$' + absVal : '$' + absVal;
+                    }
+                } catch (err) {
+                    console.error("Error in safeFormatChartVal:", v, err);
+                    return v;
+                }
+            },
             updateHeaderActiveLinks(view) {
                 const linkIds = [
                     'nav-active-main',
@@ -1262,9 +1292,268 @@
                         if (this.perfData && this.perfData.classifications && this.perfData.classifications.length > 0) {
                             this.perfSelectedClassification = this.perfData.classifications[0];
                         }
+                        this.initSpaPerformanceCharts();
                     }
                 } catch (e) {
                     console.error("Error fetching performance report:", e);
+                }
+            },
+            initSpaPerformanceCharts() {
+                if (!this.perfData || !this.perfData.chart_data) return;
+                
+                if (this.spaPerfChartsTimeoutId) {
+                    clearTimeout(this.spaPerfChartsTimeoutId);
+                }
+                
+                const themeConfig = { mode: 'dark' };
+                const monthsLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                const desktopFont = this.portfolioData?.ui?.font_size || '14px';
+                
+                const self = this;
+                function getAxisConfig(mode) {
+                    return {
+                        labels: {
+                            style: { fontSize: desktopFont },
+                            formatter: (v) => self.safeFormatChartVal(v, mode)
+                        }
+                    };
+                }
+
+                this.$nextTick(() => {
+                    this.spaPerfChartsTimeoutId = setTimeout(() => {
+                        this.spaPerfChartsTimeoutId = null;
+
+                        if (window.spaPerfChartInstances) {
+                            Object.keys(window.spaPerfChartInstances).forEach(key => {
+                                try {
+                                    window.spaPerfChartInstances[key].destroy();
+                                } catch (e) {}
+                                delete window.spaPerfChartInstances[key];
+                            });
+                        } else {
+                            window.spaPerfChartInstances = {};
+                        }
+
+                        const activeTab = this.perfActiveTab;
+                        const selectedYear = this.perfSelectedYear;
+                        if (!selectedYear) return;
+
+                        if (activeTab === 'cash' || activeTab.startsWith('cash-')) {
+                            let chartDataSource = null;
+                            let brokerName = null;
+                            if (activeTab === 'cash') {
+                                chartDataSource = this.perfData.chart_data.cash?.[String(selectedYear)];
+                            } else {
+                                brokerName = activeTab.substring(5).toUpperCase();
+                                chartDataSource = this.perfData.chart_data.broker_cash?.[brokerName]?.[String(selectedYear)];
+                            }
+                            if (chartDataSource) {
+                                const mode = this.getSpaCashChartMode(activeTab, selectedYear);
+                                
+                                // 1. Cumulative Chart
+                                const cumId = `spa-chart-cash-cumulative-${activeTab}-${selectedYear}`;
+                                const cumEl = document.getElementById(cumId);
+                                if (cumEl) {
+                                    const options = {
+                                        chart: { type: 'line', height: 350, background: 'transparent', toolbar: { show: false } },
+                                        theme: themeConfig,
+                                        series: [{ name: 'Cumulative Base Capital Gains', data: chartDataSource.cumulative }],
+                                        xaxis: { categories: monthsLabels },
+                                        yaxis: getAxisConfig('val'),
+                                        stroke: { curve: 'smooth', width: 3 },
+                                        colors: ['#2ecc71'],
+                                        dataLabels: {
+                                            enabled: true,
+                                            formatter: (v) => self.safeFormatChartVal(v, 'val')
+                                        },
+                                        tooltip: { y: { formatter: (v) => self.safeFormatChartVal(v, 'val') } }
+                                    };
+                                    const chart = new ApexCharts(cumEl, options);
+                                    chart.render();
+                                    window.spaPerfChartInstances[cumId] = chart;
+                                }
+
+                                // 2. MTD Chart
+                                const mtdId = `spa-chart-cash-mtd-${activeTab}-${selectedYear}`;
+                                const mtdEl = document.getElementById(mtdId);
+                                if (mtdEl) {
+                                    const seriesData = mode === 'val' ? chartDataSource.mtd_val : chartDataSource.mtd_pct;
+                                    const options = {
+                                        chart: { type: 'bar', height: 300, background: 'transparent', toolbar: { show: false } },
+                                        theme: themeConfig,
+                                        series: [{ name: 'Monthly Base Capital Gains', data: seriesData }],
+                                        xaxis: { categories: monthsLabels },
+                                        yaxis: getAxisConfig(mode),
+                                        tooltip: { y: { formatter: (v) => self.safeFormatChartVal(v, mode) } },
+                                        dataLabels: {
+                                            enabled: true,
+                                            formatter: (v) => self.safeFormatChartVal(v, mode)
+                                        },
+                                        plotOptions: {
+                                            bar: {
+                                                borderRadius: 4,
+                                                colors: {
+                                                    ranges: [
+                                                        { from: -99999999, to: -0.001, color: '#e74c3c' },
+                                                        { from: 0, to: 99999999, color: '#2ecc71' }
+                                                    ]
+                                                }
+                                            }
+                                        }
+                                    };
+                                    const chart = new ApexCharts(mtdEl, options);
+                                    chart.render();
+                                    window.spaPerfChartInstances[mtdId] = chart;
+                                }
+                            }
+                        } else if (activeTab === 'portfolio') {
+                            const cls = this.perfSelectedClassification;
+                            if (cls) {
+                                const slug = this.slugify(cls);
+                                const chartDataSource = this.perfData.chart_data.portfolio?.[cls]?.[String(selectedYear)];
+                                if (chartDataSource) {
+                                    const mode = this.getSpaPortfolioChartMode(cls, selectedYear);
+
+                                    // 1. Cumulative Chart
+                                    const cumId = `spa-chart-portfolio-cumulative-${slug}-${selectedYear}`;
+                                    const cumEl = document.getElementById(cumId);
+                                    if (cumEl) {
+                                        const options = {
+                                            chart: { type: 'line', height: 350, background: 'transparent', toolbar: { show: false } },
+                                            theme: themeConfig,
+                                            series: [{ name: 'Cumulative Total Returns', data: chartDataSource.cumulative }],
+                                            xaxis: { categories: monthsLabels },
+                                            yaxis: getAxisConfig('val'),
+                                            stroke: { curve: 'smooth', width: 3 },
+                                            colors: ['#2ecc71'],
+                                            dataLabels: {
+                                                enabled: true,
+                                                formatter: (v) => self.safeFormatChartVal(v, 'val')
+                                            },
+                                            tooltip: { y: { formatter: (v) => self.safeFormatChartVal(v, 'val') } }
+                                        };
+                                        const chart = new ApexCharts(cumEl, options);
+                                        chart.render();
+                                        window.spaPerfChartInstances[cumId] = chart;
+                                    }
+
+                                    // 2. MTD Chart
+                                    const mtdId = `spa-chart-portfolio-mtd-${slug}-${selectedYear}`;
+                                    const mtdEl = document.getElementById(mtdId);
+                                    if (mtdEl) {
+                                        const seriesData = mode === 'val' ? chartDataSource.mtd_val : chartDataSource.mtd_pct;
+                                        const options = {
+                                            chart: { type: 'bar', height: 300, background: 'transparent', toolbar: { show: false } },
+                                            theme: themeConfig,
+                                            series: [{ name: 'Monthly Total Returns', data: seriesData }],
+                                            xaxis: { categories: monthsLabels },
+                                            yaxis: getAxisConfig(mode),
+                                            tooltip: { y: { formatter: (v) => self.safeFormatChartVal(v, mode) } },
+                                            dataLabels: {
+                                                enabled: true,
+                                                formatter: (v) => self.safeFormatChartVal(v, mode)
+                                            },
+                                            plotOptions: {
+                                                bar: {
+                                                    borderRadius: 4,
+                                                    colors: {
+                                                        ranges: [
+                                                            { from: -99999999, to: -0.001, color: '#e74c3c' },
+                                                            { from: 0, to: 99999999, color: '#2ecc71' }
+                                                        ]
+                                                    }
+                                                }
+                                            }
+                                        };
+                                        const chart = new ApexCharts(mtdEl, options);
+                                        chart.render();
+                                        window.spaPerfChartInstances[mtdId] = chart;
+                                    }
+                                }
+                            }
+                        }
+                    }, 50);
+                });
+            },
+            getSpaCashChartMode(tab, year) {
+                const key = `${tab}-${year}`;
+                return this.spaCashChartModes[key] || 'val';
+            },
+            setSpaCashChartMode(tab, year, mode) {
+                const key = `${tab}-${year}`;
+                this.spaCashChartModes[key] = mode;
+                const mtdId = `spa-chart-cash-mtd-${tab}-${year}`;
+                const chart = window.spaPerfChartInstances?.[mtdId];
+                let chartDataSource = null;
+                if (tab === 'cash') {
+                    chartDataSource = this.perfData?.chart_data?.cash?.[String(year)];
+                } else {
+                    const brokerName = tab.substring(5).toUpperCase();
+                    chartDataSource = this.perfData?.chart_data?.broker_cash?.[brokerName]?.[String(year)];
+                }
+                if (chart && chartDataSource) {
+                    const self = this;
+                    const seriesData = mode === 'val' ? chartDataSource.mtd_val : chartDataSource.mtd_pct;
+                    const desktopFont = this.portfolioData?.ui?.font_size || '14px';
+                    const getAxisConfig = (m) => {
+                        return {
+                            labels: {
+                                style: { fontSize: desktopFont },
+                                formatter: (v) => self.safeFormatChartVal(v, m)
+                            }
+                        };
+                    };
+                    chart.updateOptions({
+                        series: [{ name: 'Monthly Base Capital Gains', data: seriesData }],
+                        yaxis: getAxisConfig(mode),
+                        tooltip: {
+                            y: {
+                                formatter: (v) => self.safeFormatChartVal(v, mode)
+                            }
+                        },
+                        dataLabels: {
+                            enabled: true,
+                            formatter: (v) => self.safeFormatChartVal(v, mode)
+                        }
+                    });
+                }
+            },
+            getSpaPortfolioChartMode(cls, year) {
+                const key = `${cls}-${year}`;
+                return this.spaPortfolioChartModes[key] || 'val';
+            },
+            setSpaPortfolioChartMode(cls, year, mode) {
+                const key = `${cls}-${year}`;
+                this.spaPortfolioChartModes[key] = mode;
+                const slug = this.slugify(cls);
+                const mtdId = `spa-chart-portfolio-mtd-${slug}-${year}`;
+                const chart = window.spaPerfChartInstances?.[mtdId];
+                const chartDataSource = this.perfData?.chart_data?.portfolio?.[cls]?.[String(year)];
+                if (chart && chartDataSource) {
+                    const self = this;
+                    const seriesData = mode === 'val' ? chartDataSource.mtd_val : chartDataSource.mtd_pct;
+                    const desktopFont = this.portfolioData?.ui?.font_size || '14px';
+                    const getAxisConfig = (m) => {
+                        return {
+                            labels: {
+                                style: { fontSize: desktopFont },
+                                formatter: (v) => self.safeFormatChartVal(v, m)
+                            }
+                        };
+                    };
+                    chart.updateOptions({
+                        series: [{ name: 'Monthly Total Returns', data: seriesData }],
+                        yaxis: getAxisConfig(mode),
+                        tooltip: {
+                            y: {
+                                formatter: (v) => self.safeFormatChartVal(v, mode)
+                            }
+                        },
+                        dataLabels: {
+                            enabled: true,
+                            formatter: (v) => self.safeFormatChartVal(v, mode)
+                        }
+                    });
                 }
             },
             formatStartEnd(startVal, endVal) {

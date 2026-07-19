@@ -122,10 +122,11 @@ class PerformanceReportRenderer:
             BACKTESTER_URL=backtester_url
         )
 
-def build_chart_data(years, cash_data, portfolio_data):
+def build_chart_data(years, cash_data, portfolio_data, broker_cash_data=None):
     raw_chart = {
         "cash": {},
-        "portfolio": {}
+        "portfolio": {},
+        "broker_cash": {}
     }
     
     def r2(val):
@@ -160,6 +161,20 @@ def build_chart_data(years, cash_data, portfolio_data):
                 "mtm_pct": [r2(y_data.get(m, {}).get("mtm", {}).get("total_returns_pct")) for m in range(1, 13)]
             }
             
+    # 3. Broker cash chart data
+    if broker_cash_data:
+        for br, br_data in broker_cash_data.items():
+            raw_chart["broker_cash"][br] = {}
+            for y in years:
+                y_data = br_data.get(y, {})
+                raw_chart["broker_cash"][br][y] = {
+                    "cumulative": [r2(y_data.get(m, {}).get("base_capital_gains")) for m in range(1, 13)],
+                    "mtd_val": [r2(y_data.get(m, {}).get("mtd", {}).get("base_capital_gains_val")) for m in range(1, 13)],
+                    "mtd_pct": [r2(y_data.get(m, {}).get("mtd", {}).get("base_capital_gains_pct")) for m in range(1, 13)],
+                    "mtm_val": [r2(y_data.get(m, {}).get("mtm", {}).get("base_capital_gains_val")) for m in range(1, 13)],
+                    "mtm_pct": [r2(y_data.get(m, {}).get("mtm", {}).get("base_capital_gains_pct")) for m in range(1, 13)]
+                }
+            
     return raw_chart
 
 def main():
@@ -190,7 +205,8 @@ def main():
     raw_chart_data = build_chart_data(
         report_data["years"], 
         report_data["cash_data"], 
-        report_data["portfolio_data"]
+        report_data["portfolio_data"],
+        report_data.get("broker_cash_data")
     )
     
     # Replicate nav scanning from report_renderer.py

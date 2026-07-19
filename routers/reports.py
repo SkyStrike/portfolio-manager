@@ -310,41 +310,8 @@ def get_performance_report():
     cash_ytd = data["cash_ytd"]
     portfolio_ytd = data["portfolio_ytd"]
     
-    def r2(val):
-        if val is None:
-            return None
-        try:
-            return round(float(val), 2)
-        except:
-            return val
-            
-    chart_data = {
-        "cash": {},
-        "portfolio": {}
-    }
-    
-    for y in years:
-        y_data = cash_by_year_month.get(y, {})
-        chart_data["cash"][y] = {
-            "cumulative": [r2(y_data.get(m, {}).get("base_capital_gains")) for m in range(1, 13)],
-            "mtd_val": [r2(y_data.get(m, {}).get("mtd", {}).get("base_capital_gains_val")) for m in range(1, 13)],
-            "mtd_pct": [r2(y_data.get(m, {}).get("mtd", {}).get("base_capital_gains_pct")) for m in range(1, 13)],
-            "mtm_val": [r2(y_data.get(m, {}).get("mtm", {}).get("base_capital_gains_val")) for m in range(1, 13)],
-            "mtm_pct": [r2(y_data.get(m, {}).get("mtm", {}).get("base_capital_gains_pct")) for m in range(1, 13)]
-        }
-        
-    for cls in classifications:
-        chart_data["portfolio"][cls] = {}
-        cls_data = portfolio_by_class_year_month.get(cls, {})
-        for y in years:
-            y_data = cls_data.get(y, {})
-            chart_data["portfolio"][cls][y] = {
-                "cumulative": [r2(y_data.get(m, {}).get("total_returns")) for m in range(1, 13)],
-                "mtd_val": [r2(y_data.get(m, {}).get("mtd", {}).get("total_returns_val")) for m in range(1, 13)],
-                "mtd_pct": [r2(y_data.get(m, {}).get("mtd", {}).get("total_returns_pct")) for m in range(1, 13)],
-                "mtm_val": [r2(y_data.get(m, {}).get("mtm", {}).get("total_returns_val")) for m in range(1, 13)],
-                "mtm_pct": [r2(y_data.get(m, {}).get("mtm", {}).get("total_returns_pct")) for m in range(1, 13)]
-            }
+    from services.generate_performance_report import build_chart_data
+    chart_data = build_chart_data(years, cash_by_year_month, portfolio_by_class_year_month, data.get("broker_cash_data"))
             
     return {
         "years": years,

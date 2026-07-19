@@ -1155,7 +1155,7 @@ def render_all_views_in_memory(all_positions, options_data, cash_report_data, co
     # 6. Render Performance Report (containing all classifications and active portfolio names)
     if generate_mode in ("all", "html"):
         perf_data = get_performance_report_data("data/portfolio.db")
-        perf_chart = build_chart_data(perf_data["years"], perf_data["cash_data"], perf_data["portfolio_data"])
+        perf_chart = build_chart_data(perf_data["years"], perf_data["cash_data"], perf_data["portfolio_data"], perf_data.get("broker_cash_data"))
         perf_renderer = PerformanceReportRenderer(config)
         views["performance_report.html"] = perf_renderer.render(perf_data, perf_chart, nav_items, category_nav, port_nav=portfolio_nav, json_filename="portfolio_data.json")
 

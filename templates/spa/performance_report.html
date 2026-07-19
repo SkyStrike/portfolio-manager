@@ -211,6 +211,24 @@
                                 </tbody>
                             </table>
                         </div>
+                        
+                        <!-- SPA Cash Charts Grid -->
+                        <div class="dashboard-grid spa-chart-grid-margin">
+                            <div class="chart-container full-width">
+                                <h4>Cumulative Base Capital Gains (Value)</h4>
+                                <div :id="'spa-chart-cash-cumulative-' + perfActiveTab + '-' + perfSelectedYear"></div>
+                            </div>
+                            <div class="chart-container full-width">
+                                <div class="chart-controls">
+                                    <h4>Monthly Change: Base Capital Gains</h4>
+                                    <div>
+                                        <button class="toggle-btn" :class="{ active: getSpaCashChartMode(perfActiveTab, perfSelectedYear) === 'val' }" @click="setSpaCashChartMode(perfActiveTab, perfSelectedYear, 'val')">Value</button>
+                                        <button class="toggle-btn" :class="{ active: getSpaCashChartMode(perfActiveTab, perfSelectedYear) === 'pct' }" @click="setSpaCashChartMode(perfActiveTab, perfSelectedYear, 'pct')">%</button>
+                                    </div>
+                                </div>
+                                <div :id="'spa-chart-cash-mtd-' + perfActiveTab + '-' + perfSelectedYear"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -378,6 +396,24 @@
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+                        
+                        <!-- SPA Portfolio Charts Grid -->
+                        <div class="dashboard-grid spa-chart-grid-margin">
+                            <div class="chart-container full-width">
+                                <h4>Cumulative Total Returns (Value)</h4>
+                                <div :id="'spa-chart-portfolio-cumulative-' + slugify(perfSelectedClassification) + '-' + perfSelectedYear"></div>
+                            </div>
+                            <div class="chart-container full-width">
+                                <div class="chart-controls">
+                                    <h4>Monthly Change: Total Returns</h4>
+                                    <div>
+                                        <button class="toggle-btn" :class="{ active: getSpaPortfolioChartMode(perfSelectedClassification, perfSelectedYear) === 'val' }" @click="setSpaPortfolioChartMode(perfSelectedClassification, perfSelectedYear, 'val')">Value</button>
+                                        <button class="toggle-btn" :class="{ active: getSpaPortfolioChartMode(perfSelectedClassification, perfSelectedYear) === 'pct' }" @click="setSpaPortfolioChartMode(perfSelectedClassification, perfSelectedYear, 'pct')">%</button>
+                                    </div>
+                                </div>
+                                <div :id="'spa-chart-portfolio-mtd-' + slugify(perfSelectedClassification) + '-' + perfSelectedYear"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
