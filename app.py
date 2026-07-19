@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from core.database import init_db
 from core.migrations import run_migrations
 from core.cache import clear_dashboard_cache, get_cached_view, base_path
-from routers import views, portfolios, tickers, transactions, dividends, prices, dashboard, reports, uploads, settings, patches
+from routers import views, portfolios, tickers, transactions, dividends, prices, dashboard, reports, uploads, settings, patches, api_v1
 
 # Run Alembic migrations first, then initialize static schema guards
 run_migrations()
@@ -27,6 +27,10 @@ main_app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include sub-routers
+main_app.include_router(views.router)
+main_app.include_router(api_v1.router)
 
 async def hourly_rebuild_loop():
     while True:
