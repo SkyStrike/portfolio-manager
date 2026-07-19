@@ -1234,9 +1234,20 @@
                     if (headerSelector) {
                         this.priceMode = headerSelector.innerText.trim().toLowerCase();
                     }
-                    const res = await fetch(`src/${this.activePrefix}_${this.priceMode}.json`);
-                    if (!res.ok) throw new Error("API failed");
-                    this.portfolioData = await res.json();
+                    const posRes = await fetch(`/api/v1/portfolios/positions?price_mode=${this.priceMode}`);
+                    if (!posRes.ok) throw new Error("Positions API failed");
+                    const posData = await posRes.json();
+                    
+                    const sumRes = await fetch(`/api/v1/portfolios/summary?price_mode=${this.priceMode}`);
+                    const summaryData = sumRes.ok ? await sumRes.json() : { summary: {} };
+                    
+                    this.portfolioData = {
+                        positions: posData.positions || [],
+                        dashboard: posData.dashboard || {},
+                        metadata: {
+                            summary: summaryData.summary || {}
+                        }
+                    };
                 } catch (error) {
                     console.error("Error loading portfolio data:", error);
                 }
@@ -1283,7 +1294,7 @@
             },
             async fetchPerformanceReport() {
                 try {
-                    const res = await fetch("api/reports/performance");
+                    const res = await fetch(`/api/v1/reports/performance?price_mode=${this.priceMode}`);
                     if (res.ok) {
                         this.perfData = await res.json();
                         if (this.perfData && this.perfData.years && this.perfData.years.length > 0) {
@@ -1294,8 +1305,8 @@
                         }
                         this.initSpaPerformanceCharts();
                     }
-                } catch (e) {
-                    console.error("Error fetching performance report:", e);
+                } catch (err) {
+                    console.error("Failed to fetch performance report data:", err);
                 }
             },
             initSpaPerformanceCharts() {

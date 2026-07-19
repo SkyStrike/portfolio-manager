@@ -36,7 +36,8 @@ def get_positions(
     return {
         "price_mode": price_mode,
         "count": len(positions),
-        "positions": positions
+        "positions": positions,
+        "dashboard": data.get("dashboard", {})
     }
 
 @router.get("/portfolios/summary")

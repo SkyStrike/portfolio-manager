@@ -401,6 +401,7 @@ function toggleTopPerformers(type, mode, btn) {
 }
 
 function initCharts(chartData) {
+    if (!chartData) return;
     // New Daily Performance Charts
     Object.entries(chartData.daily_performance || {}).forEach(([slug, data]) => {
         safeRender(`#chart-daily-perf-${slug}`, (el) => {
