@@ -3,7 +3,6 @@ import os
 import datetime
 from datetime import timedelta
 from collections import defaultdict
-from jinja2 import Environment, FileSystemLoader
 
 def commas(value, precision=2, sign=False):
     if value is None: return "0.00"
@@ -18,16 +17,6 @@ class DividendCalendarGenerator:
         else:
             with open(data_or_path, 'r', encoding='utf-8') as f:
                 self.data = json.load(f)
-        
-        self.env = Environment(
-            loader=FileSystemLoader(template_dir),
-            autoescape=True
-        )
-        self.env.filters['commas'] = commas
-        
-        # Setup BASE_PATH global helper
-        from core.cache import base_path
-        self.env.globals['BASE_PATH'] = base_path
 
     def calculate_suppression_and_frequency(self, conn):
         """
@@ -390,19 +379,4 @@ class DividendCalendarGenerator:
 
     def generate(self, conn, exchange_rates, json_filename="portfolio_data.json", category_nav=None, port_nav=None):
         cal_data = self.generate_calendar_data(conn, exchange_rates)
-        try:
-            content_template = self.env.get_template('dividend_calendar.html')
-            content_rendered = content_template.render(
-                cal=cal_data,
-                meta=self.data["metadata"],
-                JSON_FILENAME=json_filename
-            )
-            base_template = self.env.get_template('base.html')
-            rendered = base_template.render(
-                TITLE="Dividend Calendar",
-                CONTENT=content_rendered,
-                JSON_FILENAME=json_filename
-            )
-            return rendered, cal_data
-        except Exception:
-            return "", cal_data
+        return "", cal_data

@@ -2,7 +2,6 @@ import json
 import os
 import re
 from datetime import datetime
-from jinja2 import Environment, FileSystemLoader
 from core.performance_calculator import get_performance_report_data
 
 def slugify(text):
@@ -12,72 +11,6 @@ def slugify(text):
     text = re.sub(r'[^\w\s\-]', '', text)
     text = re.sub(r'[\s_]+', '-', text)
     return re.sub(r'-+', '-', text).strip('-')
-
-class PerformanceReportRenderer:
-    def __init__(self, config_data):
-        self.config = config_data
-        self.ui = self.config.get('ui', {})
-        self.colors = self.ui.get('colors', {})
-        self.template_dir = 'templates'
-        
-        self.env = Environment(
-            loader=FileSystemLoader(self.template_dir),
-            autoescape=False,
-            trim_blocks=True,
-            lstrip_blocks=True
-        )
-        base_path = os.getenv("BASE_PATH", "").strip()
-        if base_path and not base_path.startswith("/"):
-            base_path = "/" + base_path
-        self.env.globals['BASE_PATH'] = base_path
-        
-        self.env.filters['slugify'] = slugify
-        self.env.filters['commas'] = lambda val, p=2, sign=False: f"{'+' if sign and float(val)>0 else ''}{float(val):,.{p}f}"
-        self.env.filters['round'] = lambda val, p=2, sign=False: f"{'+' if sign and float(val)>0 else ''}{round(float(val), p)}"
-        self.env.filters['tojson'] = lambda obj: json.dumps(obj)
-
-    def _get_css(self):
-        from services.css_helper import render_combined_css
-        return render_combined_css(
-            self.env,
-            page_width=self.ui.get('page_width', '1300px'),
-            chart_height=self.ui.get('chart_height', '40vh')
-        )
-
-    def _get_js(self):
-        template = self.env.get_template('scripts.js')
-        c = self.colors
-        defaults = {
-            'invested': '#7f8c8d', 'current': '#3498db', 'returns': '#2ecc71',
-            'income': '#2ecc71', 'positive': '#3498db', 'negative': '#e74c3c'
-        }
-        return template.render(
-            COLOR_INVESTED=c.get('invested', defaults['invested']),
-            COLOR_CURRENT=c.get('current', defaults['current']),
-            COLOR_RETURNS=c.get('returns', defaults['returns']),
-            COLOR_INCOME=c.get('income', defaults['income']),
-            COLOR_POSITIVE=c.get('positive', defaults['positive']),
-            COLOR_NEGATIVE=c.get('negative', defaults['negative']),
-            UI_FONT_SIZE=self.ui.get('font_size', '14px'),
-            UI_MOBILE_FONT_SIZE=self.ui.get('mobile_font_size', '12px')
-        )
-
-    def render(self, data, raw_chart_data, nav_items, category_nav, port_nav=None, json_filename="portfolio_data.json"):
-        try:
-            template = self.env.get_template('performance_report.html')
-            return template.render(
-                years=data['years'],
-                classifications=data['classifications'],
-                cash_data=data['cash_data'],
-                portfolio_data=data['portfolio_data'],
-                cash_ytd=data.get('cash_ytd', {}),
-                portfolio_ytd=data.get('portfolio_ytd', {}),
-                broker_cash_data=data.get('broker_cash_data', {}),
-                broker_cash_ytd=data.get('broker_cash_ytd', {}),
-                raw_chart_data=raw_chart_data
-            )
-        except Exception:
-            return ""
 
 def build_chart_data(years, cash_data, portfolio_data, broker_cash_data=None):
     raw_chart = {
