@@ -70,7 +70,9 @@ def is_exchange_in_session(exchange: str) -> bool:
     if exchange_upper == "SG":
         tz = pytz.timezone('Asia/Singapore')
         start_time = time(9, 0)
-        end_time = time(17, 0)
+        # intentionally adding 15 minutes buffer after the market closes at 5:00 PM SGT. 
+        # But we consider it "in session" until 5:15 PM for price updates
+        end_time = time(17, 15)
     elif exchange_upper in ["TO", "TSE", "V", "TSX", "NEO", "NE", "CSE"]:
         tz = pytz.timezone('America/Toronto')
         start_time = time(9, 30)
