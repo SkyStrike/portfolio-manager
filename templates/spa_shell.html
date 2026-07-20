@@ -1,5 +1,145 @@
-<!-- Load Vue 3 via CDN -->
-<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset='UTF-8'>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ TITLE | default("Portfolio Manager - Dashboard") }}</title>
+    <!-- Google Fonts for outfit/inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ BASE_PATH }}/static/global-theme.css">
+    <script>
+        window.BASE_PATH = {{ BASE_PATH | tojson | safe }};
+        (function() {
+            const base = window.BASE_PATH;
+            if (base) {
+                const originalFetch = window.fetch;
+                window.fetch = function(input, init) {
+                    if (typeof input === 'string' && input.startsWith('/api/')) {
+                        input = base + input;
+                    } else if (input instanceof URL && input.pathname.startsWith('/api/')) {
+                        input.pathname = base + input.pathname;
+                    }
+                    return originalFetch(input, init);
+                };
+            }
+        })();
+        window.globalNavConfig = {
+            apps: [
+                { name: 'Active', url: {{ BASE_PATH | tojson | safe }} + '/active', match: new RegExp('^' + {{ BASE_PATH | tojson | safe }} + '(/|/active)?$') },
+                { name: 'Closed', url: {{ BASE_PATH | tojson | safe }} + '/closed', match: /\/closed$/ },
+                { name: 'Charts', url: {{ BASE_PATH | tojson | safe }} + '/charts', match: /\/charts$/ },
+                { name: 'History', url: {{ BASE_PATH | tojson | safe }} + '/history', match: /\/history$/ }
+            ]
+        };
+    </script>
+    <script src="{{ BASE_PATH }}/static/global-nav.js" defer></script>
+    <!-- Load Vue 3 via CDN -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src='https://cdn.jsdelivr.net/npm/apexcharts'></script>
+    <style>
+        :root {
+            --bg-color: var(--global-bg, #0b0f19);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-primary: #8b5cf6;
+            --accent-secondary: #6366f1;
+            --accent-gradient: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+            --card-border: rgba(255, 255, 255, 0.07);
+        }
+        body { 
+            background-color: var(--bg-color); 
+            margin: 0 !important;
+            padding: 0 !important;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        {{ CSS | safe }}
+    </style>
+    <script>{{ JS | safe }}</script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const toggleBtn = document.getElementById("mask-toggle-btn");
+            const icon = document.getElementById("mask-toggle-icon");
+            if (!toggleBtn || !icon) return;
+
+            const eyeIcon = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>`;
+            const eyeOffIcon = `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>`;
+            
+            function setMaskState(isMasked) {
+                if (isMasked) {
+                    document.body.classList.add("mask-values");
+                    icon.innerHTML = eyeOffIcon;
+                    toggleBtn.title = "Show Sensitive Values";
+                } else {
+                    document.body.classList.remove("mask-values");
+                    icon.innerHTML = eyeIcon;
+                    toggleBtn.title = "Hide Sensitive Values";
+                }
+                localStorage.setItem("dashboard_masked", isMasked ? "true" : "false");
+            }
+
+            function initializeSensitiveMasking() {
+                document.querySelectorAll('.stat-value, .stat-subvalue, .kpi-value, .kpi-subtext').forEach(el => {
+                    const text = el.textContent || '';
+                    if ((text.includes('SGD') || text.includes('USD') || text.includes('CAD') || text.includes('SG$') || text.includes('US$')) && !text.includes('%') && !text.includes('days')) {
+                        el.classList.add('sensitive-value');
+                    }
+                });
+
+                document.querySelectorAll('.pos-val, .neg-val, .stat-value, td').forEach(el => {
+                    const text = (el.textContent || '').trim();
+                    if (/^-?[\d,]+\.?\d*\s*(SGD|USD|CAD|SG\$|US\$)$/.test(text) || /^SG\$\s*-?[\d,]+\.?\d*$/.test(text)) {
+                        el.classList.add('sensitive-value');
+                    }
+                });
+
+                document.querySelectorAll('table.holdings-summary tbody tr').forEach(row => {
+                    const cells = row.children;
+                    if (cells.length >= 9) {
+                        for (let idx of [3, 4, 5, 6, 7, 8]) {
+                            const cell = cells[idx];
+                            if (cell && !cell.classList.contains('sensitive-value')) {
+                                const text = cell.textContent.trim();
+                                if (text && text !== '-' && !text.includes('%')) {
+                                    cell.classList.add('sensitive-value');
+                                }
+                            }
+                        }
+                    }
+                });
+
+                document.querySelectorAll('table.summary-table tbody tr, table.holdings-table tbody tr').forEach(row => {
+                    Array.from(row.children).forEach((cell, idx) => {
+                        if (idx === 0) return;
+                        const text = cell.textContent.trim();
+                        if (/^-?[\d,]+\.?\d*$/.test(text) && !text.includes('%') && text.length > 1) {
+                            cell.classList.add('sensitive-value');
+                        }
+                    });
+                });
+            }
+
+            initializeSensitiveMasking();
+            setTimeout(initializeSensitiveMasking, 500);
+            setTimeout(initializeSensitiveMasking, 2000);
+
+            const isMasked = localStorage.getItem("dashboard_masked") === "true";
+            setMaskState(isMasked);
+
+            toggleBtn.addEventListener("click", () => {
+                const currentlyMasked = document.body.classList.contains("mask-values");
+                setMaskState(!currentlyMasked);
+            });
+        });
+    </script>
+</head>
+<body id="top">
+    {% set USE_CLASSIFICATION_DROPDOWN = True %}
+    {% include 'partials/nav_header.html' %}
+
+    <div id="spa-app" class="main-content-wrapper" style="max-width: {{ PAGE_WIDTH }};">
 
 <style>
     .action-btn-cash {
@@ -2646,3 +2786,100 @@
     window.portfolioApp = app.mount('#spa-app');
 </script>
 {% endraw %}
+
+    <!-- Footer Section with system control and data sources -->
+    <footer class="main-footer">
+        <div class="footer-links-container">
+            <div class="footer-link-item">
+                <span>Metadata:</span>
+                <a href="src/{{ JSON_FILENAME | default('portfolio_data_intraday.json') }}" target="_blank" class="footer-raw-json-link">Raw JSON</a>
+            </div>
+        </div>
+        <div class="footer-disclaimer">* All SGD values are approximate and based on the latest available exchange rates.</div>
+    </footer>
+
+    <!-- Calculator Center Backdrop -->
+    <div id="calc-backdrop" class="calc-backdrop" style="display: none;" onclick="toggleExpandCalculator(event)"></div>
+
+    <!-- Floating Position Calculator Widget -->
+    <div id="portfolio-calculator-widget" class="portfolio-calculator" style="display: none;">
+        <div class="calc-header" onclick="toggleMinimizeCalculator(event)">
+            <span class="calc-title">🖩 Position Calculator (<span id="calc-count">0</span>)</span>
+            <div class="calc-header-controls">
+                <button id="calc-minimize-btn" title="Minimize" onclick="toggleMinimizeCalculator(event)">—</button>
+                <button id="calc-expand-btn" title="Expand / Center" onclick="toggleExpandCalculator(event)">⛶</button>
+                <button id="calc-close-btn" title="Close" onclick="closeCalculator(event)">×</button>
+            </div>
+        </div>
+        <div class="calc-body" id="calc-body-content">
+            <div class="calc-table-container">
+                <table id="calc-comparison-table">
+                    <thead>
+                        <tr id="calc-tr-headers">
+                            <th class="sticky-col">Fields</th>
+                            <!-- Dynamic ticker headers injected here -->
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr id="calc-row-currency"><td class="sticky-col">Currency</td></tr>
+                        <tr id="calc-row-price"><td class="sticky-col">Current Share Price</td></tr>
+                        <tr id="calc-row-position"><td class="sticky-col">Current Positions</td></tr>
+                        <tr id="calc-row-weight"><td class="sticky-col">Current Weight</td></tr>
+                        <tr id="calc-row-simulate"><td class="sticky-col">Simulated Action (Shares)</td></tr>
+                        <tr id="calc-row-tx-native"><td class="sticky-col">Transacted Amt</td></tr>
+                        <tr id="calc-row-tx-sgd"><td class="sticky-col">Transacted Amt (SGD)</td></tr>
+                        <tr id="calc-row-new-weight"><td class="sticky-col">New Weight</td></tr>
+                        <tr id="calc-row-weight-change"><td class="sticky-col">Weightage Change</td></tr>
+                        <tr id="calc-row-stock-change"><td class="sticky-col">Position Change %</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div class="toast-container" id="toast-container"></div>
+
+    {% include "transaction_modal.html" %}
+
+    <!-- TX VISUALIZER MODAL -->
+    <div class="modal-overlay" id="txv-modal">
+        <div class="modal-content txv-modal-content">
+            <div class="txv-modal-header">
+                <div class="txv-modal-top-row">
+                    <div class="txv-modal-title-group">
+                        <span class="txv-modal-symbol" id="txv-symbol-label">—</span>
+                        <span class="txv-modal-subtitle" id="txv-avg-cost-label"></span>
+                    </div>
+                    <button class="modal-close-btn" onclick="closeTxVisualizer()">&#x2715;</button>
+                </div>
+                <div class="txv-modal-controls-row">
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <div class="txv-range-group" id="txv-range-group">
+                            <button class="txv-range-btn" data-range="7d">7d</button>
+                            <button class="txv-range-btn" data-range="1m">1m</button>
+                            <button class="txv-range-btn" data-range="3m">3m</button>
+                            <button class="txv-range-btn txv-range-active" data-range="6m">6m</button>
+                            <button class="txv-range-btn" data-range="YTD">YTD</button>
+                            <button class="txv-range-btn" data-range="1y">1y</button>
+                            <button class="txv-range-btn" data-range="5y">5y</button>
+                            <button class="txv-range-btn" data-range="all">all</button>
+                            <button class="txv-range-btn" id="txv-custom-toggle-btn" title="Custom range">📅</button>
+                        </div>
+                        <div class="txv-custom-date-inputs" id="txv-custom-date-inputs" style="display: none; align-items: center; gap: 6px;">
+                            <input type="date" id="txv-start-date" class="txv-date-input" title="Start Date">
+                            <span style="color: var(--text-secondary, #94a3b8); font-size: 0.85rem;">to</span>
+                            <input type="date" id="txv-end-date" class="txv-date-input" title="End Date">
+                            <button class="txv-range-btn" id="txv-apply-custom-btn" style="background: rgba(56, 189, 248, 0.1); border-color: rgba(56, 189, 248, 0.3);">Apply</button>
+                        </div>
+                    </div>
+                    <div class="txv-perf-info" id="txv-perf-info"></div>
+                </div>
+            </div>
+            <div id="txv-status" class="txv-status"></div>
+            <div id="txv-chart-container" class="txv-chart-container"></div>
+        </div>
+    </div>
+
+</body>
+</html>

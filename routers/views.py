@@ -68,7 +68,6 @@ def get_spa_dashboard():
 
         env = Environment(loader=FileSystemLoader("templates"))
         spa_template = env.get_template("spa_shell.html")
-        spa_content = spa_template.render(BASE_PATH=base_path)
         
         config = load_config()
         page_width = config.get("ui", {}).get("page_width", "1800px")
@@ -76,7 +75,6 @@ def get_spa_dashboard():
         css_content = render_combined_css(env, page_width=page_width)
         
         js_template = env.get_template("scripts.js")
-        config = load_config()
         ui_config = config.get("ui", {})
         colors_config = config.get("colors", {})
         font_style = ui_config.get("typography", {}).get("font_family", "sans-serif")
@@ -93,8 +91,6 @@ def get_spa_dashboard():
             UI_MOBILE_FONT_SIZE=ui_config.get("mobile_font_size", "12px")
         )
         
-        base_template = env.get_template("base.html")
-        page_width = config.get("ui", {}).get("page_width", "1800px")
         options_tracker_url = config.get("external_services", {}).get("options_tracker_url", "")
         if "/api/positions" in options_tracker_url:
             options_tracker_main_url = options_tracker_url.replace("/api/positions", "")
@@ -102,11 +98,9 @@ def get_spa_dashboard():
             options_tracker_main_url = options_tracker_url
         backtester_url = config.get("external_services", {}).get("backtester_url", "")
         
-        wrapped = base_template.render(
-            TITLE="Dashboard",
+        rendered = spa_template.render(
+            TITLE="Portfolio Manager - Dashboard",
             page_title="Dashboard",
-            CONTENT=spa_content,
-            body_content=spa_content,
             CSS=css_content,
             JS=js_content,
             PAGE_WIDTH=page_width,
@@ -121,7 +115,7 @@ def get_spa_dashboard():
             PORT_NAV=portfolio_nav,
             JSON_FILENAME="portfolio_data_intraday.json"
         )
-        return HTMLResponse(content=wrapped)
+        return HTMLResponse(content=rendered)
     return HTMLResponse("<h3>Please create templates/spa_shell.html</h3>")
 
 
