@@ -1,3 +1,9 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+.git/
 data/
 docs/
 .agents/

@@ -167,10 +167,11 @@ def get_blacklisted_tickers(conn: sqlite3.Connection, api_type: str = "yfinance_
         logger.warning("Failed to query blacklisted tickers: %s", e)
         return set()
 
-def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_minutes: int = 60) -> dict:
+def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_minutes: int = 15) -> dict:
     """
     Fetches latest prices in a single batch from yfinance and caches them in the DB.
     Only queries tickers whose cached prices are older than `cache_minutes` unless `force` is True.
+    When `force=True`, unconditionally fetches all active tickers regardless of market session status.
     """
     close_on_exit = False
     if conn is None:
@@ -218,17 +219,15 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
             
             # Determine if ticker needs update
             needs_update = False
-            if ticker_id not in price_records:
+            if force or ticker_id not in price_records:
                 needs_update = True
             else:
                 try:
                     last_updated = datetime.fromisoformat(price_records[ticker_id])
                     
                     if is_exchange_in_session(t['exchange']):
-                        # If the exchange is in session, refresh if force=True OR cache expired
-                        if force:
-                            needs_update = True
-                        elif get_now_utc() - last_updated > timedelta(minutes=cache_minutes):
+                        # If the exchange is in session, refresh if cache expired
+                        if get_now_utc() - last_updated > timedelta(minutes=cache_minutes):
                             needs_update = True
                     else:
                         # Exchange is closed. Only refresh if the DB price is not fresh after the last close

@@ -564,6 +564,8 @@
                         <span class="maintenance-sub-label">The backup name must end with '.db' and not match the active database filename.</span>
                     </div>
 
+                    
+
                     <!-- List, Download & Delete Backups -->
                     <div class="form-group maintenance-group-border">
                         <label class="maintenance-field-label">Manage Database Backups</label>
@@ -590,6 +592,31 @@
                         </div>
                         <button id="btn-db-restore" class="btn btn-danger">Restore Selected Backup</button>
                         <span class="maintenance-restore-warning">🚨 WARNING: Restoring will overwrite the current database file. This takes effect immediately.</span>
+                    </div>
+                </div>
+
+                <!-- MIDDLE COLUMN: SYSTEM OPERATIONS & REFRESH -->
+                <div class="table-card maintenance-card">
+                    <div class="table-header-row maintenance-card-title">
+                        <span>⚡ System & Data Operations</span>
+                    </div>
+
+                    <!-- Force Price Refresh Card -->
+                    <div class="form-group maintenance-group-border">
+                        <label class="maintenance-field-label">Administrative Price Refresh</label>
+                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px; margin-top: 4px;">
+                            Bypasses all market session open/closed rules and cache timestamps to force an immediate yfinance query for <strong>all active holdings</strong>.
+                        </p>
+                        <button id="btn-admin-force-price-refresh" class="btn" style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #fbbf24; font-weight: 600; cursor: pointer; padding: 8px 16px; border-radius: 6px;" onclick="handleAdminForcePriceRefresh()">⚡ Force Update All Prices</button>
+                    </div>
+
+                    <!-- Rebuild Dashboard Cache -->
+                    <div class="form-group">
+                        <label class="maintenance-field-label">Rebuild Dashboard Cache</label>
+                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px; margin-top: 4px;">
+                            Re-calculates metrics, position weights, cash summaries, and ApexCharts data, re-caching in-memory JSON views.
+                        </p>
+                        <button id="btn-admin-rebuild-cache" class="btn" style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa; font-weight: 600; cursor: pointer; padding: 8px 16px; border-radius: 6px;" onclick="handleAdminRebuildCache()">🔄 Rebuild Dashboard Cache</button>
                     </div>
                 </div>
 

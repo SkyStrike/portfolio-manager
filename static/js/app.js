@@ -3827,3 +3827,57 @@ async function loadPatchesList() {
         showToast("Error loading patches: " + e.message, "error");
     }
 }
+
+window.handleAdminForcePriceRefresh = async function() {
+    const btn = document.getElementById("btn-admin-force-price-refresh");
+    if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = "0.6";
+        btn.innerText = "⚡ Refreshing All Prices...";
+    }
+    try {
+        const res = await fetch("/api/prices/refresh?force=true", { method: "POST" });
+        const data = await res.json();
+        if (res.ok) {
+            showToast(data.message || "Prices force-refreshed successfully!");
+        } else {
+            showToast(data.detail || "Force refresh failed.", "error");
+        }
+    } catch (err) {
+        console.error("Force refresh error:", err);
+        showToast("Error connecting to server.", "error");
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.style.opacity = "1";
+            btn.innerText = "⚡ Force Update All Prices";
+        }
+    }
+};
+
+window.handleAdminRebuildCache = async function() {
+    const btn = document.getElementById("btn-admin-rebuild-cache");
+    if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = "0.6";
+        btn.innerText = "🔄 Rebuilding Cache...";
+    }
+    try {
+        const res = await fetch("/api/dashboard/rebuild-spa?sync=true", { method: "POST" });
+        const data = await res.json();
+        if (res.ok) {
+            showToast(data.message || "Dashboard cache rebuilt successfully!");
+        } else {
+            showToast(data.detail || "Rebuild failed.", "error");
+        }
+    } catch (err) {
+        console.error("Rebuild error:", err);
+        showToast("Error connecting to server.", "error");
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.style.opacity = "1";
+            btn.innerText = "🔄 Rebuild Dashboard Cache";
+        }
+    }
+};

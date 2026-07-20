@@ -639,7 +639,7 @@ tr.child-row td:first-child {
 /* Maintenance & Patching panel layout */
 .maintenance-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
     gap: 20px;
     align-items: start;
     margin-bottom: 2rem;
