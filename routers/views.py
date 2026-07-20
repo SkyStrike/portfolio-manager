@@ -1,8 +1,8 @@
 import logging
 import os
 from fastapi import APIRouter, Form, File, UploadFile
-from fastapi.responses import HTMLResponse, FileResponse, JSONResponse, RedirectResponse
-from core.cache import serve_rebuilt_page, get_cached_view, base_path
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from core.cache import get_cached_view, base_path
 
 logger = logging.getLogger(__name__)
 
@@ -19,26 +19,11 @@ def redirect_legacy_to_spa(path: str = ""):
 # Primary SPA Dashboard Routes
 @router.get("/", response_class=HTMLResponse)
 @router.get("/active", response_class=HTMLResponse)
-@router.get("/portfolio_active.html", response_class=HTMLResponse)
 @router.get("/closed", response_class=HTMLResponse)
-@router.get("/portfolio_closed.html", response_class=HTMLResponse)
 @router.get("/history", response_class=HTMLResponse)
-@router.get("/transaction_history.html", response_class=HTMLResponse)
 @router.get("/charts", response_class=HTMLResponse)
-@router.get("/charts.html", response_class=HTMLResponse)
 @router.get("/performance", response_class=HTMLResponse)
-@router.get("/performance_report.html", response_class=HTMLResponse)
 @router.get("/dividend-calendar", response_class=HTMLResponse)
-@router.get("/dividend_calendar.html", response_class=HTMLResponse)
-@router.get("/portfolio_active_{slug}.html", response_class=HTMLResponse)
-@router.get("/portfolio_closed_{slug}.html", response_class=HTMLResponse)
-@router.get("/transaction_history_{slug}.html", response_class=HTMLResponse)
-@router.get("/charts_{slug}.html", response_class=HTMLResponse)
-@router.get("/performance_report_{slug}.html", response_class=HTMLResponse)
-@router.get("/portfolio_active_port_{slug}.html", response_class=HTMLResponse)
-@router.get("/portfolio_closed_port_{slug}.html", response_class=HTMLResponse)
-@router.get("/transaction_history_port_{slug}.html", response_class=HTMLResponse)
-@router.get("/charts_port_{slug}.html", response_class=HTMLResponse)
 def get_spa_dashboard():
     logger.info("GET SPA Dashboard - serving SPA shell wrapped in base.html")
     if os.path.exists("templates/spa_shell.html"):
@@ -142,6 +127,40 @@ def get_spa_dashboard():
         )
         return HTMLResponse(content=wrapped)
     return HTMLResponse("<h3>Please create templates/spa_shell.html</h3>")
+
+
+# Legacy .html alias redirects (301 Permanent) → canonical SPA paths
+@router.get("/portfolio_active.html")
+def redirect_portfolio_active(): return RedirectResponse(url=f"{base_path}/active", status_code=301)
+
+@router.get("/portfolio_closed.html")
+def redirect_portfolio_closed(): return RedirectResponse(url=f"{base_path}/closed", status_code=301)
+
+@router.get("/transaction_history.html")
+def redirect_transaction_history(): return RedirectResponse(url=f"{base_path}/history", status_code=301)
+
+@router.get("/charts.html")
+def redirect_charts(): return RedirectResponse(url=f"{base_path}/charts", status_code=301)
+
+@router.get("/performance_report.html")
+def redirect_performance_report(): return RedirectResponse(url=f"{base_path}/performance", status_code=301)
+
+@router.get("/dividend_calendar.html")
+def redirect_dividend_calendar(): return RedirectResponse(url=f"{base_path}/dividend-calendar", status_code=301)
+
+@router.get("/portfolio_active_{slug}.html")
+@router.get("/portfolio_closed_{slug}.html")
+@router.get("/transaction_history_{slug}.html")
+@router.get("/charts_{slug}.html")
+@router.get("/performance_report_{slug}.html")
+@router.get("/portfolio_active_port_{slug}.html")
+@router.get("/portfolio_closed_port_{slug}.html")
+@router.get("/transaction_history_port_{slug}.html")
+@router.get("/charts_port_{slug}.html")
+def redirect_legacy_slug_html(slug: str):
+    logger.info("Redirecting legacy slug .html route (slug=%s) to SPA root", slug)
+    return RedirectResponse(url=f"{base_path}/", status_code=301)
+
 
 # Dynamic source JSON routing
 @router.get("/static/generated/src/{filename}")

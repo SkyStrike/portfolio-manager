@@ -31,10 +31,10 @@
         })();
         window.globalNavConfig = {
             apps: [
-                { name: 'Active', url: {{ BASE_PATH | tojson | safe }} + '/portfolio_active.html', match: new RegExp('^' + {{ BASE_PATH | tojson | safe }} + '(/|/portfolio_active\\.html)?$') },
-                { name: 'Closed', url: {{ BASE_PATH | tojson | safe }} + '/portfolio_closed.html', match: /portfolio_closed\.html/ },
+                { name: 'Active', url: {{ BASE_PATH | tojson | safe }} + '/active', match: new RegExp('^' + {{ BASE_PATH | tojson | safe }} + '(/|/active)?$') },
+                { name: 'Closed', url: {{ BASE_PATH | tojson | safe }} + '/closed', match: /\/closed$/ },
                 { name: 'Charts', url: {{ BASE_PATH | tojson | safe }} + '/charts', match: /\/charts$/ },
-                { name: 'History', url: {{ BASE_PATH | tojson | safe }} + '/transaction_history.html', match: /transaction_history\.html/ }
+                { name: 'History', url: {{ BASE_PATH | tojson | safe }} + '/history', match: /\/history$/ }
             ]
         };
     </script>

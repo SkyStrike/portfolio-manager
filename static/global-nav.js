@@ -175,16 +175,9 @@
     // --- Classification Dropdown & Highlighting Logic ---
     // 1. Determine current classification slug
     let currentSlug = 'all';
-    const slugMatch = filename.match(/(?:portfolio_active|portfolio_closed|transaction_history|charts|performance_report)_(port_[^.]+|[^.]+)\.html/);
-    if (slugMatch) {
-        // Convert file slug "port_x" back to data-slug "port-x" for selection highlighting
-        const fileSlug = slugMatch[1];
-        currentSlug = fileSlug.startsWith('port_') ? 'port-' + fileSlug.slice(5) : fileSlug;
-    } else {
-        const filterParam = urlParams.get('filter');
-        if (filterParam) {
-            currentSlug = filterParam;
-        }
+    const filterParam = urlParams.get('filter');
+    if (filterParam) {
+        currentSlug = filterParam;
     }
 
     // 2. Setup toggle behavior for all dropdown menus (Classification, Analytics, Portfolio, Add)
@@ -277,16 +270,16 @@
             } else {
                 isActive = (normPath === '/admin' || normPath === '/manage') && !currentHasTabSettings;
             }
-        } else if (linkPath === '/' || linkPath === '/active' || linkPath.includes('portfolio_active')) {
-            isActive = (normPath === '/' || normPath === '/active' || filename.startsWith('portfolio_active'));
-        } else if (linkPath === '/closed' || linkPath.includes('portfolio_closed')) {
-            isActive = (normPath === '/closed' || filename.startsWith('portfolio_closed'));
-        } else if (linkPath === '/history' || linkPath.includes('transaction_history')) {
-            isActive = (normPath === '/history' || filename.startsWith('transaction_history'));
+        } else if (linkPath === '/' || linkPath === '/active') {
+            isActive = (normPath === '/' || normPath === '/active');
+        } else if (linkPath === '/closed') {
+            isActive = (normPath === '/closed');
+        } else if (linkPath === '/history') {
+            isActive = (normPath === '/history');
         } else if (linkPath.includes('charts')) {
-            isActive = (normPath === '/charts' || filename.startsWith('charts'));
+            isActive = (normPath === '/charts');
         } else if (linkPath.includes('performance')) {
-            isActive = (normPath === '/performance' || filename.startsWith('performance') || filename.startsWith('performance_report'));
+            isActive = (normPath === '/performance');
         } else {
             isActive = (normPath === linkPath);
         }
@@ -319,10 +312,10 @@
         if (basePath && normPath2.startsWith(basePath)) {
             normPath2 = normPath2.substring(basePath.length);
         }
-        const isClosedActive = (normPath2 === '/closed' || filename.startsWith('portfolio_closed'));
-        const isChartsActive = (normPath2 === '/charts' || filename.startsWith('charts'));
-        const isPerfActive = (normPath2 === '/performance' || filename.startsWith('performance') || filename.startsWith('performance_report'));
-        const isHistoryActive = (normPath2 === '/history' || filename.startsWith('transaction_history'));
+        const isClosedActive = (normPath2 === '/closed');
+        const isChartsActive = (normPath2 === '/charts');
+        const isPerfActive = (normPath2 === '/performance');
+        const isHistoryActive = (normPath2 === '/history');
         if (isClosedActive || isChartsActive || isPerfActive || isHistoryActive) {
             perfBtn.classList.add('active');
         } else {

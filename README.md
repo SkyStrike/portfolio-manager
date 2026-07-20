@@ -65,7 +65,7 @@ No authentication, CSRF validation, or multi-user access controls are implemente
 * **Multi-Portfolio & Combined Net Worth**: Consolidated overview ("My Net Worth") alongside individual broker/portfolio segments with customizable sorting priorities.
 * **Interactive Transaction & Dividend Ledger**: A dynamic management interface (`trades.html`) for editing, deleting, or manually inputting historical stock transactions and dividend distributions.
 * **FIFO Financial Calculation Engine**: Calculates FIFO cost basis, capital gains (realized P&L), and rolls transaction data into 12-month charts and net/gross dividend aggregates in SGD.
-* **Interactive Dividend Calendar**: Grid/List monthly visualization (`dividend_calendar.html`) with calendar views, monthly totals, search filters, and Interactive Brokers (IBKR) statement synchronization.
+* **Interactive Dividend Calendar**: Grid/List monthly visualization (`/dividend-calendar`) with calendar views, monthly totals, search filters, and Interactive Brokers (IBKR) statement synchronization.
 * **IBKR Statement Reconciliation**: Automatically compares database positions against uploaded IBKR statement positions (`ib_data.json`) to display mismatch warnings and sync badges.
 * **Options & Stress-Testing Dashboards**: Integrates with external options trackers to visualize active contracts, risk exposure metrics, expiration profiles, and cash stress tests.
 * **Dynamic Database Backups & Patching**: Admin tools for managing, downloading, and hot-restoring database backups on-the-fly, alongside custom patching manifests for data migrations.
@@ -168,10 +168,9 @@ The project has been refactored into a modern, modular architecture:
   - [core/performance_calculator.py](core/performance_calculator.py): Performance metrics and cash assets daily calculator.
   - [core/schemas.py](core/schemas.py): Pydantic validation schemas for API endpoints.
 * **`services/`**: Command-line tools, background integrations, and rendering pipelines.
-  - [services/rebuild_dashboard.py](services/rebuild_dashboard.py): Dashboard builder orchestration. Renders HTML outputs statically.
+  - [services/rebuild_dashboard.py](services/rebuild_dashboard.py): Dashboard builder orchestration. Builds and populates the in-memory JSON cache consumed by SPA REST endpoints.
   - [services/price_service.py](services/price_service.py): Manages Yahoo Finance updates.
   - [services/fetch_exchange_rates.py](services/fetch_exchange_rates.py): Central bank exchange rates pull services.
-  - [services/report_renderer.py](services/report_renderer.py): Compiles Jinja2 dashboard pages.
   - [services/dividend_service.py](services/dividend_service.py): Syncs upcoming dividend ex-dates and estimates distributions.
   - [services/dividend_calendar_service.py](services/dividend_calendar_service.py): Formats schedules and compiles dividend calendar JSON.
 * **`ingestion/`**: Data parsing and intake pipelines.

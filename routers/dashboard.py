@@ -1,5 +1,4 @@
 import logging
-import traceback
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from core.database import get_connection
 from core.calculations import get_portfolio_summary

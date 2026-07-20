@@ -999,13 +999,13 @@ def render_all_views_in_memory(all_positions, options_data, cash_report_data, co
             
             category_nav.append({
                 "name": c_name,
-                "url": f"portfolio_active_{slug}.html",
+                "url": f"/active?filter={slug}",
                 "id": f"pill-active-{slug}",
                 "slug": slug
             })
             
     # Compile HTML files
-    nav_items = [{"name": "All", "url": "portfolio_active.html", "id": "pill-active", "slug": "all"}]
+    nav_items = [{"name": "All", "url": "/", "id": "pill-active", "slug": "all"}]
 
     # Build per-portfolio nav and exports
     portfolio_nav = []
@@ -1062,7 +1062,7 @@ def render_all_views_in_memory(all_positions, options_data, cash_report_data, co
 
         portfolio_nav.append({
             "name": name,
-            "url": f"portfolio_active_port_{pslug}.html",
+            "url": f"/active?portfolio={pslug}",
             "id": f"pill-active-port-{pslug}",
             "slug": f"port-{pslug}",
             "broker": broker,

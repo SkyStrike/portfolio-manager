@@ -1,8 +1,4 @@
-import json
-import os
 import re
-from datetime import datetime
-from core.performance_calculator import get_performance_report_data
 
 def slugify(text):
     """Generates URL-safe IDs for HTML anchors and TOC linking."""

@@ -4,8 +4,7 @@ import json
 import requests
 from datetime import datetime, timezone, timedelta
 from collections import defaultdict
-from fastapi import APIRouter, HTTPException
-from core.database import get_connection
+from fastapi import APIRouter
 from services.fetch_exchange_rates import get_exchange_rates
 from services.rebuild_dashboard import load_config
 
