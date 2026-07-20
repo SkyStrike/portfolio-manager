@@ -63,64 +63,21 @@ class PerformanceReportRenderer:
         )
 
     def render(self, data, raw_chart_data, nav_items, category_nav, port_nav=None, json_filename="portfolio_data.json"):
-        template = self.env.get_template('performance_report.html')
-        
-        month_names = {
-            1: "Jan", 2: "Feb", 3: "Mar", 4: "Apr", 5: "May", 6: "Jun",
-            7: "Jul", 8: "Aug", 9: "Sep", 10: "Oct", 11: "Nov", 12: "Dec"
-        }
-        
-        c = self.colors
-        defaults = {
-            'invested': '#7f8c8d', 'current': '#3498db', 'returns': '#2ecc71',
-            'income': '#2ecc71', 'positive': '#3498db', 'negative': '#e74c3c'
-        }
-        content = template.render(
-            years=data['years'],
-            classifications=data['classifications'],
-            cash_data=data['cash_data'],
-            portfolio_data=data['portfolio_data'],
-            cash_ytd=data.get('cash_ytd', {}),
-            portfolio_ytd=data.get('portfolio_ytd', {}),
-            broker_cash_data=data.get('broker_cash_data', {}),
-            broker_cash_ytd=data.get('broker_cash_ytd', {}),
-            month_names=month_names,
-            raw_chart_data=raw_chart_data,
-            COLOR_RETURNS=c.get('returns', defaults['returns']),
-            COLOR_NEGATIVE=c.get('negative', defaults['negative']),
-            BROKERS=self.config.get('brokers', ['IBKR', 'MOOMOO'])
-        )
-        
-        base_template = self.env.get_template('base.html')
-        from services.rebuild_dashboard import load_config
-        config = load_config()
-        allowed_docs = config.get("allowed_documents", {})
-        ib_data_path = allowed_docs.get("ib-data", "data/ib_data.json")
-        ib_exists = os.path.exists(ib_data_path)
-        
-        # Resolve options tracker main URL
-        options_tracker_url = config.get("external_services", {}).get("options_tracker_url", "")
-        if "/api/positions" in options_tracker_url:
-            options_tracker_main_url = options_tracker_url.replace("/api/positions", "")
-        else:
-            options_tracker_main_url = options_tracker_url
-        backtester_url = config.get("external_services", {}).get("backtester_url", "")
-        
-        return base_template.render(
-            TITLE="Performance Report",
-            CSS=self._get_css(),
-            JS=self._get_js(),
-            CONTENT=content,
-            NAV_ITEMS=nav_items,
-            CAT_NAV=category_nav,
-            PORT_NAV=port_nav or [],
-            IB_DATA_EXISTS=ib_exists,
-            JSON_FILENAME=json_filename,
-            GENERATED_AT_SGT=datetime.now().strftime("%Y-%m-%d %H:%M:%S SGT"),
-            PAGE_WIDTH=self.ui.get('page_width', '1800px'),
-            OPTIONS_TRACKER_URL=options_tracker_main_url,
-            BACKTESTER_URL=backtester_url
-        )
+        try:
+            template = self.env.get_template('performance_report.html')
+            return template.render(
+                years=data['years'],
+                classifications=data['classifications'],
+                cash_data=data['cash_data'],
+                portfolio_data=data['portfolio_data'],
+                cash_ytd=data.get('cash_ytd', {}),
+                portfolio_ytd=data.get('portfolio_ytd', {}),
+                broker_cash_data=data.get('broker_cash_data', {}),
+                broker_cash_ytd=data.get('broker_cash_ytd', {}),
+                raw_chart_data=raw_chart_data
+            )
+        except Exception:
+            return ""
 
 def build_chart_data(years, cash_data, portfolio_data, broker_cash_data=None):
     raw_chart = {

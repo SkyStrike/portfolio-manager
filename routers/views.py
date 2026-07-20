@@ -97,8 +97,21 @@ def get_spa_dashboard():
         
         js_template = env.get_template("scripts.js")
         config = load_config()
-        font_style = config.get("ui", {}, ).get("typography", {}).get("font_family", "sans-serif")
-        js_content = js_template.render(FONT_STYLE=font_style, BASE_PATH=base_path)
+        ui_config = config.get("ui", {})
+        colors_config = config.get("colors", {})
+        font_style = ui_config.get("typography", {}).get("font_family", "sans-serif")
+        js_content = js_template.render(
+            FONT_STYLE=font_style,
+            BASE_PATH=base_path,
+            COLOR_INVESTED=colors_config.get("invested", "#8b5cf6"),
+            COLOR_CURRENT=colors_config.get("current", "#3498db"),
+            COLOR_RETURNS=colors_config.get("returns", "#2ecc71"),
+            COLOR_INCOME=colors_config.get("income", "#2ecc71"),
+            COLOR_POSITIVE=colors_config.get("positive", "#3498db"),
+            COLOR_NEGATIVE=colors_config.get("negative", "#e74c3c"),
+            UI_FONT_SIZE=ui_config.get("font_size", "14px"),
+            UI_MOBILE_FONT_SIZE=ui_config.get("mobile_font_size", "12px")
+        )
         
         base_template = env.get_template("base.html")
         page_width = config.get("ui", {}).get("page_width", "1800px")

@@ -390,62 +390,19 @@ class DividendCalendarGenerator:
 
     def generate(self, conn, exchange_rates, json_filename="portfolio_data.json", category_nav=None, port_nav=None):
         cal_data = self.generate_calendar_data(conn, exchange_rates)
-        
-        # 1. Render content (dividend_calendar.html)
-        content_template = self.env.get_template('dividend_calendar.html')
-        content_rendered = content_template.render(
-            cal=cal_data,
-            meta=self.data["metadata"],
-            JSON_FILENAME=json_filename
-        )
-        
-        # 2. Render css/js dependencies
-        from services.css_helper import render_combined_css
-        ui_config = self.data.get('metadata', {}).get('config', {}).get('ui', {})
-        page_width = ui_config.get('page_width', '1800px')
-        css_rendered = render_combined_css(self.env, page_width=page_width, chart_height="40vh")
-        
-        js_template = self.env.get_template('scripts.js')
-        js_rendered = js_template.render(
-            COLOR_INVESTED='#8b5cf6', 
-            COLOR_CURRENT='#3498db',
-            COLOR_RETURNS='#2ecc71',
-            COLOR_INCOME='#2ecc71',
-            COLOR_POSITIVE='#3498db',
-            COLOR_NEGATIVE='#e74c3c',
-            UI_FONT_SIZE=ui_config.get('font_size', '14px'),
-            UI_MOBILE_FONT_SIZE=ui_config.get('mobile_font_size', '12px')
-        )
-        
-        # 3. Resolve configs for base
-        from services.rebuild_dashboard import load_config
-        config = load_config()
-        allowed_docs = config.get("allowed_documents", {})
-        ib_exists = os.path.exists(allowed_docs.get("ib-data")) if allowed_docs.get("ib-data") else False
-        
-        options_tracker_url = config.get("external_services", {}).get("options_tracker_url", "")
-        if "/api/positions" in options_tracker_url:
-            options_tracker_main_url = options_tracker_url.replace("/api/positions", "")
-        else:
-            options_tracker_main_url = options_tracker_url
-            
-        base_template = self.env.get_template('base.html')
-        nav_items = [{"name": "All", "url": "portfolio_active.html", "id": "pill-active", "slug": "all"}]
-        
-        rendered = base_template.render(
-            TITLE="Dividend Calendar",
-            CSS=css_rendered,
-            JS=js_rendered,
-            CONTENT=content_rendered,
-            NAV_ITEMS=nav_items,
-            CAT_NAV=category_nav or [],
-            PORT_NAV=port_nav or [],
-            JSON_FILENAME=json_filename,
-            IB_DATA_EXISTS=ib_exists,
-            PAGE_WIDTH=page_width,
-            OPTIONS_TRACKER_URL=options_tracker_main_url,
-            BACKTESTER_URL=config.get("external_services", {}).get("backtester_url", ""),
-            GENERATED_AT_SGT=self.data["metadata"].get('generated_at_sgt')
-        )
-        
-        return rendered, cal_data
+        try:
+            content_template = self.env.get_template('dividend_calendar.html')
+            content_rendered = content_template.render(
+                cal=cal_data,
+                meta=self.data["metadata"],
+                JSON_FILENAME=json_filename
+            )
+            base_template = self.env.get_template('base.html')
+            rendered = base_template.render(
+                TITLE="Dividend Calendar",
+                CONTENT=content_rendered,
+                JSON_FILENAME=json_filename
+            )
+            return rendered, cal_data
+        except Exception:
+            return "", cal_data
