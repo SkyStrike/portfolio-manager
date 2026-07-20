@@ -168,3 +168,22 @@ def update_prices_and_rebuild(ingest_ibkr_cash=False):
 
 def serve_rebuilt_page(filename: str, price_mode: str) -> HTMLResponse | JSONResponse:
     return get_cached_view(filename, price_mode)
+
+def get_cached_portfolio_data(price_mode: str = "closing", force: bool = False) -> dict:
+    """Provides strongly-typed in-memory access to portfolio data payload."""
+    mode = "closing" if price_mode == "closing" else "intraday"
+    if force or not _dashboard_cache[mode]:
+        get_cached_view("portfolio_active.html", mode, force=force)
+    views = _dashboard_cache[mode]
+    data = views.get("src/portfolio_data.json")
+    return data if isinstance(data, dict) else {}
+
+def get_cached_dividend_calendar(price_mode: str = "closing", force: bool = False) -> dict:
+    """Provides strongly-typed in-memory access to dividend calendar payload."""
+    mode = "closing" if price_mode == "closing" else "intraday"
+    if force or not _dashboard_cache[mode]:
+        get_cached_view("portfolio_active.html", mode, force=force)
+    views = _dashboard_cache[mode]
+    data = views.get("src/dividend_calendar_data.json")
+    return data if isinstance(data, dict) else {}
+

@@ -8,12 +8,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["v1"])
 
 def _get_raw_data(price_mode: str):
-    from core.cache import _dashboard_cache, get_cached_view
-    cache_key = "closing" if price_mode == "closing" else "intraday"
-    if not _dashboard_cache[cache_key]:
-        get_cached_view("portfolio_active.html", cache_key)
-    data = _dashboard_cache[cache_key].get("src/portfolio_data.json")
-    if not data or not isinstance(data, dict):
+    from core.cache import get_cached_portfolio_data
+    data = get_cached_portfolio_data(price_mode)
+    if not data:
         raise HTTPException(status_code=500, detail="Portfolio data cache empty")
     return data
 
@@ -92,11 +89,8 @@ def get_performance_report(price_mode: str = Query("closing")):
 def get_dividend_calendar_report(price_mode: str = Query("closing")):
     """Fetch dividend calendar data and metrics dynamically."""
     logger.info("GET /api/v1/reports/dividend-calendar (price_mode=%s)", price_mode)
-    from core.cache import _dashboard_cache, get_cached_view
-    cache_key = "closing" if price_mode == "closing" else "intraday"
-    if not _dashboard_cache[cache_key]:
-        get_cached_view("portfolio_active.html", cache_key)
-    cal_data = _dashboard_cache[cache_key].get("src/dividend_calendar_data.json")
+    from core.cache import get_cached_dividend_calendar
+    cal_data = get_cached_dividend_calendar(price_mode)
     if not cal_data:
         raise HTTPException(status_code=500, detail="Dividend calendar data empty")
     return cal_data
