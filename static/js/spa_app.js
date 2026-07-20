@@ -600,9 +600,17 @@ const { createApp } = Vue;
                 }
 
                 if (newView === 'calendar') {
-                    this.$nextTick(() => {
-                        this.initCalendarChart();
-                    });
+                    if (!this.calendarData) {
+                        this.fetchCalendarData().then(() => {
+                            this.$nextTick(() => {
+                                this.initCalendarChart();
+                            });
+                        });
+                    } else {
+                        this.$nextTick(() => {
+                            this.initCalendarChart();
+                        });
+                    }
                 } else if (newView === 'charts') {
                     this.$nextTick(() => {
                         this.initGlobalCharts();
@@ -1679,7 +1687,9 @@ const { createApp } = Vue;
                     this.loading = true;
                 }
                 await this.fetchPortfolioData();
-                await this.fetchCalendarData();
+                if (this.currentView === 'calendar') {
+                    await this.fetchCalendarData();
+                }
                 if (!skipLoading) {
                     this.loading = false;
                 }
