@@ -2064,6 +2064,40 @@
                 const sign = (includeSign && num > 0) ? '+' : '';
                 return `${sign}${num.toFixed(2)}%`;
             },
+            formatToSgt(dtStr) {
+                if (!dtStr || dtStr === 'N/A') return 'N/A';
+                if (dtStr.endsWith('SGT')) return dtStr;
+                let cleanStr = dtStr;
+                if (!cleanStr.endsWith('Z') && !/\+\d{2}:?\d{2}$/.test(cleanStr) && !/-\d{2}:?\d{2}$/.test(cleanStr)) {
+                    if (cleanStr.includes(' ')) {
+                        cleanStr = cleanStr.replace(' ', 'T');
+                    }
+                    cleanStr = cleanStr + 'Z';
+                }
+                const dateObj = new Date(cleanStr);
+                if (isNaN(dateObj.getTime())) return dtStr;
+                try {
+                    const formatter = new Intl.DateTimeFormat('en-GB', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false,
+                        timeZone: 'Asia/Singapore'
+                    });
+                    const formatted = formatter.format(dateObj);
+                    const parts = formatted.split(', ');
+                    const dateParts = parts[0].split('/');
+                    return `${dateParts[2]}-${dateParts[1]}-${dateParts[0]} ${parts[1]} SGT`;
+                } catch (e) {
+                    const utc = dateObj.getTime() + (dateObj.getTimezoneOffset() * 60000);
+                    const sgtDate = new Date(utc + (3600000 * 8));
+                    const pad = (n) => n.toString().padStart(2, '0');
+                    return `${sgtDate.getFullYear()}-${pad(sgtDate.getMonth()+1)}-${pad(sgtDate.getDate())} ${pad(sgtDate.getHours())}:${pad(sgtDate.getMinutes())}:${pad(sgtDate.getSeconds())} SGT`;
+                }
+            },
             getIbSyncTooltip(p) {
                 if (!p || !p.is_augmented) return '';
                 const rate = p.rate || 1.0;
@@ -2302,7 +2336,8 @@
                 
                 // Datetimes resolution
                 const lastUpdatedSgt = this.portfolioData?.summary?.quotes_last_updated_sgt || '';
-                const currentPriceDatetime = details.current_price_datetime || lastUpdatedSgt || 'N/A';
+                const rawDatetime = details.current_price_datetime || lastUpdatedSgt || 'N/A';
+                const currentPriceDatetime = this.formatToSgt(rawDatetime);
                 const prevCloseDate = details.prev_close_date || 'N/A';
                 
                 this.activeDailyChange = {
