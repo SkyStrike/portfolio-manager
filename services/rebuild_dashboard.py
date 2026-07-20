@@ -13,10 +13,6 @@ logger = logging.getLogger(__name__)
 # Core imports
 from core.models import Position, parse_val, slugify
 from core.dashboard_builder import build_dashboard
-from core.performance_calculator import get_performance_report_data
-from services.report_renderer import ReportRenderer
-from services.generate_tx_report import TransactionReportGenerator
-from services.generate_performance_report import PerformanceReportRenderer, build_chart_data
 from core.database import get_connection, DB_FILE
 from services.fetch_exchange_rates import get_exchange_rates, get_historical_exchange_rate
 
@@ -444,9 +440,9 @@ def generate_views_in_memory(conn=None, price_mode="intraday", generate_mode="al
 
 def rebuild_all_views(conn=None, price_mode="intraday", ingest_ibkr_cash=False):
     """
-    Generate all views in memory and compile/write them statically to the disk.
+    Clears cache and ingests IBKR cash if requested.
     """
-    logger.info("[rebuild_all_views] Starting (price_mode=%s, ingest_ibkr_cash=%s)", price_mode, ingest_ibkr_cash)
+    logger.info("[rebuild_all_views] Clearing cache (price_mode=%s, ingest_ibkr_cash=%s)", price_mode, ingest_ibkr_cash)
     close_conn = False
     if conn is None:
         conn = get_connection()
@@ -455,53 +451,12 @@ def rebuild_all_views(conn=None, price_mode="intraday", ingest_ibkr_cash=False):
     try:
         if ingest_ibkr_cash:
             ingest_ibkr_cash_from_file(conn)
-            
-        config = load_config()
-        views = generate_views_in_memory(conn, price_mode=price_mode)
-        
-        logger.info("[rebuild_all_views] Writing %d views to disk (price_mode=%s)...", len(views), price_mode)
-        # Write views to disk for backward compatibility
-        suffix = f"_{price_mode}"
-        os.makedirs("static/generated/src", exist_ok=True)
-        
-        # Write reference files if they exist
-        allowed_docs = config.get("allowed_documents", {})
-        ref_files = {
-            "ib_data.json": allowed_docs.get("ib-data", "data/ib_data.json")
-        }
-        for filename, src_path in ref_files.items():
-            if not os.path.exists(src_path):
-                if "ib_data" in filename:
-                    src_path = "data/ib_data.json"
-            if os.path.exists(src_path):
-                try:
-                    with open(src_path, 'r', encoding='utf-8') as src:
-                        with open(f"static/generated/src/{filename}", 'w', encoding='utf-8') as dest:
-                            dest.write(src.read())
-                except Exception as ex:
-                    logger.error("Error copying reference file %s to static/generated/src: %s", filename, ex)
-        
-        # Write views
-        for filename, content in views.items():
-            if filename.startswith("src/"):
-                # e.g., src/portfolio_data.json -> static/generated/src/portfolio_data_{price_mode}.json
-                base, ext = os.path.splitext(filename)
-                clean_base = base[4:]  # Remove "src/"
-                dest_path = f"static/generated/src/{clean_base}{suffix}{ext}"
-                with open(dest_path, 'w', encoding='utf-8') as f:
-                    if isinstance(content, (dict, list)):
-                        json.dump(content, f, indent=4)
-                    else:
-                        f.write(content)
-            else:
-                # e.g., portfolio_active.html -> static/generated/portfolio_active_{price_mode}.html
-                base, ext = os.path.splitext(filename)
-                dest_path = f"static/generated/{base}{suffix}{ext}"
-                with open(dest_path, 'w', encoding='utf-8') as f:
-                    f.write(content)
+        from core.cache import clear_dashboard_cache
+        clear_dashboard_cache()
     finally:
         if close_conn:
             conn.close()
+    return {}
 
 def fetch_options_details(exchange_rates, trading_date=None):
     config = load_config()
@@ -1115,64 +1070,36 @@ def render_all_views_in_memory(all_positions, options_data, cash_report_data, co
         })
 
     # 2. Render Main Views (Active, Closed, Charts)
-    if generate_mode in ("all", "html"):
-        main_renderer = ReportRenderer(main_export)
-        views["portfolio_active.html"] = main_renderer.render_active(nav_items=nav_items, cat_nav=category_nav, port_nav=portfolio_nav, json_filename="portfolio_data.json")
-        views["portfolio_closed.html"] = main_renderer.render_closed(nav_items=nav_items, cat_nav=category_nav, port_nav=portfolio_nav, json_filename="portfolio_data.json")
-        views["charts.html"] = main_renderer.render_charts(nav_items=nav_items, cat_nav=category_nav, port_nav=portfolio_nav, json_filename="portfolio_data.json")
+    if generate_mode == "html":
+        pass
 
     # 3. Render individual category views (Active, Closed, Charts, Transaction History)
-    if generate_mode in ("all", "html"):
-        for c_name in unique_classes:
-            if c_name and c_name != "Other":
-                slug = slugify(c_name)
-                filename = f"portfolio_data_{slug}.json"
-                cat_data = category_exports[slug]
-                cat_renderer = ReportRenderer(cat_data)
-                views[f"portfolio_active_{slug}.html"] = cat_renderer.render_active(nav_items=nav_items, cat_nav=category_nav, port_nav=portfolio_nav, json_filename=filename)
-                views[f"portfolio_closed_{slug}.html"] = cat_renderer.render_closed(nav_items=nav_items, cat_nav=category_nav, port_nav=portfolio_nav, json_filename=filename)
-                views[f"charts_{slug}.html"] = cat_renderer.render_charts(nav_items=nav_items, cat_nav=category_nav, port_nav=portfolio_nav, json_filename=filename)
-
-                tx_gen_cat = TransactionReportGenerator(cat_data)
-                views[f"transaction_history_{slug}.html"] = tx_gen_cat.generate(json_filename=filename, category_nav=category_nav, port_nav=portfolio_nav)
+    if generate_mode == "html":
+        pass
 
     # 4. Render per-portfolio views
-    if generate_mode in ("all", "html"):
-        for pslug, port_export in portfolio_exports.items():
-            port_renderer = ReportRenderer(port_export)
-            port_filename = f"portfolio_data_port_{pslug}.json"
-            views[f"portfolio_active_port_{pslug}.html"]     = port_renderer.render_active(nav_items=nav_items, cat_nav=category_nav, port_nav=portfolio_nav, json_filename=port_filename)
-            views[f"portfolio_closed_port_{pslug}.html"]     = port_renderer.render_closed(nav_items=nav_items, cat_nav=category_nav, port_nav=portfolio_nav, json_filename=port_filename)
-            views[f"charts_port_{pslug}.html"]               = port_renderer.render_charts(nav_items=nav_items, cat_nav=category_nav, port_nav=portfolio_nav, json_filename=port_filename)
-            tx_gen_port = TransactionReportGenerator(port_export)
-            views[f"transaction_history_port_{pslug}.html"]  = tx_gen_port.generate(json_filename=port_filename, category_nav=category_nav, port_nav=portfolio_nav)
+    if generate_mode == "html":
+        pass
 
     # 5. Render Transaction History
-    if generate_mode in ("all", "html"):
-        tx_gen = TransactionReportGenerator(main_export)
-        views["transaction_history.html"] = tx_gen.generate(json_filename="portfolio_data.json", category_nav=category_nav, port_nav=portfolio_nav)
+    if generate_mode == "html":
+        pass
 
     # 6. Render Performance Report (containing all classifications and active portfolio names)
-    if generate_mode in ("all", "html"):
-        perf_data = get_performance_report_data("data/portfolio.db")
-        perf_chart = build_chart_data(perf_data["years"], perf_data["cash_data"], perf_data["portfolio_data"], perf_data.get("broker_cash_data"))
-        perf_renderer = PerformanceReportRenderer(config)
-        views["performance_report.html"] = perf_renderer.render(perf_data, perf_chart, nav_items, category_nav, port_nav=portfolio_nav, json_filename="portfolio_data.json")
+    if generate_mode == "html":
+        pass
 
-    # 7. Render Dividend Calendar
+    # 7. Render Dividend Calendar JSON Data for SPA
     from services.generate_dividend_calendar import DividendCalendarGenerator
     try:
         div_gen = DividendCalendarGenerator(main_export)
-        div_rendered, cal_data = div_gen.generate(
+        _, cal_data = div_gen.generate(
             conn, exchange_rates,
             json_filename="dividend_calendar_data.json",
             category_nav=category_nav,
             port_nav=portfolio_nav
         )
-        if generate_mode in ("all", "html"):
-            views["dividend_calendar.html"] = div_rendered
-        if generate_mode in ("all", "spa"):
-            views["src/dividend_calendar_data.json"] = cal_data
+        views["src/dividend_calendar_data.json"] = cal_data
     except Exception as e:
         logger.warning("Failed to render dividend calendar: %s", e)
         import traceback
