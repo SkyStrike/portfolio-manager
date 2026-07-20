@@ -115,6 +115,12 @@ def get_spa_dashboard():
         
         base_template = env.get_template("base.html")
         page_width = config.get("ui", {}).get("page_width", "1800px")
+        options_tracker_url = config.get("external_services", {}).get("options_tracker_url", "")
+        if "/api/positions" in options_tracker_url:
+            options_tracker_main_url = options_tracker_url.replace("/api/positions", "")
+        else:
+            options_tracker_main_url = options_tracker_url
+        backtester_url = config.get("external_services", {}).get("backtester_url", "")
         
         wrapped = base_template.render(
             TITLE="Dashboard",
@@ -125,6 +131,8 @@ def get_spa_dashboard():
             JS=js_content,
             PAGE_WIDTH=page_width,
             BASE_PATH=base_path,
+            OPTIONS_TRACKER_URL=options_tracker_main_url,
+            BACKTESTER_URL=backtester_url,
             nav_items=nav_items,
             category_nav=category_nav,
             portfolio_nav=portfolio_nav,
@@ -246,6 +254,12 @@ def get_fd_comparison():
         
         base_template = env.get_template("base.html")
         page_width = config.get("ui", {}).get("page_width", "1800px")
+        options_tracker_url = config.get("external_services", {}).get("options_tracker_url", "")
+        if "/api/positions" in options_tracker_url:
+            options_tracker_main_url = options_tracker_url.replace("/api/positions", "")
+        else:
+            options_tracker_main_url = options_tracker_url
+        backtester_url = config.get("external_services", {}).get("backtester_url", "")
         
         wrapped = base_template.render(
             TITLE="vs Fixed Deposits",
@@ -256,6 +270,8 @@ def get_fd_comparison():
             JS=js_content,
             PAGE_WIDTH=page_width,
             BASE_PATH=base_path,
+            OPTIONS_TRACKER_URL=options_tracker_main_url,
+            BACKTESTER_URL=backtester_url,
             nav_items=[],
             category_nav=[],
             portfolio_nav=[]
