@@ -62,7 +62,7 @@ def get_performance_report(price_mode: str = Query("closing")):
     """Fetch performance report data and chart series dynamically."""
     logger.info("GET /api/v1/reports/performance (price_mode=%s)", price_mode)
     from core.performance_calculator import get_performance_report_data
-    from services.generate_performance_report import build_chart_data
+    from services.performance_report_service import build_chart_data
     import os
     
     db_path = os.getenv("PORTFOLIO_DB_FILE", "data/portfolio.db")

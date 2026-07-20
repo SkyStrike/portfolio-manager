@@ -310,7 +310,7 @@ def get_performance_report():
     cash_ytd = data["cash_ytd"]
     portfolio_ytd = data["portfolio_ytd"]
     
-    from services.generate_performance_report import build_chart_data
+    from services.performance_report_service import build_chart_data
     chart_data = build_chart_data(years, cash_by_year_month, portfolio_by_class_year_month, data.get("broker_cash_data"))
             
     return {

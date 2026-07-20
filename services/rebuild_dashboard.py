@@ -1090,9 +1090,9 @@ def render_all_views_in_memory(all_positions, options_data, cash_report_data, co
         pass
 
     # 7. Render Dividend Calendar JSON Data for SPA
-    from services.generate_dividend_calendar import DividendCalendarGenerator
+    from services.dividend_calendar_service import DividendCalendarService
     try:
-        div_gen = DividendCalendarGenerator(main_export)
+        div_gen = DividendCalendarService(main_export)
         _, cal_data = div_gen.generate(
             conn, exchange_rates,
             json_filename="dividend_calendar_data.json",

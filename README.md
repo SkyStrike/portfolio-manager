@@ -173,7 +173,7 @@ The project has been refactored into a modern, modular architecture:
   - [services/fetch_exchange_rates.py](services/fetch_exchange_rates.py): Central bank exchange rates pull services.
   - [services/report_renderer.py](services/report_renderer.py): Compiles Jinja2 dashboard pages.
   - [services/dividend_service.py](services/dividend_service.py): Syncs upcoming dividend ex-dates and estimates distributions.
-  - [services/generate_dividend_calendar.py](services/generate_dividend_calendar.py): Formats schedules and compiles static dividend calendar JSON.
+  - [services/dividend_calendar_service.py](services/dividend_calendar_service.py): Formats schedules and compiles dividend calendar JSON.
 * **`ingestion/`**: Data parsing and intake pipelines.
   - [ingestion/importer.py](ingestion/importer.py): Parses Holdings and Transactions CSV exports.
 * **`routers/`**: Decoupled, modular controller endpoints (views, uploads, CRUD API, patches, reports).

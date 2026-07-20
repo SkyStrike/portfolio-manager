@@ -10,7 +10,7 @@ def commas(value, precision=2, sign=False):
     if sign and value > 0: fmt = "+" + fmt
     return fmt.format(value)
 
-class DividendCalendarGenerator:
+class DividendCalendarService:
     def __init__(self, data_or_path, template_dir='templates'):
         if isinstance(data_or_path, dict):
             self.data = data_or_path
