@@ -1244,6 +1244,16 @@
                     if (el) el.classList.add('active');
                 }
             },
+            getBasePath() {
+                const dashLink = document.getElementById('nav-active-main');
+                if (!dashLink) return '';
+                try {
+                    const pathname = new URL(dashLink.href, window.location.origin).pathname;
+                    return pathname.replace(/\/(active)?\/?$/, '');
+                } catch (e) {
+                    return '';
+                }
+            },
             async fetchPortfolioData() {
                 try {
                     const headerSelector = document.querySelector(".price-btn.active");
@@ -1261,10 +1271,11 @@
                         }
                     }
 
-                    const res = await fetch(`/src/${filename}?price_mode=${this.priceMode}`);
+                    const bp = this.getBasePath();
+                    const res = await fetch(`${bp}/src/${filename}?price_mode=${this.priceMode}`);
                     if (!res.ok) {
-                        console.warn(`Specific payload /src/${filename} not found, falling back to /src/portfolio_data.json`);
-                        const fallbackRes = await fetch(`/src/portfolio_data.json?price_mode=${this.priceMode}`);
+                        console.warn(`Specific payload ${bp}/src/${filename} not found, falling back to ${bp}/src/portfolio_data.json`);
+                        const fallbackRes = await fetch(`${bp}/src/portfolio_data.json?price_mode=${this.priceMode}`);
                         this.portfolioData = await fallbackRes.json();
                     } else {
                         this.portfolioData = await res.json();
@@ -1298,7 +1309,8 @@
                     formData.append("file", this.fdFile);
                 }
                 try {
-                    const res = await fetch('api/fd-comparison', {
+                    const bp = this.getBasePath();
+                    const res = await fetch(`${bp}/api/fd-comparison`, {
                         method: 'POST',
                         body: formData
                     });
@@ -1319,7 +1331,8 @@
             },
             async fetchPerformanceReport() {
                 try {
-                    const res = await fetch(`/api/v1/reports/performance?price_mode=${this.priceMode}`);
+                    const bp = this.getBasePath();
+                    const res = await fetch(`${bp}/api/v1/reports/performance?price_mode=${this.priceMode}`);
                     if (res.ok) {
                         this.perfData = await res.json();
                         if (this.perfData && this.perfData.years && this.perfData.years.length > 0) {
@@ -1761,7 +1774,8 @@
             },
             async fetchCalendarData() {
                 try {
-                    const res = await fetch(`/api/v1/reports/dividend-calendar?price_mode=${this.priceMode}`);
+                    const bp = this.getBasePath();
+                    const res = await fetch(`${bp}/api/v1/reports/dividend-calendar?price_mode=${this.priceMode}`);
                     if (!res.ok) throw new Error("Calendar API failed");
                     this.calendarData = await res.json();
                 } catch (error) {
@@ -2035,7 +2049,8 @@
                 }
                 document.body.style.cursor = "wait";
                 try {
-                    const res = await fetch("api/dashboard/rebuild-spa?sync=true", { method: "POST" });
+                    const bp = this.getBasePath();
+                    const res = await fetch(`${bp}/api/dashboard/rebuild-spa?sync=true`, { method: "POST" });
                     if (res.ok) {
                         await this.initializeDashboardCharts(true);
                     } else {
@@ -2529,7 +2544,8 @@
 
             // Populate #tx-portfolio dropdown select for transaction modal
             try {
-                const res = await fetch("api/portfolios");
+                const bp = this.getBasePath();
+                const res = await fetch(`${bp}/api/portfolios`);
                 if (res.ok) {
                     const list = await res.json();
                     const selectTxs = document.getElementById("tx-portfolio");
@@ -2596,7 +2612,8 @@
 
                     saveBtn.disabled = true;
                     try {
-                        const res = await fetch("/api/dividends", {
+                        const bp = this.getBasePath();
+                        const res = await fetch(`${bp}/api/dividends`, {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify(payload)
