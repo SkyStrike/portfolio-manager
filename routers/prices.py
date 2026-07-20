@@ -10,25 +10,25 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.post("/api/prices/refresh")
-def refresh_prices(background_tasks: BackgroundTasks, force: bool = False):
-    logger.info("POST /api/prices/refresh (force=%s)", force)
+def refresh_prices(background_tasks: BackgroundTasks = None, force: bool = False, sync: bool = True):
+    logger.info("POST /api/prices/refresh (force=%s, sync=%s)", force, sync)
     if not force and not can_refresh():
         raise HTTPException(
             status_code=429, 
             detail=f"Manual refresh cooldown active. Please wait up to {REFRESH_COOLDOWN.seconds // 60} minutes between refreshes."
         )
         
-    if force:
-        logger.info("Starting synchronous price refresh...")
+    if sync or force:
+        logger.info("Starting synchronous price refresh (force=%s)...", force)
         conn = get_connection()
         try:
-            update_prices(conn, force=True)
+            update_prices(conn, force=force)
             from services.dividend_service import sync_upcoming_dividends
             try:
                 logger.info("Syncing upcoming dividends post price refresh...")
                 sync_upcoming_dividends(conn, force=False)
             except Exception as e:
-                logger.warning("Failed to sync upcoming dividends in force refresh: %s", e)
+                logger.warning("Failed to sync upcoming dividends in price refresh: %s", e)
             logger.info("Rebuilding dashboard (intraday + closing) after price refresh...")
             rebuild_dashboard_sync(conn, "intraday")
             rebuild_dashboard_sync(conn, "closing")
@@ -39,7 +39,8 @@ def refresh_prices(background_tasks: BackgroundTasks, force: bool = False):
         return {"status": "success", "message": "Prices refreshed synchronously."}
     else:
         logger.info("Price refresh queued as background task.")
-        background_tasks.add_task(update_prices_and_rebuild)
+        if background_tasks:
+            background_tasks.add_task(update_prices_and_rebuild)
         record_refresh()
         return {"status": "success", "message": "Price refresh task started in the background."}
 
