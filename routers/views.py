@@ -124,42 +124,6 @@ def get_spa_dashboard():
         return HTMLResponse(content=wrapped)
     return HTMLResponse("<h3>Please create templates/spa_shell.html</h3>")
 
-# Legacy .html alias redirects (301 Permanent) → canonical SPA paths
-@router.get("/portfolio_active.html")
-def redirect_portfolio_active(): return RedirectResponse(url=f"{base_path}/active", status_code=301)
-
-@router.get("/portfolio_closed.html")
-def redirect_portfolio_closed(): return RedirectResponse(url=f"{base_path}/closed", status_code=301)
-
-@router.get("/transaction_history.html")
-def redirect_transaction_history(): return RedirectResponse(url=f"{base_path}/history", status_code=301)
-
-@router.get("/charts.html")
-def redirect_charts(): return RedirectResponse(url=f"{base_path}/charts", status_code=301)
-
-@router.get("/performance_report.html")
-def redirect_performance_report(): return RedirectResponse(url=f"{base_path}/performance", status_code=301)
-
-@router.get("/dividend_calendar.html")
-def redirect_dividend_calendar(): return RedirectResponse(url=f"{base_path}/dividend-calendar", status_code=301)
-
-# Redirect legacy .html routes preserving query parameter filter
-@router.get("/portfolio_active_{slug}.html")
-@router.get("/portfolio_closed_{slug}.html")
-@router.get("/transaction_history_{slug}.html")
-@router.get("/charts_{slug}.html")
-@router.get("/performance_report_{slug}.html")
-@router.get("/portfolio_active_port_{slug}.html")
-@router.get("/portfolio_closed_port_{slug}.html")
-@router.get("/transaction_history_port_{slug}.html")
-@router.get("/charts_port_{slug}.html")
-def redirect_legacy_slug_html(slug: str):
-    logger.info("Redirecting legacy slug .html route (slug=%s) to SPA query route", slug)
-    if slug.startswith("port_"):
-        target_filter = f"port-{slug[5:]}"
-    else:
-        target_filter = slug
-    return RedirectResponse(url=f"{base_path}/active?filter={target_filter}", status_code=301)
 
 
 # Dynamic source JSON routing
