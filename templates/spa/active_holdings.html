@@ -573,7 +573,8 @@
                                 <ul v-if="u.symbols.length > 1" class="toc-sublist">
                                     <li v-for="p in u.symbols" :key="p.symbol">
                                         <a :href="'#' + slugify(u.title + '-' + p.symbol)" class="toc-sublist-link" v-text="p.symbol"></a>
-                                        <span v-if="p.ib_mismatch" class="warning-indicator tooltip-trigger spa-warning-indicator">⚠</span>
+                                        <span v-if="p.is_augmented" class="augmented-badge spa-badge-augmented" :title="getIbSyncTooltip(p)" style="font-size: 0.65rem; padding: 1px 4px; margin-left: 2px;">IB Sync</span>
+                                        <span v-if="p.ib_mismatch" class="warning-indicator tooltip-trigger spa-warning-indicator" :title="getIbMismatchTooltip(p)">⚠</span>
                                         <span class="toc-sublist-val">{{ formatPct(p.sgd_metrics.current_sgd / summary.total_market_value_sgd * 100) }} | </span>
                                         <span class="toc-sublist-val" :class="getValClass(p.sgd_metrics.daily_val_sgd)">
                                             <span class="sensitive-value">{{ formatCommas(p.sgd_metrics.daily_val_sgd, true) }} SGD</span> <span class="daily-change-clickable" @click="openDailyChangeModal(p)" title="Click to view daily change calculation breakdown">({{ formatPct(p.metrics.daily_pct) }})</span>
@@ -737,8 +738,8 @@
                                 <div class="header-content">
                                     <div class="title spa-flex-center-gap-8">
                                         <span v-text="p.symbol"></span>
-                                        <span v-if="p.is_augmented" class="augmented-badge spa-badge-augmented">IB Sync</span>
-                                        <span v-if="p.ib_mismatch" class="warning-badge spa-badge-mismatch">IB Mismatch</span>
+                                        <span v-if="p.is_augmented" class="augmented-badge spa-badge-augmented" :title="getIbSyncTooltip(p)">IB Sync</span>
+                                        <span v-if="p.ib_mismatch" class="warning-badge spa-badge-mismatch" :title="getIbMismatchTooltip(p)">IB Mismatch</span>
                                         
                                         <!-- Ticker Utilities Calculator Dropdown -->
                                         <div class="ticker-menu-container spa-relative-inline">

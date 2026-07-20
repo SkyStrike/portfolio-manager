@@ -2064,6 +2064,22 @@
                 const sign = (includeSign && num > 0) ? '+' : '';
                 return `${sign}${num.toFixed(2)}%`;
             },
+            getIbSyncTooltip(p) {
+                if (!p || !p.is_augmented) return '';
+                const rate = p.rate || 1.0;
+                const curr = p.currency || '';
+                const cbNative = this.formatCommas(p.ib_cost_basis) + ' ' + curr;
+                const cbSgd = this.formatCommas((p.ib_cost_basis || 0) * rate) + ' SGD';
+                const profitNative = this.formatCommas(p.ib_unrealized_profits, true) + ' ' + curr;
+                const profitSgd = this.formatCommas((p.ib_unrealized_profits || 0) * rate, true) + ' SGD';
+                const mvNative = this.formatCommas(p.ib_market_value) + ' ' + curr;
+                const mvSgd = this.formatCommas((p.ib_market_value || 0) * rate) + ' SGD';
+                return `IB Cost Basis: ${cbNative} (${cbSgd})\nIB Capital Gain/Loss: ${profitNative} (${profitSgd})\nIB Market Value: ${mvNative} (${mvSgd})`;
+            },
+            getIbMismatchTooltip(p) {
+                if (!p || !p.ib_mismatch) return '';
+                return `IB Mismatch: Broker Holdings = ${p.ib_actual_qty} vs DB Trades Calc = ${p.ibkr_calc_qty}`;
+            },
             getValClass(val) {
                 if (!val) return '';
                 return parseFloat(val) >= 0 ? 'pos-val' : 'neg-val';
