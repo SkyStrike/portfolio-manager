@@ -7,6 +7,13 @@ This tracker originally started as a simple tool to monitor cash flows and divid
 
 Over time, the project evolved into a full-featured dashboard. The codebase heavily favors **Interactive Brokers (IBKR)** integration because it is my primary brokerage account and supports easy API connectivity using the `ib_insync` library. The system also supports manual entries and CSV sheets for other brokers like **Moomoo**, though full API automation is not implemented for them due to limitations with their official SDKs.
 
+### 🌟 Dashboard 2.0 (Single Page Application Architecture)
+Version 2.0 represents a major architectural modernization, completely replacing the legacy Static Site Generator (SSG) pipeline with a reactive **Vue 3 Single Page Application (SPA)** and a **FastAPI REST API**:
+* **Reactive Single-Page App (Vue 3)**: Instant tab switching (`/active`, `/closed`, `/history`, `/charts`, `/performance`, `/dividend-calendar`) without full page reloads.
+* **In-Memory API Caching**: Replaced static `.html` file disk generation with an $O(1)$ RAM cache (`core/cache.py`) streaming JSON payloads to FastAPI REST endpoints in sub-5ms response times.
+* **Clean RESTful Routing**: Deprecated static SSG filename routing (`.html`) in favor of standard, RESTful clean paths.
+* **Dynamic Refactoring & Technical Debt Cleanup**: Deprecated legacy Jinja rendering pipelines and reorganized services into modular backend dependencies (`dividend_calendar_service.py`, `performance_report_service.py`).
+
 ---
 
 ## 🔒 Environment & Security Context
