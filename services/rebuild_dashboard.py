@@ -303,7 +303,7 @@ def ingest_ibkr_cash_from_file(conn):
         logger.error("[ingest_ibkr_cash] Failed to ingest cash report from %s: %s", ib_data_path, e)
         return False
 
-def generate_views_in_memory(conn=None, price_mode="intraday", generate_mode="all"):
+def generate_views_in_memory(conn=None, price_mode="intraday"):
     """
     Query database, fetch options, perform calculations, and return rendered views as in-memory dict.
     """
@@ -428,8 +428,7 @@ def generate_views_in_memory(conn=None, price_mode="intraday", generate_mode="al
         logger.info("[generate_views] Rendering all views in memory...")
         result = render_all_views_in_memory(
             all_positions, options_data, cash_report_data, config, trading_date, 
-            earliest_transaction_date, conn, portfolios, tickers_map, tx_rows, div_rows, exchange_rates, price_mode=price_mode,
-            generate_mode=generate_mode
+            earliest_transaction_date, conn, portfolios, tickers_map, tx_rows, div_rows, exchange_rates, price_mode=price_mode
         )
         logger.info("[generate_views] View generation complete (price_mode=%s).", price_mode)
         return result
@@ -895,7 +894,7 @@ def fetch_cash_report_details(earliest_transaction_date):
     finally:
         conn.close()
 
-def render_all_views_in_memory(all_positions, options_data, cash_report_data, config, trading_date, earliest_transaction_date, conn, portfolios, tickers_map, tx_rows, div_rows, exchange_rates, price_mode="intraday", generate_mode="all"):
+def render_all_views_in_memory(all_positions, options_data, cash_report_data, config, trading_date, earliest_transaction_date, conn, portfolios, tickers_map, tx_rows, div_rows, exchange_rates, price_mode="intraday"):
     portfolio_broker_map = {p['id']: (p['broker'] or '').strip().upper() for p in portfolios}
 
     # Load ib_data.json if present

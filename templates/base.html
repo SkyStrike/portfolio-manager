@@ -29,7 +29,7 @@
             apps: [
                 { name: 'Active', url: {{ BASE_PATH | tojson | safe }} + '/portfolio_active.html', match: new RegExp('^' + {{ BASE_PATH | tojson | safe }} + '(/|/portfolio_active\\.html)?$') },
                 { name: 'Closed', url: {{ BASE_PATH | tojson | safe }} + '/portfolio_closed.html', match: /portfolio_closed\.html/ },
-                { name: 'Charts', url: {{ BASE_PATH | tojson | safe }} + '/charts.html', match: /charts\.html/ },
+                { name: 'Charts', url: {{ BASE_PATH | tojson | safe }} + '/charts', match: /\/charts$/ },
                 { name: 'History', url: {{ BASE_PATH | tojson | safe }} + '/transaction_history.html', match: /transaction_history\.html/ }
             ]
         };

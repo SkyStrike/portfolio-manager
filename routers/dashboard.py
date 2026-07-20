@@ -61,7 +61,7 @@ def trigger_spa_rebuild(background_tasks: BackgroundTasks, sync: bool = False):
         try:
             for price_mode in ("intraday", "closing"):
                 views = generate_views_in_memory(
-                    conn, price_mode=price_mode, generate_mode="spa"
+                    conn, price_mode=price_mode
                 )
                 # Merge only the JSON keys into the existing cache
                 if price_mode in _dashboard_cache and _dashboard_cache[price_mode]:

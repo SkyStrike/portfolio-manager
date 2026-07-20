@@ -244,76 +244,8 @@
         }
     }
 
-    // 4. Determine current view/report page base type
-    let pageType = 'portfolio_active';
-    if (filename.includes('portfolio_closed') || path === '/closed') {
-        pageType = 'portfolio_closed';
-    } else if (filename.includes('transaction_history') || path === '/history') {
-        pageType = 'transaction_history';
-    } else if (filename.includes('charts')) {
-        pageType = 'charts';
-    } else if (filename.includes('performance') || filename.includes('performance_report')) {
-        pageType = 'performance_report';
-    } else if (filename.includes('portfolio_active') || path === '/' || path === '/active') {
-        pageType = 'portfolio_active';
-    }
 
-    // 5. Update classification dropdown links to target current page type
-    const basePath = window.BASE_PATH || "";
-    if (dropdown) {
-        const dropDownLinks = dropdown.querySelectorAll('.portfolio-item');
-        dropDownLinks.forEach(link => {
-            const slug = link.getAttribute('data-slug');
-            let newHref = '';
-            if (pageType === 'performance_report') {
-                newHref = `${basePath}/performance_report.html?filter=${slug}`;
-                link.setAttribute('href', newHref);
-            } else {
-                if (slug === 'all') {
-                    newHref = `${basePath}/${pageType}.html`;
-                } else if (slug.startsWith('port-')) {
-                    // Portfolio slugs: data-slug="port-moomoo" → file "port_moomoo"
-                    const fileSlug = 'port_' + slug.slice(5);
-                    newHref = `${basePath}/${pageType}_${fileSlug}.html`;
-                } else {
-                    newHref = `${basePath}/${pageType}_${slug}.html`;
-                }
-                link.setAttribute('href', newHref);
-            }
-        });
-    }
-
-    // 6. Rewrite main header nav links to keep the active classification slug
-    if (currentSlug !== 'all') {
-        // Convert data-slug back to file slug for path building
-        const fileSlug = currentSlug.startsWith('port-') ? 'port_' + currentSlug.slice(5) : currentSlug;
-        headerLinks.forEach(link => {
-            const href = link.getAttribute('href');
-            if (href && !link.classList.contains('nav-admin-btn')) {
-                let newHref = href;
-                if (href === '/' || href === '/active' || href === `${basePath}/` || href === `${basePath}/active` || href.includes('portfolio_active')) {
-                    newHref = `${basePath}/portfolio_active_${fileSlug}.html`;
-                } else if (href === '/closed' || href === `${basePath}/closed` || href.includes('portfolio_closed')) {
-                    newHref = `${basePath}/portfolio_closed_${fileSlug}.html`;
-                } else if (href === '/history' || href === `${basePath}/history` || href.includes('transaction_history')) {
-                    newHref = `${basePath}/transaction_history_${fileSlug}.html`;
-                } else if (href.includes('charts.html') || href.includes('charts')) {
-                    newHref = `${basePath}/charts_${fileSlug}.html`;
-                } else if (href.includes('performance_report.html') || href.includes('performance')) {
-                    newHref = `${basePath}/performance_report.html?filter=${currentSlug}`;
-                }
-                link.setAttribute('href', newHref);
-            }
-        });
-
-        // Update logo section behavior to preserve classification
-        const logoSection = document.querySelector('.logo-section');
-        if (logoSection) {
-            logoSection.setAttribute('onclick', `window.location.href='${basePath}/portfolio_active_${fileSlug}.html'`);
-        }
-    }
-
-    // 7. Highlight global header nav links
+    // 4. Highlight global header nav links
     headerLinks.forEach(link => {
         if (link.classList.contains('nav-dropdown-toggle') || link.getAttribute('href') === '#') {
             link.classList.remove('active');
@@ -352,9 +284,9 @@
         } else if (linkPath === '/history' || linkPath.includes('transaction_history')) {
             isActive = (normPath === '/history' || filename.startsWith('transaction_history'));
         } else if (linkPath.includes('charts')) {
-            isActive = filename.startsWith('charts');
+            isActive = (normPath === '/charts' || filename.startsWith('charts'));
         } else if (linkPath.includes('performance')) {
-            isActive = (filename.startsWith('performance') || filename.startsWith('performance_report'));
+            isActive = (normPath === '/performance' || filename.startsWith('performance') || filename.startsWith('performance_report'));
         } else {
             isActive = (normPath === linkPath);
         }
@@ -388,8 +320,8 @@
             normPath2 = normPath2.substring(basePath.length);
         }
         const isClosedActive = (normPath2 === '/closed' || filename.startsWith('portfolio_closed'));
-        const isChartsActive = (filename.startsWith('charts'));
-        const isPerfActive = (filename.startsWith('performance') || filename.startsWith('performance_report'));
+        const isChartsActive = (normPath2 === '/charts' || filename.startsWith('charts'));
+        const isPerfActive = (normPath2 === '/performance' || filename.startsWith('performance') || filename.startsWith('performance_report'));
         const isHistoryActive = (normPath2 === '/history' || filename.startsWith('transaction_history'));
         if (isClosedActive || isChartsActive || isPerfActive || isHistoryActive) {
             perfBtn.classList.add('active');
