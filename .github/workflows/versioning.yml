@@ -27,9 +27,9 @@ jobs:
           WITH_V: true
 
       # disabled until the SPA version is completed.
-      # - name: Create GitHub Release
-      #   uses: softprops/action-gh-release@v3
-      #   with:
-      #     generate_release_notes: true # GitHub will automatically list your commits since the last tag
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          generate_release_notes: true # GitHub will automatically list your commits since the last tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
