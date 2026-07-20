@@ -1,3 +1,14 @@
+const APP_CONFIG = Object.assign({
+    ui_font_size: "14px",
+    ui_mobile_font_size: "12px",
+    color_invested: "#8b5cf6",
+    color_current: "#3498db",
+    color_returns: "#2ecc71",
+    color_income: "#2ecc71",
+    color_positive: "#3498db",
+    color_negative: "#e74c3c"
+}, window.APP_CONFIG || {});
+
 const chartInstances = {};
 window.chartInstances = chartInstances;
 const chartDataStore = {};
@@ -6,8 +17,8 @@ const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep
 function expandAll() { document.querySelectorAll('details').forEach(d => d.open = true); }
 function collapseAll() { document.querySelectorAll('details').forEach(d => d.open = false); }
 
-const desktopFontSize = '{{UI_FONT_SIZE}}';
-const mobileFontSize = '{{UI_MOBILE_FONT_SIZE}}';
+const desktopFontSize = APP_CONFIG.ui_font_size;
+const mobileFontSize = APP_CONFIG.ui_mobile_font_size;
 
 
 /**
@@ -155,9 +166,9 @@ function renderBarChart(selector, id, title, categories, series, roi) {
         };
         
         if (series.length === 3) {
-            options.colors = ['{{COLOR_INVESTED}}', '{{COLOR_CURRENT}}', '{{COLOR_RETURNS}}']; 
+            options.colors = [APP_CONFIG.color_invested, APP_CONFIG.color_current, APP_CONFIG.color_returns]; 
         } else if (series.length === 2) {
-            options.colors = ['{{COLOR_INVESTED}}', '{{COLOR_CURRENT}}'];
+            options.colors = [APP_CONFIG.color_invested, APP_CONFIG.color_current];
         }
         
         const chart = new ApexCharts(el, options);
@@ -234,13 +245,13 @@ function toggleChartMode(id, mode, btn) {
                 formatter: (v) => Math.round(v) + '%',
                 style: { fontSize: desktopFontSize }
             },
-            colors: ['{{COLOR_POSITIVE}}'], 
+            colors: [APP_CONFIG.color_positive], 
             plotOptions: { 
                 bar: { 
                     colors: { 
                         ranges: [
-                            { from: -999, to: -0.01, color: '{{COLOR_NEGATIVE}}' }, 
-                            { from: 0, to: 999, color: '{{COLOR_POSITIVE}}' }
+                            { from: -999, to: -0.01, color: APP_CONFIG.color_negative }, 
+                            { from: 0, to: 999, color: APP_CONFIG.color_positive }
                         ] 
                     } 
                 } 
@@ -250,8 +261,8 @@ function toggleChartMode(id, mode, btn) {
         });
     } else {
         const colors = data.originalSeries.length === 3 
-            ? ['{{COLOR_INVESTED}}', '{{COLOR_CURRENT}}', '{{COLOR_RETURNS}}'] 
-            : ['{{COLOR_INVESTED}}', '{{COLOR_CURRENT}}'];
+            ? [APP_CONFIG.color_invested, APP_CONFIG.color_current, APP_CONFIG.color_returns] 
+            : [APP_CONFIG.color_invested, APP_CONFIG.color_current];
         
         chart.updateOptions({ 
             series: data.originalSeries, 
@@ -560,7 +571,7 @@ function initCharts(chartData) {
                 text: 'Portfolio Passive Income (SGD)', 
                 align: 'left' 
             }, 
-            colors: ['{{COLOR_INCOME}}']
+            colors: [APP_CONFIG.color_income]
         };
         const incChart = new ApexCharts(el, incOptions);
         incChart.render();
@@ -644,7 +655,7 @@ function initCharts(chartData) {
                             formatter: (val) => '$' + Math.round(val).toLocaleString() 
                         } 
                     },
-                    colors: ['{{COLOR_INVESTED}}', '{{COLOR_CURRENT}}', '{{COLOR_RETURNS}}'],
+                    colors: [APP_CONFIG.color_invested, APP_CONFIG.color_current, APP_CONFIG.color_returns],
                     yaxis: getYAxisConfig('val', false),
                     responsive: getResponsiveConfig('val')
                 };

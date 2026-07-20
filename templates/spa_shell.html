@@ -56,7 +56,19 @@
             font-family: 'Inter', sans-serif;
         }
     </style>
-    <script>{{ JS | safe }}</script>
+    <script>
+        window.APP_CONFIG = {
+            ui_font_size: {{ UI_FONT_SIZE | tojson | safe }},
+            ui_mobile_font_size: {{ UI_MOBILE_FONT_SIZE | tojson | safe }},
+            color_invested: {{ COLOR_INVESTED | tojson | safe }},
+            color_current: {{ COLOR_CURRENT | tojson | safe }},
+            color_returns: {{ COLOR_RETURNS | tojson | safe }},
+            color_income: {{ COLOR_INCOME | tojson | safe }},
+            color_positive: {{ COLOR_POSITIVE | tojson | safe }},
+            color_negative: {{ COLOR_NEGATIVE | tojson | safe }}
+        };
+    </script>
+    <script src="{{ BASE_PATH }}/static/js/spa.js?v={{ range(1, 100000) | random }}" defer></script>
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             const toggleBtn = document.getElementById("mask-toggle-btn");

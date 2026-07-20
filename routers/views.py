@@ -71,23 +71,8 @@ def get_spa_dashboard():
         
         config = load_config()
         page_width = config.get("ui", {}).get("page_width", "1800px")
-        
-        js_template = env.get_template("scripts.js")
         ui_config = config.get("ui", {})
         colors_config = config.get("colors", {})
-        font_style = ui_config.get("typography", {}).get("font_family", "sans-serif")
-        js_content = js_template.render(
-            FONT_STYLE=font_style,
-            BASE_PATH=base_path,
-            COLOR_INVESTED=colors_config.get("invested", "#8b5cf6"),
-            COLOR_CURRENT=colors_config.get("current", "#3498db"),
-            COLOR_RETURNS=colors_config.get("returns", "#2ecc71"),
-            COLOR_INCOME=colors_config.get("income", "#2ecc71"),
-            COLOR_POSITIVE=colors_config.get("positive", "#3498db"),
-            COLOR_NEGATIVE=colors_config.get("negative", "#e74c3c"),
-            UI_FONT_SIZE=ui_config.get("font_size", "14px"),
-            UI_MOBILE_FONT_SIZE=ui_config.get("mobile_font_size", "12px")
-        )
         
         options_tracker_url = config.get("external_services", {}).get("options_tracker_url", "")
         if "/api/positions" in options_tracker_url:
@@ -99,11 +84,18 @@ def get_spa_dashboard():
         rendered = spa_template.render(
             TITLE="Portfolio Manager - Dashboard",
             page_title="Dashboard",
-            JS=js_content,
             PAGE_WIDTH=page_width,
             BASE_PATH=base_path,
             OPTIONS_TRACKER_URL=options_tracker_main_url,
             BACKTESTER_URL=backtester_url,
+            UI_FONT_SIZE=ui_config.get("font_size", "14px"),
+            UI_MOBILE_FONT_SIZE=ui_config.get("mobile_font_size", "12px"),
+            COLOR_INVESTED=colors_config.get("invested", "#8b5cf6"),
+            COLOR_CURRENT=colors_config.get("current", "#3498db"),
+            COLOR_RETURNS=colors_config.get("returns", "#2ecc71"),
+            COLOR_INCOME=colors_config.get("income", "#2ecc71"),
+            COLOR_POSITIVE=colors_config.get("positive", "#3498db"),
+            COLOR_NEGATIVE=colors_config.get("negative", "#e74c3c"),
             nav_items=nav_items,
             category_nav=category_nav,
             portfolio_nav=portfolio_nav,
