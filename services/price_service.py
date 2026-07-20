@@ -548,6 +548,7 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
 
                     if reset_pnl:
                         intraday_prev_close = intraday_current
+                        intraday_prev_close_date = last_date_str
                     # -----------------------------------------
 
                     # Determine if the market is open today for this exchange (using local exchange time)
