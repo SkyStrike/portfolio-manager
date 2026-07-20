@@ -239,6 +239,7 @@
 
 
     // 4. Highlight global header nav links
+    const basePath = window.BASE_PATH || "";
     headerLinks.forEach(link => {
         if (link.classList.contains('nav-dropdown-toggle') || link.getAttribute('href') === '#') {
             link.classList.remove('active');
