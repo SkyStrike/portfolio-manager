@@ -167,7 +167,7 @@ def get_blacklisted_tickers(conn: sqlite3.Connection, api_type: str = "yfinance_
         logger.warning("Failed to query blacklisted tickers: %s", e)
         return set()
 
-def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_minutes: int = 15) -> dict:
+def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_minutes: int = 5) -> dict:
     """
     Fetches latest prices in a single batch from yfinance and caches them in the DB.
     Only queries tickers whose cached prices are older than `cache_minutes` unless `force` is True.

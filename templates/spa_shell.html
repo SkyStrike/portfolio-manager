@@ -2212,7 +2212,7 @@
                 }
                 document.body.style.cursor = "wait";
                 try {
-                    const res = await fetch("/api/prices/refresh?force=true", { method: "POST" });
+                    const res = await fetch("/api/prices/refresh", { method: "POST" });
                     if (res.ok) {
                         await this.initializeDashboardCharts(true);
                     } else {
