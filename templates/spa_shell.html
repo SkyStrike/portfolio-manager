@@ -1642,32 +1642,33 @@
             },
             prepareCountryBreakdown() {
                 if (!this.portfolioData || !this.portfolioData.positions) return [];
-                const countryVals = { "Singapore": 0, "Canada": 0, "US": 0 };
+                const countryVals = {};
                 this.portfolioData.positions.forEach(p => {
                     if (p.is_closed) return;
                     const val = p.sgd_metrics?.current_sgd || 0;
                     if (val <= 0) return;
-                    
+                    const ticker = (p.ticker || p.symbol || "").trim().toUpperCase();
                     const ex = (p.exchange || "").trim().toUpperCase();
                     let country = "US";
-                    if (["SG", "SI"].includes(ex)) {
+                    if (ticker.endsWith(".SI") || ["SG", "SI"].includes(ex)) {
                         country = "Singapore";
-                    } else if (["TO", "TSE", "V", "TSX", "NEO", "NE", "CSE"].includes(ex)) {
+                    } else if (ticker.endsWith(".TO") || ["TO", "TSE", "V", "TSX", "NEO", "NE", "CSE"].includes(ex)) {
                         country = "Canada";
                     }
+                    if (!countryVals[country]) countryVals[country] = 0;
                     countryVals[country] += val;
                 });
-                
                 const totalVal = Object.values(countryVals).reduce((sum, v) => sum + v, 0);
                 const list = [];
                 Object.keys(countryVals).forEach(name => {
                     const val = countryVals[name];
-                    const pct = totalVal > 0 ? (val / totalVal * 100) : 0;
-                    list.push({
-                        name: name,
-                        value: val,
-                        pct: pct
-                    });
+                    if (val > 0) {
+                        list.push({
+                            name: name,
+                            value: val,
+                            pct: totalVal > 0 ? (val / totalVal) * 100 : 0
+                        });
+                    }
                 });
                 return list.sort((a, b) => b.value - a.value);
             },

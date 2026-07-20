@@ -200,7 +200,11 @@ function renderPieChart(selector, title, labels, series) {
                 }
             }]
         };
-        new ApexCharts(el, options).render();
+        const chart = new ApexCharts(el, options);
+        chart.render();
+        if (typeof chartInstances !== 'undefined') {
+            chartInstances[selector] = chart;
+        }
     });
 }
 
