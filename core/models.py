@@ -351,6 +351,7 @@ class Position:
                 "realized_pnl_sgd": self.realized_pnl_sgd,
                 "profit_sgd": self.profit_sgd,
                 "total_returns_sgd": self.total_returns_sgd,
+                "capital_gain_sgd": self.capital_gain_sgd,
             },
             "transactions": self.transactions,
             "income": self.income_records
