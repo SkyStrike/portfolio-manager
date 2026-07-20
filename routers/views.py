@@ -71,8 +71,6 @@ def get_spa_dashboard():
         
         config = load_config()
         page_width = config.get("ui", {}).get("page_width", "1800px")
-        from services.css_helper import render_combined_css
-        css_content = render_combined_css(env, page_width=page_width)
         
         js_template = env.get_template("scripts.js")
         ui_config = config.get("ui", {})
@@ -101,7 +99,6 @@ def get_spa_dashboard():
         rendered = spa_template.render(
             TITLE="Portfolio Manager - Dashboard",
             page_title="Dashboard",
-            CSS=css_content,
             JS=js_content,
             PAGE_WIDTH=page_width,
             BASE_PATH=base_path,
