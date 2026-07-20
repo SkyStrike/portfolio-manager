@@ -88,7 +88,10 @@ const labelOptions = {
 
 function safeRender(selector, renderFn) {
     const el = document.querySelector(selector);
-    if (el) renderFn(el);
+    if (el) {
+        el.innerHTML = '';
+        renderFn(el);
+    }
 }
 
 /**

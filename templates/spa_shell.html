@@ -2095,12 +2095,13 @@
                         });
                     }
                     
-                    // 1. Re-render dashboard level performance, gainers/losers, and underlying stats charts
-                    if (window.initCharts && this.dashboard) {
+                    // 1. Re-render charts depending on current view
+                    if (this.currentView === 'charts') {
+                        this.initGlobalCharts();
+                    } else if (window.initCharts && this.dashboard) {
                         window.initCharts(this.dashboard);
                     }
 
-                    // Re-render dividend calendar chart if we are currently on the calendar view
                     if (this.currentView === 'calendar') {
                         this.initCalendarChart();
                     }
