@@ -1069,27 +1069,7 @@ def render_all_views_in_memory(all_positions, options_data, cash_report_data, co
             "broker": broker,
         })
 
-    # 2. Render Main Views (Active, Closed, Charts)
-    if generate_mode == "html":
-        pass
-
-    # 3. Render individual category views (Active, Closed, Charts, Transaction History)
-    if generate_mode == "html":
-        pass
-
-    # 4. Render per-portfolio views
-    if generate_mode == "html":
-        pass
-
-    # 5. Render Transaction History
-    if generate_mode == "html":
-        pass
-
-    # 6. Render Performance Report (containing all classifications and active portfolio names)
-    if generate_mode == "html":
-        pass
-
-    # 7. Render Dividend Calendar JSON Data for SPA
+    # 2. Render Dividend Calendar JSON Data for SPA
     from services.dividend_calendar_service import DividendCalendarService
     try:
         div_gen = DividendCalendarService(main_export)

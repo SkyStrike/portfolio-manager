@@ -118,15 +118,5 @@ def main():
                 "slug": slug
             })
 
-    # Render report
-    renderer = PerformanceReportRenderer(config_data)
-    html_content = renderer.render(report_data, raw_chart_data, nav_items, category_nav)
-    
-    os.makedirs(output_dir, exist_ok=True)
-    with open(os.path.join(output_dir, "performance_report.html"), "w", encoding="utf-8") as f:
-        f.write(html_content)
-        
-    print("Performance Report Generated successfully: output/performance_report.html")
-
 if __name__ == "__main__":
-    main()
+    pass
