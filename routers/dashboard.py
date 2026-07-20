@@ -48,7 +48,6 @@ def trigger_spa_rebuild(background_tasks: BackgroundTasks, sync: bool = False):
     """
     Lightweight rebuild for the SPA dashboard — generates JSON data only,
     skipping HTML template rendering. ~1-1.5s faster than /api/dashboard/rebuild.
-    The legacy dashboard cache (HTML views) is left intact.
     """
     logger.info("POST /api/dashboard/rebuild-spa (sync=%s)", sync)
 

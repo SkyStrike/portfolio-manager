@@ -8,14 +8,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# Redirect legacy routes to primary SPA dashboard
-@router.get("/legacy")
-@router.get("/legacy/{path:path}")
-def redirect_legacy_to_spa(path: str = ""):
-    logger.info("Redirecting legacy route '/legacy/%s' to SPA dashboard", path)
-    return RedirectResponse(url=f"{base_path}/", status_code=301)
-
-
 # Primary SPA Dashboard Routes
 @router.get("/", response_class=HTMLResponse)
 @router.get("/active", response_class=HTMLResponse)
@@ -53,7 +45,7 @@ def get_spa_dashboard():
                 c_slug = slugify(c)
                 category_nav.append({
                     "name": c,
-                    "url": f"{base_path}/portfolio_active_{c_slug}.html",
+                    "url": f"{base_path}/active?filter={c_slug}",
                     "id": f"nav-{c_slug}",
                     "slug": c_slug
                 })
@@ -64,7 +56,7 @@ def get_spa_dashboard():
                 pslug = port['name'].lower().replace(" ", "-")
                 portfolio_nav.append({
                     "name": port['name'],
-                    "url": f"{base_path}/portfolio_active_port_{pslug}.html",
+                    "url": f"{base_path}/active?filter=port-{pslug}",
                     "id": f"port-{pslug}",
                     "slug": f"port-{pslug}",
                     "broker": port['broker'] or '',
@@ -124,11 +116,13 @@ def get_spa_dashboard():
             nav_items=nav_items,
             category_nav=category_nav,
             portfolio_nav=portfolio_nav,
+            NAV_ITEMS=nav_items,
+            CAT_NAV=category_nav,
+            PORT_NAV=portfolio_nav,
             JSON_FILENAME="portfolio_data_intraday.json"
         )
         return HTMLResponse(content=wrapped)
     return HTMLResponse("<h3>Please create templates/spa_shell.html</h3>")
-
 
 # Legacy .html alias redirects (301 Permanent) → canonical SPA paths
 @router.get("/portfolio_active.html")
@@ -149,6 +143,7 @@ def redirect_performance_report(): return RedirectResponse(url=f"{base_path}/per
 @router.get("/dividend_calendar.html")
 def redirect_dividend_calendar(): return RedirectResponse(url=f"{base_path}/dividend-calendar", status_code=301)
 
+# Redirect legacy .html routes preserving query parameter filter
 @router.get("/portfolio_active_{slug}.html")
 @router.get("/portfolio_closed_{slug}.html")
 @router.get("/transaction_history_{slug}.html")
@@ -159,8 +154,12 @@ def redirect_dividend_calendar(): return RedirectResponse(url=f"{base_path}/divi
 @router.get("/transaction_history_port_{slug}.html")
 @router.get("/charts_port_{slug}.html")
 def redirect_legacy_slug_html(slug: str):
-    logger.info("Redirecting legacy slug .html route (slug=%s) to SPA root", slug)
-    return RedirectResponse(url=f"{base_path}/", status_code=301)
+    logger.info("Redirecting legacy slug .html route (slug=%s) to SPA query route", slug)
+    if slug.startswith("port_"):
+        target_filter = f"port-{slug[5:]}"
+    else:
+        target_filter = slug
+    return RedirectResponse(url=f"{base_path}/active?filter={target_filter}", status_code=301)
 
 
 # Dynamic source JSON routing
@@ -242,12 +241,6 @@ def get_control_center():
     return HTMLResponse("<h3>Please place templates/control_center.html</h3>")
 
 
-
-@router.get("/analytics/fd-comparison")
-def redirect_fd_comparison_legacy():
-    """Legacy redirect — keep old deep-links working."""
-    logger.info("GET /analytics/fd-comparison - redirecting to /fd-comparison")
-    return RedirectResponse(url=f"{base_path}/fd-comparison", status_code=301)
 
 # Fixed Deposit Simulation API
 @router.post("/api/fd-comparison")

@@ -544,9 +544,12 @@
     const app = createApp({
         data() {
             const today = new Date();
+            const urlParams = new URLSearchParams(window.location.search);
+            const filterParam = urlParams.get('filter') || 'all';
             return {
                 loading: true,
                 currentView: 'dashboard',
+                currentFilter: filterParam,
                 priceMode: 'intraday',
                 txFilter: 'both',
                 tocView: 'list',
@@ -657,45 +660,47 @@
                     }
                 });
                 
-                if (allTxs.length === 0) return null;
+                allTxs.sort((a, b) => new Date(b.date) - new Date(a.date));
                 
-                const weeksMap = {};
-                let totalMonthFlow = 0;
+                const totals = {
+                    netSgd: allTxs.reduce((sum, t) => sum + t.sgdImpact, 0),
+                    buySgd: allTxs.filter(t => t.action === 'Buy').reduce((sum, t) => sum + t.sgdImpact, 0),
+                    sellSgd: allTxs.filter(t => t.action !== 'Buy').reduce((sum, t) => sum + Math.abs(t.sgdImpact), 0),
+                    count: allTxs.length
+                };
                 
-                allTxs.forEach(tx => {
-                    const d = new Date(tx.date);
-                    const day = d.getDay();
-                    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-                    const monday = new Date(d.setDate(diff));
-                    const mondayStr = monday.toISOString().split('T')[0];
+                return {
+                    transactions: allTxs,
+                    totals
+                };
+            },
+            monthlyTxFlow() {
+                if (!this.recentTx?.transactions) return { month_name: "Last 4 Weeks", month_flow: 0, weeks: [] };
+                
+                const txs = this.recentTx.transactions;
+                const totalMonthFlow = txs.reduce((sum, t) => sum + t.sgdImpact, 0);
+                
+                const now = new Date();
+                const weeks = [];
+                for (let i = 0; i < 4; i++) {
+                    const start = new Date(now.getTime() - (i + 1) * 7 * 24 * 60 * 60 * 1000);
+                    const end = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
                     
-                    if (!weeksMap[mondayStr]) {
-                        weeksMap[mondayStr] = [];
-                    }
-                    weeksMap[mondayStr].push(tx);
-                    totalMonthFlow += tx.sgdImpact;
-                });
-                
-                const sortedWeeks = Object.keys(weeksMap).sort().reverse().map(mondayStr => {
-                    const txs = weeksMap[mondayStr];
-                    const weekFlow = txs.reduce((sum, t) => sum + t.sgdImpact, 0);
-                    const buyFlow = txs.filter(t => t.action === 'Buy').reduce((sum, t) => sum + t.sgdImpact, 0);
-                    const sellFlow = txs.filter(t => t.action !== 'Buy').reduce((sum, t) => sum + t.sgdImpact, 0);
+                    const weekTxs = txs.filter(t => {
+                        const d = new Date(t.date);
+                        return d >= start && d < end;
+                    });
                     
-                    const mon = new Date(mondayStr);
-                    const sun = new Date(mon.getTime() + 6 * 24 * 60 * 60 * 1000);
-                    const options = { day: 'numeric', month: 'short' };
-                    const rangeStr = `${mon.toLocaleDateString('en-SG', options)} - ${sun.toLocaleDateString('en-SG', options)}`;
-                    
-                    return {
-                        range: rangeStr,
-                        flow: weekFlow,
-                        buy_flow: buyFlow,
-                        sell_flow: sellFlow,
-                        transactions: txs.sort((a, b) => b.date.localeCompare(a.date))
-                    };
-                });
+                    const flow = weekTxs.reduce((sum, t) => sum + t.sgdImpact, 0);
+                    weeks.push({
+                        label: `Week ${4 - i}`,
+                        date_range: `${start.getMonth()+1}/${start.getDate()} - ${end.getMonth()+1}/${end.getDate()}`,
+                        net_flow: flow,
+                        tx_count: weekTxs.length
+                    });
+                }
                 
+                const sortedWeeks = weeks.reverse();
                 return {
                     month_name: "Last 4 Weeks",
                     month_flow: totalMonthFlow,
@@ -1122,7 +1127,16 @@
                     : '';
                 const targetPath = viewPathMap[newView];
                 if (targetPath) {
-                    history.pushState({ view: newView }, '', basePath + targetPath);
+                    const currentSearch = (newView === 'dashboard' && this.currentFilter && this.currentFilter !== 'all')
+                        ? `?filter=${this.currentFilter}`
+                        : '';
+                    const fullTarget = basePath + (targetPath === '/' ? '' : targetPath) + currentSearch;
+                    const normCurrent = (window.location.pathname + window.location.search).replace(basePath, '');
+                    const normTarget = (targetPath === '/' ? '' : targetPath) + currentSearch;
+                    
+                    if (normCurrent !== normTarget && normCurrent !== ('/' + currentSearch) && normCurrent !== currentSearch) {
+                        history.pushState({ view: newView }, '', fullTarget || '/');
+                    }
                 }
 
                 if (newView === 'calendar') {
@@ -1236,26 +1250,26 @@
                     if (headerSelector) {
                         this.priceMode = headerSelector.innerText.trim().toLowerCase();
                     }
-                    const posRes = await fetch(`/api/v1/portfolios/positions?price_mode=${this.priceMode}`);
-                    if (!posRes.ok) throw new Error("Positions API failed");
-                    const posData = await posRes.json();
                     
-                    const sumRes = await fetch(`/api/v1/portfolios/summary?price_mode=${this.priceMode}`);
-                    const summaryData = sumRes.ok ? await sumRes.json() : { summary: {} };
-                    
-                    this.portfolioData = {
-                        positions: posData.positions || [],
-                        dashboard: posData.dashboard || {},
-                        cash_report: posData.cash_report || {},
-                        open_options: posData.open_options || [],
-                        recent_closed_options: posData.recent_closed_options || {},
-                        metadata: {
-                            summary: summaryData.summary || {},
-                            config: summaryData.config || {},
-                            quotes_last_updated_sgt: summaryData.quotes_last_updated_sgt || null,
-                            ib_report_datetime_sgt: summaryData.ib_report_datetime_sgt || null
+                    let filename = 'portfolio_data.json';
+                    if (this.currentFilter && this.currentFilter !== 'all') {
+                        if (this.currentFilter.startsWith('port-')) {
+                            const portSlug = this.currentFilter.slice(5);
+                            filename = `portfolio_data_port_${portSlug}.json`;
+                        } else {
+                            filename = `portfolio_data_${this.currentFilter}.json`;
                         }
-                    };
+                    }
+
+                    const res = await fetch(`/src/${filename}?price_mode=${this.priceMode}`);
+                    if (!res.ok) {
+                        console.warn(`Specific payload /src/${filename} not found, falling back to /src/portfolio_data.json`);
+                        const fallbackRes = await fetch(`/src/portfolio_data.json?price_mode=${this.priceMode}`);
+                        this.portfolioData = await fallbackRes.json();
+                    } else {
+                        this.portfolioData = await res.json();
+                    }
+
                     this.$nextTick(() => {
                         if (window.updateTimeAgos) window.updateTimeAgos();
                     });
@@ -2412,6 +2426,7 @@
                 const norm = basePath ? path.replace(basePath, '') : path;
                 const view = pathViewMap[norm] || pathViewMap[path] || 'dashboard';
                 this.currentView = view;
+                this.currentFilter = new URLSearchParams(window.location.search).get('filter') || 'all';
             });
 
             await this.initializeDashboardCharts();
@@ -2471,34 +2486,40 @@
             document.querySelectorAll("#classification-dropdown-menu .portfolio-item").forEach(item => {
                 item.addEventListener("click", async (e) => {
                     e.preventDefault();
-                    const slug = item.getAttribute("data-slug");
-                    let prefix = 'portfolio_data';
-                    if (slug && slug !== 'all') {
-                        if (slug.startsWith('port-')) {
-                            prefix = 'portfolio_data_port_' + slug.slice(5);
-                        } else {
-                            prefix = 'portfolio_data_' + slug;
-                        }
-                    }
-                    this.activePrefix = prefix;
+                    const slug = item.getAttribute("data-slug") || 'all';
+                    this.currentFilter = slug;
                     
+                    const dashLink = document.getElementById('nav-active-main');
+                    const basePath = dashLink ? new URL(dashLink.href).pathname.replace(/\/$/, '') : '';
+                    const targetUrl = slug === 'all'
+                        ? (basePath + '/active')
+                        : (basePath + '/active?filter=' + encodeURIComponent(slug));
+                    history.pushState({ view: 'dashboard', filter: slug }, '', targetUrl);
+
                     // Update header display text
                     const displayEl = document.getElementById("current-classification-display");
                     if (displayEl) {
                         const nameSpan = item.querySelector("span");
+                        const iconEl = item.querySelector(".icon");
+                        const iconText = iconEl ? iconEl.innerText.trim() : '📂';
                         if (nameSpan) {
-                            displayEl.childNodes[0].nodeValue = `📂 ${nameSpan.innerText.trim()}`;
+                            displayEl.innerHTML = `${iconText} ${nameSpan.innerText.trim()}`;
                         }
                     }
+                    
+                    // Update selected class on dropdown items
+                    document.querySelectorAll("#classification-dropdown-menu .portfolio-item").forEach(el => {
+                        el.classList.remove("selected");
+                    });
+                    item.classList.add("selected");
                     
                     // Close dropdown menu
                     const menuEl = document.getElementById("classification-dropdown-menu");
                     if (menuEl) {
-                        menuEl.classList.remove("show"); // If legacy js uses class toggling
+                        menuEl.classList.remove("show");
                     }
                     
-                    // Refresh data
-                    await this.fetchPortfolioData();
+                    // Refresh charts
                     await this.initializeDashboardCharts();
                     if (this.currentView === 'charts') {
                         this.initGlobalCharts();

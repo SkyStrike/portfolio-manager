@@ -85,7 +85,6 @@
                             <div class="nav-dropdown-menu" id="nav-tools-dropdown">
                                 <a href="{{ BASE_PATH }}/trades" id="nav-admin-main">Trades Ledger</a>
                                 <a href="{{ BASE_PATH }}/control-center" id="nav-settings-main">Control Center</a>
-                                <a href="{{ BASE_PATH }}/legacy" id="nav-legacy-main" class="nav-legacy-link">Legacy Dashboard</a>
                             </div>
                         </li>
                         <li class="nav-dropdown-container nav-add-container">
@@ -117,7 +116,10 @@
                     </button>
 
                     <!-- Classification/Portfolio Selector (dashboard) -->
-                    {% if NAV_ITEMS or CAT_NAV or PORT_NAV %}
+                    {% set nav_list = NAV_ITEMS or nav_items %}
+                    {% set cat_list = CAT_NAV or category_nav %}
+                    {% set port_list = PORT_NAV or portfolio_nav %}
+                    {% if nav_list or cat_list or port_list %}
                     <div class="portfolio-selector-container">
                         <button class="portfolio-select-btn" id="classification-select-btn">
                             <span id="current-classification-display">📂 All</span>
@@ -127,24 +129,24 @@
                         </button>
                         <div class="portfolio-dropdown-menu" id="classification-dropdown-menu">
                             <div class="portfolio-list-wrapper" id="classification-dropdown-list">
-                                {% for item in NAV_ITEMS %}
+                                {% for item in nav_list %}
                                 <a href="{{ item.url }}" class="portfolio-item" id="{{ item.id }}" data-slug="all">
                                     <div class="icon">📂</div>
                                     <span>{{ item.name }}</span>
                                 </a>
                                 {% endfor %}
-                                {% if CAT_NAV %}
+                                {% if cat_list %}
                                 <div class="dropdown-section-header">Classifications</div>
-                                {% for item in CAT_NAV %}
+                                {% for item in cat_list %}
                                 <a href="{{ item.url }}" class="portfolio-item" id="{{ item.id }}" data-slug="{{ item.slug }}">
                                     <div class="icon">📁</div>
                                     <span>{{ item.name }}</span>
                                 </a>
                                 {% endfor %}
                                 {% endif %}
-                                {% if PORT_NAV %}
+                                {% if port_list %}
                                 <div class="dropdown-section-header border-top">Portfolios</div>
-                                {% for item in PORT_NAV %}
+                                {% for item in port_list %}
                                 <a href="{{ item.url }}" class="portfolio-item" id="{{ item.id }}" data-slug="{{ item.slug }}">
                                     <div class="icon">💼</div>
                                     <div class="portfolio-item-text-wrapper">
