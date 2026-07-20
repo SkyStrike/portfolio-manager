@@ -22,13 +22,14 @@ env/
 .DS_Store
 Thumbs.db
 
-# Project Docs & Metadata
+# Project Docs, Metadata, & Repository Dirs
+.git/
+.github/
+.agents/
 README.md
 LICENSE
 prompt.md
 docs/
-.agents/
-.github/
 
 # Temporary directories
 tasks/
