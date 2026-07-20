@@ -24,6 +24,7 @@ def redirect_legacy_to_spa(path: str = ""):
 @router.get("/charts", response_class=HTMLResponse)
 @router.get("/performance", response_class=HTMLResponse)
 @router.get("/dividend-calendar", response_class=HTMLResponse)
+@router.get("/fd-comparison", response_class=HTMLResponse)
 def get_spa_dashboard():
     logger.info("GET SPA Dashboard - serving SPA shell wrapped in base.html")
     if os.path.exists("templates/spa_shell.html"):
@@ -240,65 +241,7 @@ def get_control_center():
         return HTMLResponse(content=rendered)
     return HTMLResponse("<h3>Please place templates/control_center.html</h3>")
 
-# Fixed Deposit Comparison view
-@router.get("/fd-comparison", response_class=HTMLResponse)
-def get_fd_comparison():
-    logger.info("GET /fd-comparison - serving FD comparison page")
-    
-    # 1. Load active portfolio data from in-memory cache
-    from core.cache import _dashboard_cache, get_cached_view
-    if not _dashboard_cache["intraday"]:
-        get_cached_view("portfolio_active.html", "intraday")
-        
-    data = _dashboard_cache["intraday"].get("src/portfolio_data.json")
-    from core.models import slugify
-    from jinja2 import Environment, FileSystemLoader
-    from services.rebuild_dashboard import load_config
-    
-    env = Environment(loader=FileSystemLoader("templates"))
-    if os.path.exists("templates/fixed_deposit_comparison.html"):
-        template = env.get_template("fixed_deposit_comparison.html")
-        content = template.render(
-            BASE_PATH=base_path,
-            TITLE="vs Fixed Deposits"
-        )
-        
-        config = load_config()
-        page_width = config.get("ui", {}).get("page_width", "1800px")
-        from services.css_helper import render_combined_css
-        css_content = render_combined_css(env, page_width=page_width)
-        
-        js_template = env.get_template("scripts.js")
-        config = load_config()
-        font_style = config.get("ui", {}).get("typography", {}).get("font_family", "sans-serif")
-        js_content = js_template.render(FONT_STYLE=font_style, BASE_PATH=base_path)
-        
-        base_template = env.get_template("base.html")
-        page_width = config.get("ui", {}).get("page_width", "1800px")
-        options_tracker_url = config.get("external_services", {}).get("options_tracker_url", "")
-        if "/api/positions" in options_tracker_url:
-            options_tracker_main_url = options_tracker_url.replace("/api/positions", "")
-        else:
-            options_tracker_main_url = options_tracker_url
-        backtester_url = config.get("external_services", {}).get("backtester_url", "")
-        
-        wrapped = base_template.render(
-            TITLE="vs Fixed Deposits",
-            page_title="vs Fixed Deposits",
-            CONTENT=content,
-            body_content=content,
-            CSS=css_content,
-            JS=js_content,
-            PAGE_WIDTH=page_width,
-            BASE_PATH=base_path,
-            OPTIONS_TRACKER_URL=options_tracker_main_url,
-            BACKTESTER_URL=backtester_url,
-            nav_items=[],
-            category_nav=[],
-            portfolio_nav=[]
-        )
-        return HTMLResponse(content=wrapped)
-    return HTMLResponse("<h3>Please place templates/fixed_deposit_comparison.html</h3>")
+
 
 @router.get("/analytics/fd-comparison")
 def redirect_fd_comparison_legacy():
