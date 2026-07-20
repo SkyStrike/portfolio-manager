@@ -2235,3 +2235,15 @@ body.mask-values .sensitive-value::after {
 .nav-beta-link { color: #f39c12 !important; }
 .nav-legacy-link { color: var(--text-secondary) !important; font-size: 0.9em; }
 .nav-legacy-link:hover { color: var(--text-primary) !important; }
+
+/* Daily Change Clickable Styling (FEATURE-039) */
+.daily-change-clickable {
+    cursor: pointer;
+    text-decoration: underline dotted;
+    transition: opacity 0.15s ease, text-decoration-color 0.15s ease;
+}
+.daily-change-clickable:hover {
+    opacity: 0.85;
+    text-decoration: underline;
+}
+

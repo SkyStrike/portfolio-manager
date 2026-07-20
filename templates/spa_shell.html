@@ -533,6 +533,7 @@
         {% include "spa/fd_comparison.html" %}
         {% include "spa/charts.html" %}
         {% include "spa/dividend_calendar.html" %}
+        {% include "spa/daily_change_modal.html" %}
 {% raw %}
     </div>
 </div>
@@ -550,6 +551,7 @@
                 txFilter: 'both',
                 tocView: 'list',
                 activeMenu: null,
+                activeDailyChange: null,
                 portfolioData: null,
                 vueObserver: null,
                 
@@ -2074,6 +2076,63 @@
             closeReturnBreakdownModal() {
                 const el = document.getElementById("return-breakdown-modal");
                 if (el) el.classList.remove("show");
+            },
+            openDailyChangeModal(target) {
+                if (!target) return;
+                
+                // Determine underlying position object 'p' (either target itself or first symbol in underlying group)
+                const p = (target.metrics || target.price_details) 
+                    ? target 
+                    : (target.symbols && target.symbols.length > 0 ? target.symbols[0] : target);
+                
+                const details = p.price_details || target.price_details || {};
+                
+                const symbol = p.symbol || target.title || p.underlying || 'Ticker';
+                const friendlyName = p.friendly_name || p.underlying || target.title || symbol;
+                const priceMode = details.price_mode || this.priceMode || 'intraday';
+                const currency = details.currency || p.currency || 'USD';
+                
+                // Current Price resolution
+                let currentPrice = details.current_price;
+                if (currentPrice === undefined || currentPrice === null || currentPrice === 0) {
+                    currentPrice = p.metrics?.current_price || 0;
+                }
+                
+                // Daily P/L % resolution
+                let dailyPct = details.daily_pct;
+                if (dailyPct === undefined || dailyPct === null) {
+                    dailyPct = p.metrics?.daily_pct !== undefined ? p.metrics.daily_pct : (target.daily_pct || 0);
+                }
+                
+                // Prev Close Price resolution
+                let prevClosePrice = details.prev_close_price;
+                if (!prevClosePrice && currentPrice) {
+                    if (dailyPct !== 0) {
+                        prevClosePrice = currentPrice / (1 + (dailyPct / 100));
+                    } else {
+                        prevClosePrice = currentPrice;
+                    }
+                }
+                
+                // Datetimes resolution
+                const lastUpdatedSgt = this.portfolioData?.summary?.quotes_last_updated_sgt || '';
+                const currentPriceDatetime = details.current_price_datetime || lastUpdatedSgt || 'N/A';
+                const prevCloseDate = details.prev_close_date || 'N/A';
+                
+                this.activeDailyChange = {
+                    symbol: symbol,
+                    friendly_name: friendlyName,
+                    price_mode: priceMode,
+                    current_price: currentPrice || 0,
+                    current_price_datetime: currentPriceDatetime,
+                    prev_close_price: prevClosePrice || 0,
+                    prev_close_date: prevCloseDate,
+                    currency: currency,
+                    daily_pct: dailyPct || 0
+                };
+            },
+            closeDailyChangeModal() {
+                this.activeDailyChange = null;
             },
             async initializeDashboardCharts(skipLoading = false) {
                 if (!skipLoading) {

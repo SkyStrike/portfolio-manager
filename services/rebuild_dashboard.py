@@ -113,7 +113,7 @@ def load_config():
 
     return config
 
-def calculate_positions(tickers_map, tx_rows, div_rows, exchange_rates, portfolio_class_map=None, portfolio_broker_map=None, ib_positions=None):
+def calculate_positions(tickers_map, tx_rows, div_rows, exchange_rates, portfolio_class_map=None, portfolio_broker_map=None, ib_positions=None, price_mode="intraday"):
     tx_by_key = defaultdict(list)
     for tx in tx_rows:
         pid = tx['portfolio_id']
@@ -224,6 +224,23 @@ def calculate_positions(tickers_map, tx_rows, div_rows, exchange_rates, portfoli
         pos.market_value = curr_qty * current_price
         pos.daily_val = curr_qty * (current_price - prev_close)
         pos.daily_pct = ((current_price - prev_close) / prev_close * 100) if prev_close > 0 else 0.0
+
+        if price_mode == "closing":
+            price_datetime = ticker_data.get('daily_close_date') or ticker_data.get('last_updated') or ''
+            prev_close_date = ticker_data.get('daily_prev_close_date') or ticker_data.get('intraday_prev_close_date') or ''
+        else:
+            price_datetime = ticker_data.get('intraday_current_at') or ticker_data.get('last_updated') or ''
+            prev_close_date = ticker_data.get('intraday_prev_close_date') or ''
+
+        pos.price_details = {
+            "price_mode": price_mode,
+            "current_price": current_price,
+            "current_price_datetime": price_datetime,
+            "prev_close_price": prev_close,
+            "prev_close_date": prev_close_date,
+            "currency": ticker_data.get('currency') or pos.currency or 'USD',
+            "daily_pct": pos.daily_pct
+        }
         
         # Check reconciliation with IBKR data
         ibkr_calc_qty = 0.0
@@ -346,7 +363,9 @@ def generate_views_in_memory(conn=None, price_mode="intraday"):
         prev_close_col = "COALESCE(tp.daily_prev_close, tp.intraday_prev_close)" if price_mode == "closing" else "tp.intraday_prev_close"
         cursor.execute(f"""
             SELECT t.id, t.symbol, t.friendly_name, t.underlying, t.category, t.tax_rate, t.exchange,
-                   COALESCE({price_col}, tp.price) as current_price, {prev_close_col} as prev_close, tp.currency
+                   COALESCE({price_col}, tp.price) as current_price, {prev_close_col} as prev_close, tp.currency,
+                   tp.intraday_current_at, tp.intraday_prev_close_date,
+                   tp.daily_close_date, tp.daily_prev_close_date, tp.last_updated
             FROM tickers t
             LEFT JOIN ticker_prices tp ON t.id = tp.ticker_id
         """)
@@ -412,7 +431,8 @@ def generate_views_in_memory(conn=None, price_mode="intraday"):
             tickers_map, tx_rows, div_rows, exchange_rates,
             portfolio_class_map=portfolio_class_map,
             portfolio_broker_map=portfolio_broker_map,
-            ib_positions=ib_positions
+            ib_positions=ib_positions,
+            price_mode=price_mode
         )
         # 6 & 7. Fetch live options data and cash report details in parallel
         logger.info("[generate_views] Fetching options and cash report details in parallel...")
@@ -1033,7 +1053,8 @@ def render_all_views_in_memory(all_positions, options_data, cash_report_data, co
             tickers_map, port_txs, port_divs, exchange_rates,
             portfolio_class_map=port_class_map,
             portfolio_broker_map=portfolio_broker_map,
-            ib_positions=ib_positions
+            ib_positions=ib_positions,
+            price_mode=price_mode
         )
 
         port_filename = f"portfolio_data_port_{pslug}.json"

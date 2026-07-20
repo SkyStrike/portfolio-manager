@@ -318,6 +318,7 @@ class Position:
             "ib_market_value": getattr(self, "ib_market_value", None),
             "ib_current_price": getattr(self, "ib_current_price", None),
             "yearly_income_summaries": yearly_summaries,
+            "price_details": getattr(self, "price_details", None),
             "metrics": {
                 "quantity": self.current_quantity,
                 "average_buy_price": self.average_buy_price,

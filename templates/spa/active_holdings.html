@@ -576,7 +576,7 @@
                                         <span v-if="p.ib_mismatch" class="warning-indicator tooltip-trigger spa-warning-indicator">⚠</span>
                                         <span class="toc-sublist-val">{{ formatPct(p.sgd_metrics.current_sgd / summary.total_market_value_sgd * 100) }} | </span>
                                         <span class="toc-sublist-val" :class="getValClass(p.sgd_metrics.daily_val_sgd)">
-                                            <span class="sensitive-value">{{ formatCommas(p.sgd_metrics.daily_val_sgd, true) }} SGD</span> ({{ formatPct(p.metrics.daily_pct) }})
+                                            <span class="sensitive-value">{{ formatCommas(p.sgd_metrics.daily_val_sgd, true) }} SGD</span> <span class="daily-change-clickable" @click="openDailyChangeModal(p)" title="Click to view daily change calculation breakdown">({{ formatPct(p.metrics.daily_pct) }})</span>
                                         </span>
                                     </li>
                                 </ul>
@@ -641,7 +641,7 @@
                                     </td>
                                     <td :class="getValClass(p.sgd_metrics.daily_val_sgd)">
                                         {{ formatCommas(p.sgd_metrics.daily_val_sgd, true) }}
-                                        <div class="sub-val" v-text="'(' + formatPct(p.metrics.daily_pct) + ')'"></div>
+                                        <div class="sub-val daily-change-clickable" @click="openDailyChangeModal(p)" title="Click to view daily change calculation breakdown" v-text="'(' + formatPct(p.metrics.daily_pct) + ')'"></div>
                                     </td>
                                     <td :class="getValClass(p.sgd_metrics.realized_pnl_sgd)" v-text="formatCommas(p.sgd_metrics.realized_pnl_sgd, true)"></td>
                                     <td v-text="formatCommas(p.sgd_metrics.income_sgd)"></td>
@@ -754,7 +754,7 @@
                                     <div class="highlight">
                                         Daily P/L: 
                                         <span :class="getValClass(p.sgd_metrics.daily_val_sgd)">
-                                            {{ formatCommas(p.sgd_metrics.daily_val_sgd, true) }} SGD ({{ formatPct(p.metrics.daily_pct) }})
+                                            {{ formatCommas(p.sgd_metrics.daily_val_sgd, true) }} SGD <span class="daily-change-clickable" @click="openDailyChangeModal(p)" title="Click to view daily change calculation breakdown">({{ formatPct(p.metrics.daily_pct) }})</span>
                                         </span>
                                     </div>
                                 </div>
@@ -810,12 +810,12 @@
                                         <div class="stat-item">
                                             <span class="stat-label">Daily P/L</span>
                                             <span class="stat-value" :class="getValClass(p.metrics.daily_val)" v-text="formatCommas(p.metrics.daily_val, true) + ' ' + p.currency"></span>
-                                            <span class="stat-subvalue" :class="getValClass(p.sgd_metrics.daily_val_sgd)" v-text="formatCommas(p.sgd_metrics.daily_val_sgd, true) + ' SGD (' + formatPct(p.metrics.daily_pct) + ')'"></span>
+                                            <span class="stat-subvalue daily-change-clickable" :class="getValClass(p.sgd_metrics.daily_val_sgd)" @click="openDailyChangeModal(p)" title="Click to view daily change calculation breakdown" v-text="formatCommas(p.sgd_metrics.daily_val_sgd, true) + ' SGD (' + formatPct(p.metrics.daily_pct) + ')'"></span>
                                         </div>
                                         <div class="stat-item">
                                             <span class="stat-label">Capital Gain/Loss</span>
                                             <span class="stat-value" :class="getValClass(p.metrics.capital_gain)" v-text="formatCommas(p.metrics.capital_gain, true) + ' ' + p.currency"></span>
-                                            <span class="stat-subvalue" :class="getValClass(p.metrics.capital_gain_sgd)" v-text="formatCommas(p.metrics.capital_gain_sgd, true) + ' SGD (' + formatPct(p.metrics.capital_gain_pct) + ')'"></span>
+                                            <span class="stat-subvalue" :class="getValClass(p.sgd_metrics.capital_gain_sgd)" v-text="formatCommas(p.sgd_metrics.capital_gain_sgd, true) + ' SGD (' + formatPct(p.metrics.capital_gain_pct) + ')'"></span>
                                         </div>
                                         <div class="stat-item">
                                             <span class="stat-label">Total Income</span>
