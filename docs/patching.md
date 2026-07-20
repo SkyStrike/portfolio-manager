@@ -20,11 +20,19 @@ The application supports hot-swap backups and restores using SQLite's native `sq
 * **Restore Database:** Overwrites the active database (`portfolio.db`) with the contents of the chosen backup file. This operation takes effect immediately for all subsequent HTTP requests. 
   *(Note: Restoring the active database automatically triggers a background cache prewarming/rebuilding task to update the dashboard panels).*
 
+---
+
+## 2. System & Data Operations
+
+Located inside **Control Center > Maintenance > System & Data Operations**:
+* **⚡ Administrative Price Refresh**: Triggers `POST /api/prices/refresh?force=true`. Bypasses all market session open/closed rules and cache timestamps to force an immediate `yfinance` download for all active holdings.
+* **🔄 Rebuild Dashboard Cache**: Triggers `POST /api/dashboard/rebuild-spa?sync=true`. Recalculates metrics, position weights, cash summaries, and ApexCharts data, re-caching in-memory JSON views.
+
 
 > [!WARNING]
 > Data patching is a high-risk operation that directly modifies the database. Extreme caution must be exercised. It is highly recommended to create a database backup before executing any patch.
 
-## 2. Dynamic Patching System
+## 3. Dynamic Patching System
 
 The patching system allows developers to write script-based data patches, declare their input parameters in a JSON manifest, and run them with user-selected inputs from the Control Center UI.
 

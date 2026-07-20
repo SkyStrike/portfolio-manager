@@ -75,8 +75,8 @@ No authentication, CSRF validation, or multi-user access controls are implemente
 * **Interactive Dividend Calendar**: Grid/List monthly visualization (`/dividend-calendar`) with calendar views, monthly totals, search filters, and Interactive Brokers (IBKR) statement synchronization.
 * **IBKR Statement Reconciliation**: Automatically compares database positions against uploaded IBKR statement positions (`ib_data.json`) to display mismatch warnings and sync badges.
 * **Options & Stress-Testing Dashboards**: Integrates with external options trackers to visualize active contracts, risk exposure metrics, expiration profiles, and cash stress tests.
-* **Dynamic Database Backups & Patching**: Admin tools for managing, downloading, and hot-restoring database backups on-the-fly, alongside custom patching manifests for data migrations.
-* **Smart Yahoo Finance Batch Ingestion**: Fetches prices in single batches using `yfinance` with intelligent UTC/GMT cache checks, avoiding redundant API calls for closed markets.
+* **Dynamic Database Backups, Operations & Patching**: Admin tools in Control Center for managing database backups, hot-restoring databases, triggering administrative price refreshes (bypassing exchange session rules), and running custom patching manifests.
+* **Smart & Synchronous Yahoo Finance Batch Ingestion**: Fetches prices in single batches using `yfinance` with market-session open/closed awareness, 15-minute intraday caching, and synchronous UI execution for immediate screen updates.
 * **Transaction Visualizer (TX Visualizer)**: View per-ticker historical stock price candlestick charts (7d, 1m, 3m, 6m, YTD, 1y, 5y, all, and custom date range) overlaying your historical buy/sell trade executions directly on the price curve, with interactive tooltips showing trades and 3-decimal OHLC data.
 
 ---
@@ -182,7 +182,20 @@ The project has been refactored into a modern, modular architecture:
   - [services/dividend_calendar_service.py](services/dividend_calendar_service.py): Formats schedules and compiles dividend calendar JSON.
 * **`ingestion/`**: Data parsing and intake pipelines.
   - [ingestion/importer.py](ingestion/importer.py): Parses Holdings and Transactions CSV exports.
-* **`routers/`**: Decoupled, modular controller endpoints (views, uploads, CRUD API, patches, reports).
+* **`routers/`**: Decoupled, modular controller endpoints:
+  - [routers/views.py](routers/views.py): Single Page Application dashboard shell view routing.
+  - [routers/prices.py](routers/prices.py): Price history queries, synchronous/background Yahoo Finance price refreshes.
+  - [routers/dashboard.py](routers/dashboard.py): REST payload streaming for active, closed, history, and performance views.
+  - [routers/api_v1.py](routers/api_v1.py): CRUD endpoints for trades, brokers, and settings.
+  - [routers/patches.py](routers/patches.py): Maintenance patch listing and parameter execution engine.
+* **`templates/`**: Single Page Application views and HTML component templates:
+  - [templates/spa_shell.html](templates/spa_shell.html): Unified SPA shell layout, Vue 3 root instance, and modal dialogs.
+  - [templates/control_center.html](templates/control_center.html): Administrative dashboard for settings, data imports, database backups, and maintenance operations.
+  - [templates/trades.html](templates/trades.html): Interactive trade transaction ledger and execution management.
+  - **`templates/spa/`**: Component views (`active_holdings.html`, `daily_change_modal.html`, etc.).
+* **`static/`**: Client-side styling and scripts:
+  - **`static/css/style.css`**: Design tokens, component styles, and glassmorphism layouts.
+  - **`static/js/app.js`**: Administrative Control Center application scripts.
 
 ---
 
