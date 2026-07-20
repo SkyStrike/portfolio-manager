@@ -642,8 +642,10 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                         last_updated           = excluded.last_updated
                 """, updated_records)
                 
+            logger.info("Successfully fetched and updated %d ticker prices in database.", len(updated_records))
             return {"status": "success", "message": f"Successfully updated {len(updated_records)} ticker prices."}
         else:
+            logger.info("No ticker prices could be extracted from yfinance.")
             return {"status": "success", "message": "No ticker prices could be extracted."}
             
     except Exception as e:
