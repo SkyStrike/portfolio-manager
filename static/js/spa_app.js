@@ -131,22 +131,34 @@ const { createApp } = Vue;
                 };
                 
                 const weeks = [];
+                const dayOfWeek = now.getDay();
+                const distToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+                const baseMonday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + distToMonday);
+
                 for (let i = 0; i < 4; i++) {
-                    const start = new Date(now.getTime() - (i + 1) * 7 * 24 * 60 * 60 * 1000);
-                    const end = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
+                    const start = new Date(baseMonday.getTime() - i * 7 * 24 * 60 * 60 * 1000);
+                    start.setHours(0, 0, 0, 0);
+                    
+                    const end = new Date(start.getTime() + 6 * 24 * 60 * 60 * 1000);
+                    end.setHours(23, 59, 59, 999);
                     
                     const weekTxs = allTxs.filter(t => {
                         const d = new Date(t.date);
-                        return d >= start && d < end;
+                        return d >= start && d <= end;
                     });
                     
                     const flow = weekTxs.reduce((sum, t) => sum + t.sgdImpact, 0);
                     const buy_flow = weekTxs.filter(t => t.action === 'Buy').reduce((sum, t) => sum + t.sgdImpact, 0);
                     const sell_flow = weekTxs.filter(t => t.action !== 'Buy').reduce((sum, t) => sum + Math.abs(t.sgdImpact), 0);
                     
+                    const startDay = String(start.getDate()).padStart(2, '0');
+                    const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
+                    const endDay = String(end.getDate()).padStart(2, '0');
+                    const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
+                    
                     weeks.push({
                         label: `Week ${4 - i}`,
-                        range: `${start.getMonth()+1}/${start.getDate()} - ${end.getMonth()+1}/${end.getDate()}`,
+                        range: `${startDay} ${startMonth} - ${endDay} ${endMonth}`,
                         flow: flow,
                         buy_flow: buy_flow,
                         sell_flow: sell_flow,
@@ -155,7 +167,7 @@ const { createApp } = Vue;
                     });
                 }
                 
-                const sortedWeeks = weeks.reverse();
+                const sortedWeeks = weeks;
                 
                 return {
                     month_name: "Last 4 Weeks",

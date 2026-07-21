@@ -419,7 +419,7 @@
                 </h2>
                 
                 <div class="weeks-container">
-                    <details v-for="(week, index) in recentTx.weeks" :key="week.range" class="week-details week-details-card" :open="index === 0">
+                    <details v-for="(week, index) in recentTx.weeks" :key="week.range" class="week-details week-details-card" :class="{ 'week-empty': week.tx_count === 0 }" :open="index === 0 && week.tx_count > 0">
                         <summary class="week-details-summary">
                             <span class="week-summary-center">Week: {{ week.range }}</span>
                             <div class="week-summary-right">
@@ -430,6 +430,9 @@
                         </summary>
                         <div class="week-details-content">
                             <ul class="tx-list tx-list-clean">
+                                <li v-if="week.tx_count === 0" class="tx-item text-muted text-center" style="list-style: none; padding: 12px 0;">
+                                    No transactions recorded this week.
+                                </li>
                                 <template v-for="tx in week.transactions">
                                     <li v-show="txFilter === 'both' || tx.action.toLowerCase() === txFilter" class="tx-item tx-item-row" :data-action="tx.action.toLowerCase()">
                                         [{{ tx.symbol }}] 

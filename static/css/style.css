@@ -3831,3 +3831,15 @@ body.mask-values .sensitive-value::after {
     color: #f8fafc;
 }
 
+/* Empty Weeks Styling */
+.week-empty .week-details-summary {
+    opacity: 0.5;
+    color: var(--text-muted) !important;
+}
+.week-empty .week-details-summary span {
+    color: var(--text-muted) !important;
+}
+.week-empty .week-details-summary .bold-text {
+    font-weight: 500;
+}
+
