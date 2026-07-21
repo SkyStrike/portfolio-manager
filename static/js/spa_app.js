@@ -732,6 +732,24 @@ const { createApp } = Vue;
             dismissToast(id) {
                 this.notifications = this.notifications.filter(n => n.id !== id);
             },
+            getRelativeDaysLabel(dateStr) {
+                if (!dateStr || dateStr === 'N/A') return '';
+                const datePart = dateStr.substring(0, 10);
+                const dateObj = new Date(datePart);
+                if (isNaN(dateObj.getTime())) return '';
+                
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                dateObj.setHours(0, 0, 0, 0);
+                
+                const diffTime = today.getTime() - dateObj.getTime();
+                const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+                
+                if (diffDays === 0) return ' (today)';
+                if (diffDays === 1) return ' (1 day ago)';
+                if (diffDays < 0) return ` (in ${Math.abs(diffDays)} days)`;
+                return ` (${diffDays} days ago)`;
+            },
             getBasePath() {
                 const dashLink = document.getElementById('nav-active-main');
                 if (!dashLink) return '';

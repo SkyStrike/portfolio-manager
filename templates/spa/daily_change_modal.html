@@ -27,7 +27,7 @@
                     <div class="cal-modal-row spa-modal-row">
                         <span class="cal-modal-label spa-modal-label">Current Price Datetime</span>
                         <span class="cal-modal-val text-secondary" style="font-family: monospace;">
-                            {{ activeDailyChange.current_price_datetime || 'N/A' }}
+                            {{ activeDailyChange.current_price_datetime || 'N/A' }}{{ getRelativeDaysLabel(activeDailyChange.current_price_datetime) }}
                         </span>
                     </div>
 
@@ -41,7 +41,7 @@
                     <div class="cal-modal-row spa-modal-row">
                         <span class="cal-modal-label spa-modal-label">Last Close Price Date</span>
                         <span class="cal-modal-val text-secondary" style="font-family: monospace;">
-                            {{ activeDailyChange.prev_close_date || 'N/A' }}
+                            {{ activeDailyChange.prev_close_date || 'N/A' }}{{ getRelativeDaysLabel(activeDailyChange.prev_close_date) }}
                         </span>
                     </div>
 
