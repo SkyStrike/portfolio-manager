@@ -129,42 +129,39 @@ const { createApp } = Vue;
                     count: allTxs.length
                 };
                 
-                return {
-                    transactions: allTxs,
-                    totals
-                };
-            },
-            monthlyTxFlow() {
-                if (!this.recentTx?.transactions) return { month_name: "Last 4 Weeks", month_flow: 0, weeks: [] };
-                
-                const txs = this.recentTx.transactions;
-                const totalMonthFlow = txs.reduce((sum, t) => sum + t.sgdImpact, 0);
-                
-                const now = new Date();
                 const weeks = [];
                 for (let i = 0; i < 4; i++) {
                     const start = new Date(now.getTime() - (i + 1) * 7 * 24 * 60 * 60 * 1000);
                     const end = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
                     
-                    const weekTxs = txs.filter(t => {
+                    const weekTxs = allTxs.filter(t => {
                         const d = new Date(t.date);
                         return d >= start && d < end;
                     });
                     
                     const flow = weekTxs.reduce((sum, t) => sum + t.sgdImpact, 0);
+                    const buy_flow = weekTxs.filter(t => t.action === 'Buy').reduce((sum, t) => sum + t.sgdImpact, 0);
+                    const sell_flow = weekTxs.filter(t => t.action !== 'Buy').reduce((sum, t) => sum + Math.abs(t.sgdImpact), 0);
+                    
                     weeks.push({
                         label: `Week ${4 - i}`,
-                        date_range: `${start.getMonth()+1}/${start.getDate()} - ${end.getMonth()+1}/${end.getDate()}`,
-                        net_flow: flow,
-                        tx_count: weekTxs.length
+                        range: `${start.getMonth()+1}/${start.getDate()} - ${end.getMonth()+1}/${end.getDate()}`,
+                        flow: flow,
+                        buy_flow: buy_flow,
+                        sell_flow: sell_flow,
+                        tx_count: weekTxs.length,
+                        transactions: weekTxs
                     });
                 }
                 
                 const sortedWeeks = weeks.reverse();
+                
                 return {
                     month_name: "Last 4 Weeks",
-                    month_flow: totalMonthFlow,
-                    weeks: sortedWeeks
+                    month_flow: totals.netSgd,
+                    weeks: sortedWeeks,
+                    transactions: allTxs,
+                    totals
                 };
             },
             activeReport() {
