@@ -139,6 +139,16 @@ async def startup_event():
     except Exception as e:
         logger.warning("[startup] Could not warm exchange rates: %s", e)
 
+    # Warm dashboard cache (intraday & closing) asynchronously on startup
+    try:
+        from core.cache import get_cached_view
+        loop = asyncio.get_event_loop()
+        logger.info("[startup] Pre-warming dashboard cache in background...")
+        loop.run_in_executor(None, lambda: get_cached_view("portfolio_active.html", "intraday", force=True))
+        loop.run_in_executor(None, lambda: get_cached_view("portfolio_active.html", "closing", force=True))
+    except Exception as e:
+        logger.warning("[startup] Could not pre-warm dashboard cache: %s", e)
+
     asyncio.create_task(hourly_rebuild_loop())
     asyncio.create_task(daily_weekday_metrics_job())
 
