@@ -1687,7 +1687,10 @@ const { createApp } = Vue;
                 // Datetimes resolution
                 const lastUpdatedSgt = this.portfolioData?.summary?.quotes_last_updated_sgt || '';
                 const rawDatetime = details.current_price_datetime || lastUpdatedSgt || 'N/A';
-                const currentPriceDatetime = this.formatToSgt(rawDatetime);
+                let currentPriceDatetime = this.formatToSgt(rawDatetime);
+                if (priceMode === 'closing' && currentPriceDatetime && currentPriceDatetime.length >= 10) {
+                    currentPriceDatetime = currentPriceDatetime.substring(0, 10);
+                }
                 const prevCloseDate = details.prev_close_date || 'N/A';
                 
                 this.activeDailyChange = {
