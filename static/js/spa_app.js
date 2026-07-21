@@ -8,6 +8,7 @@ const { createApp } = Vue;
             const filterParam = urlParams.get('filter') || 'all';
             return {
                 loading: true,
+                notifications: [],
                 currentView: 'dashboard',
                 currentFilter: filterParam,
                 priceMode: 'intraday',
@@ -709,6 +710,16 @@ const { createApp } = Vue;
                     if (el) el.classList.add('active');
                 }
             },
+            showToast(message, type = 'info', duration = 4000) {
+                const id = Date.now();
+                this.notifications.push({ id, message, type });
+                setTimeout(() => {
+                    this.dismissToast(id);
+                }, duration);
+            },
+            dismissToast(id) {
+                this.notifications = this.notifications.filter(n => n.id !== id);
+            },
             getBasePath() {
                 const dashLink = document.getElementById('nav-active-main');
                 if (!dashLink) return '';
@@ -1358,13 +1369,14 @@ const { createApp } = Vue;
                         await this.fetchCalendarData();
                         // Re-fetch portfolio data to reflect yield changes
                         await this.fetchPortfolioData();
+                        this.showToast("Upcoming dividends synced and calendar updated.", "success");
                     } else {
                         const data = await res.json();
-                        alert("Failed to sync dividends: " + (data.detail || "Unknown error"));
+                        this.showToast("Failed to sync dividends: " + (data.detail || "Unknown error"), "error");
                     }
                 } catch (err) {
                     console.error("Sync failed:", err);
-                    alert("Error syncing dividends. Check network connection.");
+                    this.showToast("Error syncing dividends. Check network connection.", "error");
                 } finally {
                     if (syncBtn) {
                         syncBtn.disabled = false;
@@ -1539,12 +1551,13 @@ const { createApp } = Vue;
                     const res = await fetch("/api/prices/refresh", { method: "POST" });
                     if (res.ok) {
                         await this.initializeDashboardCharts(true);
+                        this.showToast("Prices refreshed successfully.", "success");
                     } else {
-                        alert("Failed to refresh prices. Cooldown may be active.");
+                        this.showToast("Failed to refresh prices. Cooldown may be active.", "error");
                     }
                 } catch (err) {
                     console.error("Refresh failed:", err);
-                    alert("Error connecting to server.");
+                    this.showToast("Error connecting to server to refresh prices.", "error");
                 } finally {
                     if (forceRefreshBtn) {
                         forceRefreshBtn.disabled = false;
@@ -1568,12 +1581,13 @@ const { createApp } = Vue;
                     const res = await fetch(`${bp}/api/dashboard/rebuild-spa?sync=true`, { method: "POST" });
                     if (res.ok) {
                         await this.initializeDashboardCharts(true);
+                        this.showToast("Dashboard views rebuilt successfully.", "success");
                     } else {
-                        alert("Failed to rebuild dashboard.");
+                        this.showToast("Failed to rebuild dashboard views.", "error");
                     }
                 } catch (err) {
                     console.error("Rebuild failed:", err);
-                    alert("Error connecting to server.");
+                    this.showToast("Error connecting to server to rebuild dashboard.", "error");
                 } finally {
                     if (rebuildBtn) {
                         rebuildBtn.disabled = false;
@@ -2147,13 +2161,14 @@ const { createApp } = Vue;
                             await this.fetchCalendarData();
                             await this.fetchPortfolioData();
                             await this.initializeDashboardCharts(true);
+                            this.showToast("Dividend transaction logged successfully.", "success");
                         } else {
                             const err = await res.json();
-                            alert("Error saving dividend: " + (err.detail || "Unknown error"));
+                            this.showToast("Error saving dividend: " + (err.detail || "Unknown error"), "error");
                         }
                     } catch (err) {
                         console.error(err);
-                        alert("Failed to save dividend.");
+                        this.showToast("Failed to save dividend.", "error");
                     } finally {
                         saveBtn.disabled = false;
                     }

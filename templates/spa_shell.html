@@ -185,6 +185,23 @@
         {% include "spa/charts.html" %}
         {% include "spa/dividend_calendar.html" %}
         {% include "spa/daily_change_modal.html" %}
+
+        <!-- Toast Notifications -->
+        {% raw %}
+        <div class="toast-container">
+            <div v-for="toast in notifications" :key="toast.id" :class="['toast-box', 'toast-' + toast.type]">
+                <div class="toast-box-content">
+                    <span class="toast-icon">
+                        <template v-if="toast.type === 'success'">✓</template>
+                        <template v-else-if="toast.type === 'error'">⚠</template>
+                        <template v-else>ℹ</template>
+                    </span>
+                    <span>{{ toast.message }}</span>
+                </div>
+                <button class="toast-close-btn" @click="dismissToast(toast.id)">&times;</button>
+            </div>
+        </div>
+        {% endraw %}
     </div>
 </div>
 </div> <!-- end .main-content-wrapper -->
