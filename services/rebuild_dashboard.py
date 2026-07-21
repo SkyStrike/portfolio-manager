@@ -1032,8 +1032,9 @@ def render_all_views_in_memory(all_positions, options_data, cash_report_data, co
     portfolio_exports = {}  # slug -> export payload
 
     # Upsert global options profit metrics
-    opt_profit = options_data.get("options_profit_sgd", 0.0)
-    upsert_options_metrics_in_db(conn, trading_date, opt_profit)
+    if price_mode == "closing":
+        opt_profit = options_data.get("options_profit_sgd", 0.0)
+        upsert_options_metrics_in_db(conn, trading_date, opt_profit)
 
     for port in portfolios:
         pid  = port['id']
@@ -1074,12 +1075,13 @@ def render_all_views_in_memory(all_positions, options_data, cash_report_data, co
         portfolio_exports[pslug] = port_export
 
         # Record daily portfolio metrics in db
-        upsert_portfolio_metrics_in_db(
-            conn, trading_date, pid,
-            port_export["metadata"]["summary"]["total_invested_active_sgd"],
-            port_export["metadata"]["summary"]["total_market_value_sgd"],
-            port_export["metadata"]["summary"]["lifetime_profit_sgd"]
-        )
+        if price_mode == "closing":
+            upsert_portfolio_metrics_in_db(
+                conn, trading_date, pid,
+                port_export["metadata"]["summary"]["total_invested_active_sgd"],
+                port_export["metadata"]["summary"]["total_market_value_sgd"],
+                port_export["metadata"]["summary"]["lifetime_profit_sgd"]
+            )
 
         portfolio_nav.append({
             "name": name,
