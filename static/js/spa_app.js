@@ -601,11 +601,15 @@ const { createApp } = Vue;
                         ? `?filter=${this.currentFilter}`
                         : '';
                     const fullTarget = basePath + (targetPath === '/' ? '' : targetPath) + currentSearch;
-                    const normCurrent = (window.location.pathname + window.location.search).replace(basePath, '');
-                    const normTarget = (targetPath === '/' ? '' : targetPath) + currentSearch;
+                    const currentUrl = window.location.pathname + window.location.search;
+                    const targetUrl = fullTarget || '/';
                     
-                    if (normCurrent !== normTarget && normCurrent !== ('/' + currentSearch) && normCurrent !== currentSearch) {
-                        history.pushState({ view: newView }, '', fullTarget || '/');
+                    // Normalize dashboard equivalents to prevent redundant pushState
+                    const normCurrent = (currentUrl === basePath + '/active' || currentUrl === basePath + '/active/') ? (basePath + '/') : currentUrl;
+                    const normTarget = (targetUrl === basePath + '/active' || targetUrl === basePath + '/active/') ? (basePath + '/') : targetUrl;
+
+                    if (normCurrent !== normTarget) {
+                        history.pushState({ view: newView }, '', targetUrl);
                     }
                 }
 
