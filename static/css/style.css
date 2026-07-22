@@ -3736,7 +3736,7 @@ body.mask-values .sensitive-value::after {
     position: fixed;
     top: 85px;
     right: 24px;
-    z-index: 9999;
+    z-index: 100100;
     display: flex;
     flex-direction: column;
     gap: 12px;
