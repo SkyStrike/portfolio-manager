@@ -52,24 +52,6 @@
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td class="sub-row-title spa-sub-row-label">- Liquidation Change (value)</td>
-                                            <td v-for="year in perfData.years" :key="year" class="spa-ta-right">
-                                                <span v-if="getActiveYtdData().data[year]" :class="getValClass(getActiveYtdData().data[year].liquidation_val)">
-                                                    {{ formatCommas(getActiveYtdData().data[year].liquidation_val, true) }}
-                                                </span>
-                                                <span v-else class="spa-color-666">-</span>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td class="sub-row-title spa-sub-row-label">- Liquidation Change (%)</td>
-                                            <td v-for="year in perfData.years" :key="year" class="spa-ta-right">
-                                                <span v-if="getActiveYtdData().data[year]" :class="getValClass(getActiveYtdData().data[year].liquidation_pct)">
-                                                    {{ formatCommas(getActiveYtdData().data[year].liquidation_pct, true) }}%
-                                                </span>
-                                                <span v-else class="spa-color-666">-</span>
-                                            </td>
-                                        </tr>
-                                        <tr>
                                             <td class="perf-td-label spa-ta-left">Base Capital</td>
                                             <td v-for="year in perfData.years" :key="year" class="spa-ta-right">
                                                 <div v-if="getActiveYtdData().data[year]" class="spa-cell-stack">
@@ -80,7 +62,7 @@
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td class="sub-row-title spa-sub-row-label">- Net Capital Additions</td>
+                                            <td class="sub-row-title spa-sub-row-label">↳ Net Capital Additions</td>
                                             <td v-for="year in perfData.years" :key="year" class="spa-ta-right">
                                                 <span v-if="getActiveYtdData().data[year]" :class="getValClass(getActiveYtdData().data[year].capital_val)">
                                                     {{ formatCommas(getActiveYtdData().data[year].capital_val, true) }}
@@ -89,7 +71,7 @@
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td class="perf-td-label spa-ta-left">Net Portfolio Gains (Capital Return)</td>
+                                            <td class="perf-td-label spa-ta-left">Cumulative Capital Gains</td>
                                             <td v-for="year in perfData.years" :key="year" class="spa-ta-right">
                                                 <div v-if="getActiveYtdData().data[year]" class="spa-cell-stack">
                                                     <span class="spa-cell-stack-top">{{ formatCommas(getActiveYtdData().data[year].gains_start) }}</span>
@@ -99,19 +81,24 @@
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td class="sub-row-title spa-sub-row-label">- Return Change (value)</td>
+                                            <td class="sub-row-title spa-sub-row-label">↳ Cumulative Return (%)</td>
                                             <td v-for="year in perfData.years" :key="year" class="spa-ta-right">
-                                                <span v-if="getActiveYtdData().data[year]" :class="getValClass(getActiveYtdData().data[year].gains_val)">
-                                                    {{ formatCommas(getActiveYtdData().data[year].gains_val, true) }}
-                                                </span>
+                                                <div v-if="getActiveYtdData().data[year]" class="spa-cell-stack">
+                                                    <span class="spa-cell-stack-top" :class="getValClass(getActiveYtdData().data[year].gains_start)">
+                                                        {{ getActiveYtdData().data[year].capital_start > 0 ? ((getActiveYtdData().data[year].gains_start / getActiveYtdData().data[year].capital_start) * 100).toFixed(2) + '%' : '0.00%' }}
+                                                    </span>
+                                                    <span class="spa-cell-stack-bottom" :class="getValClass(getActiveYtdData().data[year].gains_end)">
+                                                        {{ getActiveYtdData().data[year].capital_end > 0 ? ((getActiveYtdData().data[year].gains_end / getActiveYtdData().data[year].capital_end) * 100).toFixed(2) + '%' : '0.00%' }}
+                                                    </span>
+                                                </div>
                                                 <span v-else class="spa-color-666">-</span>
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td class="sub-row-title spa-sub-row-label">- Return Change (%)</td>
+                                            <td class="sub-row-title spa-sub-row-label">↳ Annual Change (value)</td>
                                             <td v-for="year in perfData.years" :key="year" class="spa-ta-right">
-                                                <span v-if="getActiveYtdData().data[year]" :class="getValClass(getActiveYtdData().data[year].gains_pct)">
-                                                    {{ formatCommas(getActiveYtdData().data[year].gains_pct, true) }}%
+                                                <span v-if="getActiveYtdData().data[year]" :class="getValClass(getActiveYtdData().data[year].gains_val)">
+                                                    {{ formatCommas(getActiveYtdData().data[year].gains_val, true) }}
                                                 </span>
                                                 <span v-else class="spa-color-666">-</span>
                                             </td>
