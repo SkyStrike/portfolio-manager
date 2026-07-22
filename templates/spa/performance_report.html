@@ -71,7 +71,7 @@
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td class="perf-td-label spa-ta-left">Cumulative Capital Gains</td>
+                                            <td class="perf-td-label spa-ta-left tooltip-trigger" data-tooltip="Total returns of the entire portfolio, including active stock unrealized gains, closed options profits, and dividends received.">Cumulative Capital Gains</td>
                                             <td v-for="year in perfData.years" :key="year" class="spa-ta-right">
                                                 <div v-if="getActiveYtdData().data[year]" class="spa-cell-stack">
                                                     <span class="spa-cell-stack-top">{{ formatCommas(getActiveYtdData().data[year].gains_start) }}</span>
@@ -81,7 +81,7 @@
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td class="sub-row-title spa-sub-row-label">↳ Cumulative Return (%)</td>
+                                            <td class="sub-row-title spa-sub-row-label tooltip-trigger" data-tooltip="Cumulative returns as a percentage of the respective start/end base capital of the period: (Gains / Base Capital) * 100">↳ Cumulative Return (%)</td>
                                             <td v-for="year in perfData.years" :key="year" class="spa-ta-right">
                                                 <div v-if="getActiveYtdData().data[year]" class="spa-cell-stack">
                                                     <span class="spa-cell-stack-top" :class="getValClass(getActiveYtdData().data[year].gains_start)">
@@ -95,7 +95,7 @@
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td class="sub-row-title spa-sub-row-label">↳ Annual Change (value)</td>
+                                            <td class="sub-row-title spa-sub-row-label tooltip-trigger" data-tooltip="Absolute dollar growth of capital gains generated during this period: (Gains at End - Gains at Start)">↳ Annual Change (value)</td>
                                             <td v-for="year in perfData.years" :key="year" class="spa-ta-right">
                                                 <span v-if="getActiveYtdData().data[year]" :class="getValClass(getActiveYtdData().data[year].gains_val)">
                                                     {{ formatCommas(getActiveYtdData().data[year].gains_val, true) }}
@@ -206,7 +206,7 @@
 
                                     <!-- 4. Cumulative Capital Gains -->
                                     <tr>
-                                        <td class="metric-label spa-monthly-td-label">Cumulative Capital Gains</td>
+                                        <td class="metric-label spa-monthly-td-label tooltip-trigger" data-tooltip="Total returns of the entire portfolio, including active stock unrealized gains, closed options profits, and dividends received.">Cumulative Capital Gains</td>
                                         <td v-for="(m, m_idx) in calMonths" :key="m_idx">
                                             <div v-if="getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1]" class="spa-cell-stack">
                                                 <span class="spa-cell-stack-top">{{ formatCommas(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].base_capital_gains_start) }}</span>
@@ -216,7 +216,21 @@
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td class="sub-row-title spa-sub-row-label">↳ Monthly Change (value)</td>
+                                        <td class="sub-row-title spa-sub-row-label tooltip-trigger" data-tooltip="Cumulative returns as a percentage of the respective start/end base capital of the period: (Gains / Base Capital) * 100">↳ Cumulative Return (%)</td>
+                                        <td v-for="(m, m_idx) in calMonths" :key="m_idx">
+                                            <div v-if="getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1]" class="spa-cell-stack">
+                                                <span class="spa-cell-stack-top" :class="getValClass(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].base_capital_gains_start)">
+                                                    {{ getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].base_capital_start > 0 ? ((getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].base_capital_gains_start / getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].base_capital_start) * 100).toFixed(2) + '%' : '0.00%' }}
+                                                </span>
+                                                <span class="spa-cell-stack-bottom" :class="getValClass(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].base_capital_gains)">
+                                                    {{ getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].base_capital > 0 ? ((getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].base_capital_gains / getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].base_capital) * 100).toFixed(2) + '%' : '0.00%' }}
+                                                </span>
+                                            </div>
+                                            <span v-else class="spa-color-666">-</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="sub-row-title spa-sub-row-label tooltip-trigger" data-tooltip="Absolute dollar growth of capital gains generated during this period: (Gains at End - Gains at Start)">↳ Monthly Change (value)</td>
                                         <td v-for="(m, m_idx) in calMonths" :key="m_idx">
                                             <span v-if="getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1] && getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].mtd"
                                                   :class="getValClass(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].mtd.base_capital_gains_val)">
