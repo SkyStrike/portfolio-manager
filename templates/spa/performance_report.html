@@ -148,49 +148,102 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr v-for="row in [
-                                        { label: 'Liquidation Value', startKey: 'liquidation_value_start', endKey: 'liquidation_value' },
-                                        { label: 'Base Capital', startKey: 'base_capital_start', endKey: 'base_capital' },
-                                        { label: 'Total Stock Value', startKey: 'total_stock_value_start', endKey: 'total_stock_value' },
-                                        { label: 'Base Capital Gains', startKey: 'base_capital_gains_start', endKey: 'base_capital_gains' },
-                                        { label: 'Cash on Hand', startKey: 'cash_on_hand_start', endKey: 'cash_on_hand' }
-                                    ]" :key="row.label">
-                                        <td class="metric-label spa-monthly-td-label">{{ row.label }}</td>
+                                    <!-- 1. Liquidation Value -->
+                                    <tr>
+                                        <td class="metric-label spa-monthly-td-label">Liquidation Value</td>
                                         <td v-for="(m, m_idx) in calMonths" :key="m_idx">
                                             <div v-if="getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1]" class="spa-cell-stack">
-                                                <span class="spa-cell-stack-top">{{ formatCommas(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1][row.startKey]) }}</span>
-                                                <span class="spa-cell-stack-bottom">{{ formatCommas(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1][row.endKey]) }}</span>
+                                                <span class="spa-cell-stack-top">{{ formatCommas(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].liquidation_value_start) }}</span>
+                                                <span class="spa-cell-stack-bottom">{{ formatCommas(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].liquidation_value) }}</span>
+                                            </div>
+                                            <span v-else class="spa-color-666">-</span>
+                                        </td>
+                                    </tr>
+
+                                    <!-- 2. Base Capital -->
+                                    <tr>
+                                        <td class="metric-label spa-monthly-td-label">Base Capital</td>
+                                        <td v-for="(m, m_idx) in calMonths" :key="m_idx">
+                                            <div v-if="getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1]" class="spa-cell-stack">
+                                                <span class="spa-cell-stack-top">{{ formatCommas(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].base_capital_start) }}</span>
+                                                <span class="spa-cell-stack-bottom">{{ formatCommas(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].base_capital) }}</span>
                                             </div>
                                             <span v-else class="spa-color-666">-</span>
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td class="metric-label spa-monthly-td-label">Dividends Received</td>
+                                        <td class="sub-row-title spa-sub-row-label">↳ Monthly Net Additions</td>
                                         <td v-for="(m, m_idx) in calMonths" :key="m_idx">
-                                            <span v-if="getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1]">
-                                                {{ formatCommas(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].dividends_received) }}
+                                            <span v-if="getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1] && getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].mtd"
+                                                  :class="getValClass(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].mtd.base_capital_val)">
+                                                {{ formatCommas(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].mtd.base_capital_val, true) }}
                                             </span>
                                             <span v-else class="spa-color-666">-</span>
                                         </td>
                                     </tr>
-                                    <tr class="header-row spa-monthly-sub-header">
-                                        <td colspan="13" class="spa-monthly-sub-header-td">Monthly Change</td>
+
+                                    <!-- 3. Total Stock Value -->
+                                    <tr>
+                                        <td class="metric-label spa-monthly-td-label">Total Stock Value</td>
+                                        <td v-for="(m, m_idx) in calMonths" :key="m_idx">
+                                            <div v-if="getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1]" class="spa-cell-stack">
+                                                <span class="spa-cell-stack-top">{{ formatCommas(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].total_stock_value_start) }}</span>
+                                                <span class="spa-cell-stack-bottom">{{ formatCommas(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].total_stock_value) }}</span>
+                                            </div>
+                                            <span v-else class="spa-color-666">-</span>
+                                        </td>
                                     </tr>
-                                    <tr v-for="metric in [
-                                        { l: 'Liquidation Value (value)', k: 'liquidation_value_val', p: false },
-                                        { l: 'Liquidation Value (%)', k: 'liquidation_value_pct', p: true },
-                                        { l: 'Base Capital (value)', k: 'base_capital_val', p: false },
-                                        { l: 'Base Capital (%)', k: 'base_capital_pct', p: true },
-                                        { l: 'Total Stock Value (value)', k: 'total_stock_value_val', p: false },
-                                        { l: 'Total Stock Value (%)', k: 'total_stock_value_pct', p: true },
-                                        { l: 'Base Capital Gains (value)', k: 'base_capital_gains_val', p: false },
-                                        { l: 'Base Capital Gains (%)', k: 'base_capital_gains_pct', p: true }
-                                    ]" :key="'chg-' + metric.k">
-                                        <td class="sub-row-title spa-sub-row-label">{{ metric.l }}</td>
+                                    <tr>
+                                        <td class="sub-row-title spa-sub-row-label">↳ Monthly Exposure Change</td>
                                         <td v-for="(m, m_idx) in calMonths" :key="m_idx">
                                             <span v-if="getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1] && getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].mtd"
-                                                  :class="getValClass(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].mtd[metric.k])">
-                                                {{ formatCommas(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].mtd[metric.k], true) }}{{ metric.p ? '%' : '' }}
+                                                  :class="getValClass(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].mtd.total_stock_value_val)">
+                                                {{ formatCommas(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].mtd.total_stock_value_val, true) }}
+                                            </span>
+                                            <span v-else class="spa-color-666">-</span>
+                                        </td>
+                                    </tr>
+
+                                    <!-- 4. Cumulative Capital Gains -->
+                                    <tr>
+                                        <td class="metric-label spa-monthly-td-label">Cumulative Capital Gains</td>
+                                        <td v-for="(m, m_idx) in calMonths" :key="m_idx">
+                                            <div v-if="getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1]" class="spa-cell-stack">
+                                                <span class="spa-cell-stack-top">{{ formatCommas(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].base_capital_gains_start) }}</span>
+                                                <span class="spa-cell-stack-bottom">{{ formatCommas(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].base_capital_gains) }}</span>
+                                            </div>
+                                            <span v-else class="spa-color-666">-</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="sub-row-title spa-sub-row-label">↳ Monthly Change (value)</td>
+                                        <td v-for="(m, m_idx) in calMonths" :key="m_idx">
+                                            <span v-if="getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1] && getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].mtd"
+                                                  :class="getValClass(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].mtd.base_capital_gains_val)">
+                                                {{ formatCommas(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].mtd.base_capital_gains_val, true) }}
+                                            </span>
+                                            <span v-else class="spa-color-666">-</span>
+                                        </td>
+                                    </tr>
+
+                                    <!-- 5. Cash on Hand -->
+                                    <tr>
+                                        <td class="metric-label spa-monthly-td-label">Cash on Hand</td>
+                                        <td v-for="(m, m_idx) in calMonths" :key="m_idx">
+                                            <div v-if="getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1]" class="spa-cell-stack">
+                                                <span class="spa-cell-stack-top">{{ formatCommas(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].cash_on_hand_start) }}</span>
+                                                <span class="spa-cell-stack-bottom">{{ formatCommas(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].cash_on_hand) }}</span>
+                                            </div>
+                                            <span v-else class="spa-color-666">-</span>
+                                        </td>
+                                    </tr>
+
+                                    <!-- 6. Dividends Received -->
+                                    <tr>
+                                        <td class="metric-label spa-monthly-td-label">Dividends Received</td>
+                                        <td v-for="(m, m_idx) in calMonths" :key="m_idx">
+                                            <span v-if="getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1]">
+                                                {{ formatCommas(getMonthlyMetricsForActiveTab(perfSelectedYear)[m_idx + 1].dividends_received) }}
                                             </span>
                                             <span v-else class="spa-color-666">-</span>
                                         </td>
