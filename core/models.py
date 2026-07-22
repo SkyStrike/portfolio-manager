@@ -232,6 +232,13 @@ class Position:
             return None
         return min(buy_txs)
 
+    @property
+    def latest_buy_date(self):
+        buy_txs = [tx['date'] for tx in self.transactions if tx['action'] == 'Buy']
+        if not buy_txs:
+            return None
+        return max(buy_txs)
+
     def get_roi_percentage(self):
         basis = self.total_buy_cost if self.is_closed else self.cost_basis
         if basis <= 0:
@@ -251,6 +258,12 @@ class Position:
             days = (datetime.now() - dt_start).days
         else:
             days = 0
+
+        if self.latest_buy_date:
+            dt_buy = datetime.strptime(self.latest_buy_date, '%Y-%m-%d')
+            days_since_last_buy = (datetime.now() - dt_buy).days
+        else:
+            days_since_last_buy = 0
             
         roi = self.get_roi_percentage()
         
@@ -338,6 +351,7 @@ class Position:
                 "total_returns": self.total_returns,
                 "roi_pct": roi,
                 "days_since_first_tx": days,
+                "days_since_last_buy": days_since_last_buy,
                 "latest_tx_date": self.latest_tx_date,
                 "avg_returns_per_year": avg_annual_roi,
                 "capital_gain_sgd": self.capital_gain_sgd,

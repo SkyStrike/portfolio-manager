@@ -787,6 +787,7 @@
                                         <div class="stat-item">
                                             <span class="stat-label">Days Held</span>
                                             <span class="stat-value" v-text="p.metrics.days_since_first_tx + ' days'"></span>
+                                            <span class="stat-subvalue" v-if="p.metrics.days_since_last_buy !== undefined" v-text="p.metrics.days_since_last_buy + ' days since last buy'"></span>
                                         </div>
                                     </div>
                                     <!-- Valuation Column -->

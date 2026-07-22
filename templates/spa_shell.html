@@ -162,19 +162,6 @@
     </div>
 
     <div v-else>
-        <!-- Tab selector controls styled exactly like standard TOC/chart buttons -->
-        <!--
-        <div class="toc-controls spa-mb-25">
-            <button class="view-btn" :class="{ active: currentView === 'dashboard' }" @click="currentView = 'dashboard'">Active Holdings</button>
-            <button class="view-btn" :class="{ active: currentView === 'closed' }" @click="currentView = 'closed'">Closed Positions</button>
-            <button class="view-btn" :class="{ active: currentView === 'transactions' }" @click="currentView = 'transactions'">Transactions Log</button>
-            <button class="view-btn" :class="{ active: currentView === 'calendar' }" @click="currentView = 'calendar'">Dividend Calendar</button>
-            <button class="view-btn" :class="{ active: currentView === 'charts' }" @click="currentView = 'charts'">Charts</button>
-            <button class="view-btn" :class="{ active: currentView === 'performance' }" @click="currentView = 'performance'">Performance Report</button>
-            <button class="view-btn" :class="{ active: currentView === 'fdComparison' }" @click="currentView = 'fdComparison'">vs Fixed Deposits</button>
-        </div>
-        -->
-
 {% endraw %}
         <!-- SPA Views -->
         {% include "spa/active_holdings.html" %}
