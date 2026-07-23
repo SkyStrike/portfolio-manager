@@ -126,13 +126,19 @@ def get_performance_report_data(db_path):
         rows_by_date_broker[(r['date'], r['broker'].upper())] = r
         
     cash_rows = []
+    daily_cash_series = defaultdict(list)
+    daily_broker_series = defaultdict(lambda: defaultdict(list))
+
     for dt in unique_dates:
+        y = dt[:4]
         if (dt, 'CONSOLIDATED') in rows_by_date_broker:
             r = rows_by_date_broker[(dt, 'CONSOLIDATED')]
+            base_cap = get_base_capital_for_date(dt)
+            liq_val = r.get("liquidation_value") or 0.0
             consolidated = {
                 "date": dt,
-                "liquidation_value": r.get("liquidation_value") or 0.0,
-                "base_capital": get_base_capital_for_date(dt),
+                "liquidation_value": liq_val,
+                "base_capital": base_cap,
                 "total_stock_value": r.get("total_stock_value") or 0.0,
                 "cash_on_hand": r.get("cash_on_hand") or 0.0
             }
@@ -141,14 +147,24 @@ def get_performance_report_data(db_path):
                 if (dt, br) in rows_by_date_broker:
                     latest_metrics[br] = rows_by_date_broker[(dt, br)]
             
+            base_cap = get_base_capital_for_date(dt)
+            liq_val = sum(latest_metrics[br].get("liquidation_value") or 0.0 for br in active_brokers)
             consolidated = {
                 "date": dt,
-                "liquidation_value": sum(latest_metrics[br].get("liquidation_value") or 0.0 for br in active_brokers),
-                "base_capital": get_base_capital_for_date(dt),
+                "liquidation_value": liq_val,
+                "base_capital": base_cap,
                 "total_stock_value": sum(latest_metrics[br].get("total_stock_value") or 0.0 for br in active_brokers),
                 "cash_on_hand": sum(latest_metrics[br].get("cash_on_hand") or 0.0 for br in active_brokers)
             }
         cash_rows.append(consolidated)
+        daily_cash_series[y].append({"date": dt, "gains": liq_val - base_cap})
+
+        # Track per-broker daily series
+        for br in active_brokers:
+            br_rec = rows_by_date_broker.get((dt, br)) or latest_metrics.get(br, {})
+            br_liq = br_rec.get("liquidation_value") or 0.0
+            br_cap = get_base_capital_for_date(dt, br)
+            daily_broker_series[br][y].append({"date": dt, "gains": br_liq - br_cap})
     
     # Group and aggregate portfolio metrics by date and classification/portfolio name on the fly
     aggregated_metrics = defaultdict(lambda: {"total_invested": 0.0, "current_value": 0.0, "total_returns": 0.0})
@@ -563,5 +579,7 @@ def get_performance_report_data(db_path):
         "cash_ytd": cash_ytd,
         "portfolio_ytd": dict(portfolio_ytd),
         "broker_cash_data": dict(broker_cash_summaries),
-        "broker_cash_ytd": dict(broker_cash_ytd)
+        "broker_cash_ytd": dict(broker_cash_ytd),
+        "daily_cash_series": dict(daily_cash_series),
+        "daily_broker_series": {br: dict(ydict) for br, ydict in daily_broker_series.items()}
     }

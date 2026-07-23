@@ -44,6 +44,7 @@ const { createApp } = Vue;
                 perfSelectedYear: null,
                 perfSelectedClassification: null,
                 spaCashChartModes: {},
+                spaCumulativeChartModes: {},
                 spaPortfolioChartModes: {},
 
                 // Fixed Deposit Comparison fields
@@ -908,21 +909,39 @@ const { createApp } = Vue;
                             }
                             if (chartDataSource) {
                                 const mode = this.getSpaCashChartMode(activeTab, selectedYear);
+                                const cumMode = this.getSpaCumulativeChartMode(activeTab, selectedYear);
                                 
                                 // 1. Cumulative Chart
                                 const cumId = `spa-chart-cash-cumulative-${activeTab}-${selectedYear}`;
                                 const cumEl = document.getElementById(cumId);
                                 if (cumEl) {
+                                    let cumCategories = monthsLabels;
+                                    let cumSeriesData = chartDataSource.cumulative;
+                                    let cumShowDataLabels = true;
+                                    let cumLineWidth = 3;
+
+                                    if (cumMode === 'daily' && chartDataSource.daily_cumulative?.dates?.length) {
+                                        cumCategories = chartDataSource.daily_cumulative.dates;
+                                        cumSeriesData = chartDataSource.daily_cumulative.values;
+                                        cumShowDataLabels = false;
+                                        cumLineWidth = 2;
+                                    } else if (cumMode === 'weekly' && chartDataSource.weekly_cumulative?.dates?.length) {
+                                        cumCategories = chartDataSource.weekly_cumulative.dates;
+                                        cumSeriesData = chartDataSource.weekly_cumulative.values;
+                                        cumShowDataLabels = false;
+                                        cumLineWidth = 2.5;
+                                    }
+
                                     const options = {
                                         chart: { type: 'line', height: 350, background: 'transparent', toolbar: { show: false } },
                                         theme: themeConfig,
-                                        series: [{ name: 'Cumulative Base Capital Gains', data: chartDataSource.cumulative }],
-                                        xaxis: { categories: monthsLabels },
+                                        series: [{ name: 'Cumulative Base Capital Gains', data: cumSeriesData }],
+                                        xaxis: { categories: cumCategories },
                                         yaxis: getAxisConfig('val'),
-                                        stroke: { curve: 'smooth', width: 3 },
+                                        stroke: { curve: 'smooth', width: cumLineWidth },
                                         colors: ['#2ecc71'],
                                         dataLabels: {
-                                            enabled: true,
+                                            enabled: cumShowDataLabels,
                                             formatter: (v) => self.safeFormatChartVal(v, 'val')
                                         },
                                         tooltip: { y: { formatter: (v) => self.safeFormatChartVal(v, 'val') } }
@@ -1033,6 +1052,53 @@ const { createApp } = Vue;
                         }
                     }, 50);
                 });
+            },
+            getSpaCumulativeChartMode(tab, year) {
+                const key = `${tab}-${year}`;
+                return this.spaCumulativeChartModes[key] || 'monthly';
+            },
+            setSpaCumulativeChartMode(tab, year, mode) {
+                const key = `${tab}-${year}`;
+                this.spaCumulativeChartModes[key] = mode;
+                const cumId = `spa-chart-cash-cumulative-${tab}-${year}`;
+                const chart = window.spaPerfChartInstances?.[cumId];
+                let chartDataSource = null;
+                if (tab === 'cash') {
+                    chartDataSource = this.perfData?.chart_data?.cash?.[String(year)];
+                } else {
+                    const brokerName = tab.substring(5).toUpperCase();
+                    chartDataSource = this.perfData?.chart_data?.broker_cash?.[brokerName]?.[String(year)];
+                }
+                if (chart && chartDataSource) {
+                    const self = this;
+                    const monthsLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    let cumCategories = monthsLabels;
+                    let cumSeriesData = chartDataSource.cumulative;
+                    let cumShowDataLabels = true;
+                    let cumLineWidth = 3;
+
+                    if (mode === 'daily' && chartDataSource.daily_cumulative?.dates?.length) {
+                        cumCategories = chartDataSource.daily_cumulative.dates;
+                        cumSeriesData = chartDataSource.daily_cumulative.values;
+                        cumShowDataLabels = false;
+                        cumLineWidth = 2;
+                    } else if (mode === 'weekly' && chartDataSource.weekly_cumulative?.dates?.length) {
+                        cumCategories = chartDataSource.weekly_cumulative.dates;
+                        cumSeriesData = chartDataSource.weekly_cumulative.values;
+                        cumShowDataLabels = false;
+                        cumLineWidth = 2.5;
+                    }
+
+                    chart.updateOptions({
+                        series: [{ name: 'Cumulative Base Capital Gains', data: cumSeriesData }],
+                        xaxis: { categories: cumCategories },
+                        stroke: { curve: 'smooth', width: cumLineWidth },
+                        dataLabels: {
+                            enabled: cumShowDataLabels,
+                            formatter: (v) => self.safeFormatChartVal(v, 'val')
+                        }
+                    });
+                }
             },
             getSpaCashChartMode(tab, year) {
                 const key = `${tab}-${year}`;

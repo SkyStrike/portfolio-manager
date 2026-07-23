@@ -269,7 +269,14 @@
                         <!-- SPA Cash Charts Grid -->
                         <div class="dashboard-grid spa-chart-grid-margin">
                             <div class="chart-container full-width">
-                                <h4>Cumulative Base Capital Gains (Value)</h4>
+                                <div class="chart-controls">
+                                    <h4>Cumulative Base Capital Gains (Value)</h4>
+                                    <div>
+                                        <button class="toggle-btn" :class="{ active: getSpaCumulativeChartMode(perfActiveTab, perfSelectedYear) === 'monthly' }" @click="setSpaCumulativeChartMode(perfActiveTab, perfSelectedYear, 'monthly')">Monthly</button>
+                                        <button class="toggle-btn" :class="{ active: getSpaCumulativeChartMode(perfActiveTab, perfSelectedYear) === 'weekly' }" @click="setSpaCumulativeChartMode(perfActiveTab, perfSelectedYear, 'weekly')">Weekly</button>
+                                        <button class="toggle-btn" :class="{ active: getSpaCumulativeChartMode(perfActiveTab, perfSelectedYear) === 'daily' }" @click="setSpaCumulativeChartMode(perfActiveTab, perfSelectedYear, 'daily')">Daily</button>
+                                    </div>
+                                </div>
                                 <div :id="'spa-chart-cash-cumulative-' + perfActiveTab + '-' + perfSelectedYear"></div>
                             </div>
                             <div class="chart-container full-width">

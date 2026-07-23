@@ -70,7 +70,14 @@ def get_performance_report(price_mode: str = Query("closing")):
     cash_by_year_month = data["cash_data"]
     portfolio_by_class_year_month = data["portfolio_data"]
     
-    chart_data = build_chart_data(years, cash_by_year_month, portfolio_by_class_year_month, data.get("broker_cash_data"))
+    chart_data = build_chart_data(
+        years, 
+        cash_by_year_month, 
+        portfolio_by_class_year_month, 
+        data.get("broker_cash_data"),
+        daily_cash_series=data.get("daily_cash_series"),
+        daily_broker_cash_series=data.get("daily_broker_series")
+    )
     
     return {
         "price_mode": price_mode,

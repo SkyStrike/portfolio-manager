@@ -310,7 +310,14 @@ def get_performance_report():
     portfolio_ytd = data["portfolio_ytd"]
     
     from services.performance_report_service import build_chart_data
-    chart_data = build_chart_data(years, cash_by_year_month, portfolio_by_class_year_month, data.get("broker_cash_data"))
+    chart_data = build_chart_data(
+        years, 
+        cash_by_year_month, 
+        portfolio_by_class_year_month, 
+        data.get("broker_cash_data"),
+        daily_cash_series=data.get("daily_cash_series"),
+        daily_broker_cash_series=data.get("daily_broker_series")
+    )
             
     return {
         "years": years,
