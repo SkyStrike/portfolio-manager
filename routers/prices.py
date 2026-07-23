@@ -154,7 +154,28 @@ def get_price_history(
         ).fetchone()
         exchange = exchange_row["exchange"] if exchange_row else ""
 
-        # 1. Query what we already have in cache
+        # 1. Query what we already have in cache for this symbol & interval
+        cached_rows = conn.execute(
+            """SELECT date FROM ticker_price_history
+               WHERE symbol = ? AND interval = ?""",
+            (symbol, interval),
+        ).fetchall()
+
+        cached_dates = {r["date"] for r in cached_rows}
+        min_cached = min(cached_dates) if cached_dates else None
+        max_cached = max(cached_dates) if cached_dates else None
+
+        # 2. Gap-fill backward if requested start_date is earlier than min_cached
+        if not min_cached or min_cached > start_date:
+            fetch_end = min_cached if min_cached else end_date
+            _fetch_and_store_history(conn, symbol, start_date, fetch_end, interval, exchange)
+
+        # 3. Gap-fill forward if max_cached is stale
+        if not max_cached or max_cached < (today - timedelta(days=1)).isoformat():
+            fetch_start = max_cached if max_cached else start_date
+            _fetch_and_store_history(conn, symbol, fetch_start, end_date, interval, exchange)
+
+        # 4. Fetch final range from DB
         rows = conn.execute(
             """SELECT date, open, high, low, close
                FROM ticker_price_history
@@ -162,31 +183,6 @@ def get_price_history(
                ORDER BY date""",
             (symbol, interval, start_date, end_date),
         ).fetchall()
-
-        cached_dates = {r["date"] for r in rows}
-
-        # 2. Gap-fill: if nothing cached OR newest row is stale (> 1 day old), re-fetch
-        needs_fetch = False
-        if not cached_dates:
-            needs_fetch = True
-        else:
-            newest = max(cached_dates)
-            if newest < (today - timedelta(days=1)).isoformat():
-                needs_fetch = True
-
-        if needs_fetch:
-            # Fetch from newest cached date (or full range for first load)
-            fetch_start = max(cached_dates) if cached_dates else start_date
-            fetched = _fetch_and_store_history(conn, symbol, fetch_start, end_date, interval, exchange)
-            if fetched > 0:
-                # Reload from DB after successful fetch
-                rows = conn.execute(
-                    """SELECT date, open, high, low, close
-                       FROM ticker_price_history
-                       WHERE symbol = ? AND interval = ? AND date >= ? AND date <= ?
-                       ORDER BY date""",
-                    (symbol, interval, start_date, end_date),
-                ).fetchall()
 
         prices = [
             {"date": r["date"], "open": r["open"], "high": r["high"], "low": r["low"], "close": r["close"]}
