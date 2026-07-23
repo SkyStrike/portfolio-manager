@@ -69,24 +69,27 @@ def _fetch_and_store_history(conn, symbol: str, start_date: str, end_date: str, 
         yf_symbol = get_yfinance_symbol(symbol, exchange)
         logger.info("Fetching history for yfinance symbol: %s (DB symbol: %s)", yf_symbol, symbol)
         ticker = yf.Ticker(yf_symbol)
-        df = ticker.history(start=start_date, end=end_date, interval=interval, auto_adjust=True)
+        df = ticker.history(start=start_date, end=end_date, interval=interval, auto_adjust=False)
         if df.empty:
             return 0
         rows = []
         for ts, row in df.iterrows():
             date_str = ts.strftime("%Y-%m-%d")
+            raw_close = round(float(row.get("Close", 0) or 0), 6)
+            adj_close = round(float(row.get("Adj Close", raw_close) or raw_close), 6)
             rows.append((
                 symbol, date_str, interval,
                 round(float(row.get("Open", 0) or 0), 6),
                 round(float(row.get("High", 0) or 0), 6),
                 round(float(row.get("Low",  0) or 0), 6),
-                round(float(row.get("Close", 0) or 0), 6),
+                raw_close,
+                adj_close
             ))
         with conn:
             conn.executemany(
                 """INSERT OR REPLACE INTO ticker_price_history
-                   (symbol, date, interval, open, high, low, close)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                   (symbol, date, interval, open, high, low, close, adj_close)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                 rows,
             )
         logger.info("Stored %d %s rows for %s (%s to %s)", len(rows), interval, symbol, start_date, end_date)
@@ -100,6 +103,7 @@ def _fetch_and_store_history(conn, symbol: str, start_date: str, end_date: str, 
 def get_price_history(
     symbol: str, 
     range: str = Query(default="1y"),
+    adjusted: bool = Query(default=False),
     start: str = Query(default=None),
     end: str = Query(default=None)
 ):
@@ -108,6 +112,7 @@ def get_price_history(
 
     Query params:
         range: one of 7d | 1m | 3m | 6m | YTD | 1y | 5y | all  (default: 1y)
+        adjusted: bool whether to return total-return adjusted prices (default: False, i.e., nominal prices matching execution trades)
         start: start date string (YYYY-MM-DD) for custom range
         end: end date string (YYYY-MM-DD) for custom range
 
@@ -115,6 +120,7 @@ def get_price_history(
         {
           "symbol": "HYLD-U.TO",
           "interval": "1d",
+          "adjusted": false,
           "prices": [{"date": "YYYY-MM-DD", "open": x, "high": x, "low": x, "close": x}, ...],
         }
     Transactions and avg_cost are supplied client-side from template data attributes.
@@ -177,21 +183,39 @@ def get_price_history(
 
         # 4. Fetch final range from DB
         rows = conn.execute(
-            """SELECT date, open, high, low, close
+            """SELECT date, open, high, low, close, adj_close
                FROM ticker_price_history
                WHERE symbol = ? AND interval = ? AND date >= ? AND date <= ?
                ORDER BY date""",
             (symbol, interval, start_date, end_date),
         ).fetchall()
 
-        prices = [
-            {"date": r["date"], "open": r["open"], "high": r["high"], "low": r["low"], "close": r["close"]}
-            for r in rows
-        ]
+        prices = []
+        for r in rows:
+            raw_c = r["close"] or 0.0
+            adj_c = r["adj_close"] if r["adj_close"] is not None else raw_c
+            if adjusted and raw_c > 0 and adj_c > 0:
+                factor = adj_c / raw_c
+                prices.append({
+                    "date": r["date"],
+                    "open": round((r["open"] or raw_c) * factor, 4),
+                    "high": round((r["high"] or raw_c) * factor, 4),
+                    "low": round((r["low"] or raw_c) * factor, 4),
+                    "close": round(adj_c, 4)
+                })
+            else:
+                prices.append({
+                    "date": r["date"],
+                    "open": r["open"],
+                    "high": r["high"],
+                    "low": r["low"],
+                    "close": raw_c
+                })
 
         return {
             "symbol": symbol,
             "interval": interval,
+            "adjusted": adjusted,
             "prices": prices,
         }
 

@@ -156,13 +156,14 @@ def init_db():
     );
 
     CREATE TABLE IF NOT EXISTS ticker_price_history (
-        symbol   TEXT NOT NULL,
-        date     TEXT NOT NULL,   -- YYYY-MM-DD
-        interval TEXT NOT NULL,   -- '1d' or '1wk'
-        open     REAL,
-        high     REAL,
-        low      REAL,
-        close    REAL NOT NULL,
+        symbol    TEXT NOT NULL,
+        date      TEXT NOT NULL,   -- YYYY-MM-DD
+        interval  TEXT NOT NULL,   -- '1d' or '1wk'
+        open      REAL,
+        high      REAL,
+        low       REAL,
+        close     REAL NOT NULL,
+        adj_close REAL,
         PRIMARY KEY (symbol, date, interval)
     );
     """

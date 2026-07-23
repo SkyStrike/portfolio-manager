@@ -272,6 +272,10 @@
                             <button class="txv-range-btn" data-range="all">all</button>
                             <button class="txv-range-btn" id="txv-custom-toggle-btn" title="Custom range">📅</button>
                         </div>
+                        <div class="txv-range-group" id="txv-price-mode-group">
+                            <button class="txv-range-btn txv-price-mode-btn txv-range-active" data-price-mode="nominal" title="Nominal exchange prices (matches trade execution prices)">Nominal</button>
+                            <button class="txv-range-btn txv-price-mode-btn" data-price-mode="adjusted" title="Total-return prices adjusted for splits & dividends">Adjusted</button>
+                        </div>
                         <div class="txv-custom-date-inputs" id="txv-custom-date-inputs" style="display: none; align-items: center; gap: 6px;">
                             <input type="date" id="txv-start-date" class="txv-date-input" title="Start Date">
                             <span style="color: var(--text-secondary, #94a3b8); font-size: 0.85rem;">to</span>

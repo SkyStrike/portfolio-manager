@@ -1705,6 +1705,7 @@ let _txvState = {              // Persisted across range switches within one ope
     currency: "",
     transactions: [],
     activeRange: "1y",
+    activePriceMode: "nominal"
 };
 
 /** Read transaction annotations from the DOM symbol card closest to the button */
@@ -1715,11 +1716,6 @@ function _txvGetTransactions(btnEl) {
     const txs = [];
     lower.querySelectorAll(".tx-details-wrapper").forEach(wrapper => {
         const year = wrapper.getAttribute("data-year");
-        // Transactions are lazy-loaded; read from the rendered table if available,
-        // otherwise we only have year-level data (no individual markers needed at year precision).
-        // The per-tx data is already encoded in the page via the performance chart tojson filter.
-        // We'll rely on the data stored in the symbol analytics chart dataset instead.
-        // Keep a placeholder; actual data is fetched from the chart store below.
     });
 
     // Prefer reading from performance chart data store (already JSON-encoded in page)
@@ -1748,11 +1744,12 @@ window.openTxVisualizer = async function(btnEl) {
         console.error("Failed to parse transactions JSON on button:", e);
     }
 
-    _txvState.symbol       = symbol;
-    _txvState.avgCost      = avgCost;
-    _txvState.currency     = currency;
-    _txvState.transactions = transactions;
-    _txvState.activeRange  = "1y";
+    _txvState.symbol           = symbol;
+    _txvState.avgCost          = avgCost;
+    _txvState.currency         = currency;
+    _txvState.transactions     = transactions;
+    _txvState.activeRange      = "6m";
+    _txvState.activePriceMode  = "nominal";
 
     // Update modal header
     document.getElementById("txv-symbol-label").textContent = symbol;
@@ -1769,9 +1766,14 @@ window.openTxVisualizer = async function(btnEl) {
     if (startInput) startInput.value = "";
     if (endInput) endInput.value = "";
 
-    // Reset active range button
-    document.querySelectorAll(".txv-range-btn").forEach(b => {
+    // Reset active range buttons
+    document.querySelectorAll(".txv-range-group#txv-range-group .txv-range-btn").forEach(b => {
         b.classList.toggle("txv-range-active", b.dataset.range === "6m");
+    });
+
+    // Reset active price mode buttons
+    document.querySelectorAll(".txv-price-mode-btn").forEach(b => {
+        b.classList.toggle("txv-range-active", b.dataset.priceMode === "nominal");
     });
 
     openModal("txv-modal");
@@ -1783,22 +1785,32 @@ window.closeTxVisualizer = function() {
     if (_txvChart) { _txvChart.destroy(); _txvChart = null; }
 };
 
-/** Wire up range button clicks once the modal exists */
+/** Wire up range & price mode button clicks once the modal exists */
 document.addEventListener("DOMContentLoaded", () => {
-    // Wire up range button clicks (excluding the calendar toggle and apply button)
-    document.querySelectorAll(".txv-range-btn:not(#txv-custom-toggle-btn):not(#txv-apply-custom-btn)").forEach(btn => {
+    // Wire up range button clicks
+    document.querySelectorAll(".txv-range-group#txv-range-group .txv-range-btn:not(#txv-custom-toggle-btn):not(#txv-apply-custom-btn)").forEach(btn => {
         btn.addEventListener("click", async () => {
-            // Hide custom inputs when switching back to predefined range
             const customInputs = document.getElementById("txv-custom-date-inputs");
             if (customInputs) customInputs.style.display = "none";
             const toggleBtn = document.getElementById("txv-custom-toggle-btn");
             if (toggleBtn) toggleBtn.classList.remove("txv-range-active");
 
             const range = btn.dataset.range;
-            document.querySelectorAll(".txv-range-btn").forEach(b =>
+            document.querySelectorAll(".txv-range-group#txv-range-group .txv-range-btn").forEach(b =>
                 b.classList.toggle("txv-range-active", b === btn));
             _txvState.activeRange = range;
             await _txvLoadAndRender(range);
+        });
+    });
+
+    // Wire up price mode button clicks (Nominal vs Adjusted)
+    document.querySelectorAll(".txv-price-mode-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+            const mode = btn.dataset.priceMode;
+            document.querySelectorAll(".txv-price-mode-btn").forEach(b =>
+                b.classList.toggle("txv-range-active", b === btn));
+            _txvState.activePriceMode = mode;
+            await _txvLoadAndRender(_txvState.activeRange);
         });
     });
 
@@ -1811,15 +1823,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 const isHidden = inputs.style.display === "none";
                 inputs.style.display = isHidden ? "flex" : "none";
                 
-                // Toggle active class on toggle button
                 toggleBtn.classList.toggle("txv-range-active", isHidden);
                 if (isHidden) {
-                    // Deactivate predefined range buttons
-                    document.querySelectorAll(".txv-range-btn:not(#txv-custom-toggle-btn)").forEach(b => {
+                    document.querySelectorAll(".txv-range-group#txv-range-group .txv-range-btn:not(#txv-custom-toggle-btn)").forEach(b => {
                         b.classList.remove("txv-range-active");
                     });
                 } else {
-                    // Re-activate current range button
                     const currentBtn = document.querySelector(`.txv-range-btn[data-range="${_txvState.activeRange}"]`);
                     if (currentBtn) currentBtn.classList.add("txv-range-active");
                 }
@@ -1855,7 +1864,8 @@ async function _txvLoadAndRender(range, customStart = null, customEnd = null) {
 
     let prices = [];
     try {
-        let url = `/api/prices/history/${encodeURIComponent(_txvState.symbol)}?range=${range}`;
+        const isAdjusted = _txvState.activePriceMode === "adjusted";
+        let url = `/api/prices/history/${encodeURIComponent(_txvState.symbol)}?range=${range}&adjusted=${isAdjusted}`;
         if (customStart && customEnd) {
             url += `&start=${customStart}&end=${customEnd}`;
         }
