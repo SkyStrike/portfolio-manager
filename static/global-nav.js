@@ -215,7 +215,12 @@
                 });
                 
                 menu.addEventListener("click", (e) => {
-                    e.stopPropagation();
+                    // Only stop propagation if we did NOT click an anchor link
+                    if (e.target.closest('a')) {
+                        menu.classList.remove("show");
+                    } else {
+                        e.stopPropagation();
+                    }
                 });
             }
         }
