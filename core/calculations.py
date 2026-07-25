@@ -9,6 +9,7 @@ def calculate_holdings(portfolio_id: int, conn: sqlite3.Connection):
     """
     # Fetch all transactions for this portfolio sorted chronologically.
     # Same-day transactions are prioritized so that BUYs and SPLITs are calculated before SELLs to prevent transient negative share balances.
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("""
         SELECT t.id, t.ticker_id, t.date, t.action, t.price, t.quantity, 
@@ -36,14 +37,24 @@ def calculate_holdings(portfolio_id: int, conn: sqlite3.Connection):
     updated_txs = []
     
     for row in rows:
-        tx_id = row['id']
-        ticker_id = row['ticker_id']
-        action = row['action'].upper()
-        price = float(row['price'])
-        quantity = float(row['quantity'])
-        currency = row['currency']
-        symbol = row['symbol']
-        name = row['friendly_name'] or symbol
+        try:
+            tx_id = row['id']
+            ticker_id = row['ticker_id']
+            action = row['action'].upper()
+            price = float(row['price'])
+            quantity = float(row['quantity'])
+            currency = row['currency']
+            symbol = row['symbol']
+            name = row['friendly_name'] or symbol
+        except Exception:
+            tx_id = row[0]
+            ticker_id = row[1]
+            action = str(row[3]).upper()
+            price = float(row[4])
+            quantity = float(row[5])
+            currency = row[6]
+            symbol = row[11]
+            name = row[12] or symbol
         
         if ticker_id not in holdings:
             holdings[ticker_id] = {

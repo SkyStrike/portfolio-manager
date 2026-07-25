@@ -2373,7 +2373,7 @@ function openTransactionModal(tabName = "trades", editingData = null) {
     
     const localDateTime = new Date();
     localDateTime.setMinutes(localDateTime.getMinutes() - localDateTime.getTimezoneOffset());
-    document.getElementById("tx-date").value = localDateTime.toISOString().substring(0, 16);
+    document.getElementById("tx-date").value = localDateTime.toISOString().substring(0, 10);
     document.getElementById("div-date").value = localDateTime.toISOString().substring(0, 10);
     document.getElementById("exp-date").value = localDateTime.toISOString().substring(0, 10);
     
@@ -2457,7 +2457,7 @@ function populateEditingData(tabName, data) {
     if (tabName === "trades") {
         document.getElementById("tx-ticker").value = data.symbol;
         document.getElementById("tx-action").value = data.action;
-        document.getElementById("tx-date").value = data.date.replace(" ", "T").substring(0, 16);
+        document.getElementById("tx-date").value = data.date ? data.date.substring(0, 10) : "";
         const parsedPrice = parseFloat(data.price);
         document.getElementById("tx-price").value = isNaN(parsedPrice) ? "" : parsedPrice.toFixed(2);
         document.getElementById("tx-quantity").value = data.quantity;
@@ -2514,6 +2514,16 @@ async function saveTransaction(closeModalOnSuccess = true) {
         if (!symbol || !date || isNaN(price) || isNaN(quantity)) {
             showToast("Please fill in all required trade fields.", "error");
             return;
+        }
+
+        // Weekend validation check (Sunday = 0, Saturday = 6)
+        if (date) {
+            const selectedDate = new Date(date + "T00:00:00");
+            const dayOfWeek = selectedDate.getDay();
+            if (dayOfWeek === 0 || dayOfWeek === 6) {
+                showToast("Validation Error: Selected transaction date falls on a weekend (Saturday/Sunday). Stock markets are closed.", "error");
+                return;
+            }
         }
         
         if (action === "BUY" || action === "SELL") {

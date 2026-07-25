@@ -1,0 +1,7 @@
+{
+    "id": "0002",
+    "name": "patch_truncate_dates",
+    "description": "Truncates all transaction and dividend timestamps in portfolio.db to date-only format (YYYY-MM-DD)",
+    "script": "patch_truncate_dates.py",
+    "shell": "run_patch.sh"
+}

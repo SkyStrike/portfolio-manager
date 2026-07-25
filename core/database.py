@@ -57,7 +57,7 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         portfolio_id INTEGER NOT NULL,
         ticker_id INTEGER NOT NULL,
-        date TEXT NOT NULL,          -- Format: YYYY-MM-DD HH:MM:SS or YYYY-MM-DD
+        date TEXT NOT NULL,          -- Format: YYYY-MM-DD
         action TEXT NOT NULL,        -- 'BUY', 'SELL', or 'SPLIT'
         price REAL NOT NULL,
         quantity REAL NOT NULL,
@@ -67,6 +67,7 @@ def init_db():
         realized_pl REAL,            -- Profit/loss on SELL transaction
         realized_pl_sgd REAL,        -- Profit/loss on SELL transaction in SGD (based on historical buy and sell rates)
         notes TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(portfolio_id) REFERENCES portfolios(id) ON DELETE CASCADE,
         FOREIGN KEY(ticker_id) REFERENCES tickers(id) ON DELETE CASCADE
     );
@@ -81,6 +82,7 @@ def init_db():
         tax REAL NOT NULL,           -- Calculated or overridden tax paid
         qty REAL,                    -- Quantity of shares at dividend time
         notes TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(portfolio_id) REFERENCES portfolios(id) ON DELETE CASCADE,
         FOREIGN KEY(ticker_id) REFERENCES tickers(id) ON DELETE CASCADE
     );

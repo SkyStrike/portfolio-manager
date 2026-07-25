@@ -240,13 +240,14 @@ def import_portfolio_data(portfolio_name: str, holdings_file_path: str, transact
             
         ticker_id = ticker_symbol_to_id[symbol]
         
+        clean_date = tx["date"].strip().split()[0].split('T')[0][:10] if tx["date"] else ""
         if tx["event"] in ("BUY", "SELL", "SPLIT", "FEE"):
             from services.fetch_exchange_rates import get_historical_exchange_rate
-            get_historical_exchange_rate(tx["date"], tx["currency"], conn)
+            get_historical_exchange_rate(clean_date, tx["currency"], conn)
             cursor.execute("""
                 INSERT INTO transactions (portfolio_id, ticker_id, date, action, price, quantity, currency, commission, notes)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (portfolio_id, ticker_id, tx["date"], tx["event"], tx["price"], tx["quantity"], tx["currency"], tx["fee_tax"], tx["note"]))
+            """, (portfolio_id, ticker_id, clean_date, tx["event"], tx["price"], tx["quantity"], tx["currency"], tx["fee_tax"], tx["note"]))
             tx_count += 1
             
         elif tx["event"] in ("DIVIDEND", "OTHER_INCOME"):

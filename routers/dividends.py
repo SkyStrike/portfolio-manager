@@ -64,10 +64,12 @@ def create_dividend(div: DividendCreate):
             from core.calculations import get_shares_on_date
             qty = get_shares_on_date(div.portfolio_id, ticker_id, clean_date, conn)
         
+        from datetime import datetime, timezone
+        created_at_utc = datetime.now(timezone.utc).isoformat()
         cursor.execute("""
-            INSERT INTO dividends (portfolio_id, ticker_id, date, amount, currency, tax, notes, qty)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (div.portfolio_id, ticker_id, clean_date, div.amount, div.currency, tax_amount, div.notes, qty))
+            INSERT INTO dividends (portfolio_id, ticker_id, date, amount, currency, tax, notes, qty, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (div.portfolio_id, ticker_id, clean_date, div.amount, div.currency, tax_amount, div.notes, qty, created_at_utc))
         conn.commit()
         rebuild_dashboard_sync(conn)
         return {"status": "success", "id": cursor.lastrowid}

@@ -77,12 +77,15 @@ def create_transaction(tx: TransactionCreate):
             if tx.exchange and not ticker_row['exchange']:
                 cursor.execute("UPDATE tickers SET exchange = ? WHERE id = ?", (tx.exchange.strip().upper(), ticker_id))
             
-        get_historical_exchange_rate(tx.date, tx.currency, conn)
+        clean_date = tx.date.strip().split()[0].split('T')[0][:10] if tx.date else ""
+        get_historical_exchange_rate(clean_date, tx.currency, conn)
         
+        from datetime import datetime, timezone
+        created_at_utc = datetime.now(timezone.utc).isoformat()
         cursor.execute("""
-            INSERT INTO transactions (portfolio_id, ticker_id, date, action, price, quantity, currency, commission, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (tx.portfolio_id, ticker_id, tx.date, tx.action.upper(), tx.price, tx.quantity, tx.currency, tx.commission, tx.notes))
+            INSERT INTO transactions (portfolio_id, ticker_id, date, action, price, quantity, currency, commission, notes, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (tx.portfolio_id, ticker_id, clean_date, tx.action.upper(), tx.price, tx.quantity, tx.currency, tx.commission, tx.notes, created_at_utc))
         
         # Keep ticker_prices default currency in sync with the transaction currency
         cursor.execute("UPDATE ticker_prices SET currency = ? WHERE ticker_id = ?", (tx.currency, ticker_id))
@@ -112,13 +115,14 @@ def update_transaction(id: int, tx: TransactionCreate):
             raise HTTPException(status_code=404, detail="Ticker not found.")
         ticker_id = ticker_row['id']
         
-        get_historical_exchange_rate(tx.date, tx.currency, conn)
+        clean_date = tx.date.strip().split()[0].split('T')[0][:10] if tx.date else ""
+        get_historical_exchange_rate(clean_date, tx.currency, conn)
         
         cursor.execute("""
             UPDATE transactions
             SET portfolio_id = ?, ticker_id = ?, date = ?, action = ?, price = ?, quantity = ?, currency = ?, commission = ?, notes = ?
             WHERE id = ?
-        """, (tx.portfolio_id, ticker_id, tx.date, tx.action.upper(), tx.price, tx.quantity, tx.currency, tx.commission, tx.notes, id))
+        """, (tx.portfolio_id, ticker_id, clean_date, tx.action.upper(), tx.price, tx.quantity, tx.currency, tx.commission, tx.notes, id))
         
         # Keep ticker_prices default currency in sync with the transaction currency
         cursor.execute("UPDATE ticker_prices SET currency = ? WHERE ticker_id = ?", (tx.currency, ticker_id))
