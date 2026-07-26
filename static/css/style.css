@@ -2657,7 +2657,7 @@ body.mask-values .sensitive-value::after {
 }
 
 .calendar-list-wrapper {
-    display: none;
+    display: block;
 }
 
 .calendar-list-header {

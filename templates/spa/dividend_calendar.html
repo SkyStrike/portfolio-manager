@@ -112,16 +112,16 @@
                     </thead>
                     <tbody>
                         <tr v-for="p in filteredCalList" :key="p.id" class="ticker-row spa-cursor-pointer" @click="openDividendDetail(p)">
-                            <td v-text="p.date"></td>
-                            <td v-text="p.portfolio_name"></td>
-                            <td v-text="p.ticker" class="spa-weight-600"></td>
+                            <td>{{ p.date }}</td>
+                            <td>{{ p.portfolio_name }}</td>
+                            <td class="spa-weight-600">{{ p.ticker }}</td>
                             <td>
-                                <span class="cal-div-status-badge" :class="p.status.toLowerCase()" v-text="p.status"></span>
+                                <span class="cal-div-status-badge" :class="p.status.toLowerCase()">{{ p.status }}</span>
                             </td>
-                            <td v-text="formatCommas(p.gross_amount) + ' ' + p.currency" class="spa-ta-right"></td>
-                            <td v-text="formatCommas(p.net_amount_foreign) + ' ' + p.currency" class="spa-ta-right"></td>
-                            <td v-text="formatCommas(p.net_amount_sgd) + ' SGD'" class="spa-cal-net-sgd"></td>
-                            <td v-text="(p.yield_pct ? p.yield_pct.toFixed(2) + '%' : '-')" class="spa-cal-yield"></td>
+                            <td class="spa-ta-right">{{ formatCommas(p.gross_amount) }} {{ p.currency }}</td>
+                            <td class="spa-ta-right">{{ formatCommas(p.net_amount_foreign) }} {{ p.currency }}</td>
+                            <td class="spa-cal-net-sgd">{{ formatCommas(p.net_amount_sgd) }} SGD</td>
+                            <td class="spa-cal-yield">{{ (p.yield_pct !== null && p.yield_pct !== undefined) ? p.yield_pct.toFixed(2) + '%' : '-' }}</td>
                         </tr>
                         <tr v-if="filteredCalList.length === 0">
                             <td colspan="8" class="spa-table-empty">No dividend payouts for this period matching search filters.</td>
