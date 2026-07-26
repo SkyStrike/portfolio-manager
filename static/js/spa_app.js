@@ -24,6 +24,7 @@ const { createApp } = Vue;
                 calYear: today.getFullYear(),
                 calMonth: today.getMonth(), // 0-indexed (Jan is 0)
                 calViewMode: 'grid',
+                calHideWeekends: true,
                 calListSearch: '',
                 activeDividend: null,
                 calMonths: [
@@ -362,6 +363,15 @@ const { createApp } = Vue;
                 }
                 
                 return cells;
+            },
+            filteredCalendarWeeks() {
+                const cells = this.calendarWeeks;
+                if (!this.calHideWeekends) return cells;
+                // Filter out Saturday (5th cell mod 7) and Sunday (6th cell mod 7)
+                return cells.filter((_, idx) => {
+                    const dayOfWeek = idx % 7;
+                    return dayOfWeek !== 5 && dayOfWeek !== 6;
+                });
             },
             calMonthlyTotalSgd() {
                 if (!this.calendarData || !this.calendarData.items) return 0;

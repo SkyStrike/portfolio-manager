@@ -2656,6 +2656,11 @@ body.mask-values .sensitive-value::after {
     gap: 8px;
 }
 
+.cal-grid-header-row.five-day-grid,
+.calendar-days-grid.five-day-grid {
+    grid-template-columns: repeat(5, 1fr);
+}
+
 .calendar-list-wrapper {
     display: block;
 }

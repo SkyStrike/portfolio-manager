@@ -2590,6 +2590,16 @@ async function saveTransaction(closeModalOnSuccess = true) {
             showToast("Please fill in all required income fields.", "error");
             return;
         }
+
+        // Weekend validation check (Sunday = 0, Saturday = 6)
+        if (date) {
+            const selectedDate = new Date(date + "T00:00:00");
+            const dayOfWeek = selectedDate.getDay();
+            if (dayOfWeek === 0 || dayOfWeek === 6) {
+                showToast("Validation Error: Selected dividend payout date falls on a weekend (Saturday/Sunday). Stock markets and banks do not process payouts on weekends.", "error");
+                return;
+            }
+        }
         
         url = id ? `/api/dividends/${id}` : "/api/dividends";
         method = id ? "PUT" : "POST";

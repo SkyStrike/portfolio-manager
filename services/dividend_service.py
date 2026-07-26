@@ -225,12 +225,21 @@ def sync_upcoming_dividends(conn, force=False):
                 current_ex = current_ex - timedelta(days=interval_days)
                 current_pay = current_pay - timedelta(days=interval_days)
             
+            def adjust_to_business_day(d: datetime.date) -> datetime.date:
+                """If date falls on Saturday or Sunday, shift to Monday."""
+                if d.weekday() == 5:    # Saturday -> Monday
+                    return d + timedelta(days=2)
+                elif d.weekday() == 6:  # Sunday -> Monday
+                    return d + timedelta(days=1)
+                return d
+
             for _ in range(projected_count):
                 current_ex = current_ex + timedelta(days=interval_days)
                 current_pay = current_pay + timedelta(days=interval_days)
+                adjusted_pay = adjust_to_business_day(current_pay)
                 
                 # Only insert if it is in the future (ex-date or payment_date is future)
-                if (current_ex >= today or current_pay >= today) and last_div_value:
+                if (current_ex >= today or adjusted_pay >= today) and last_div_value:
                     # Skip if a Declared entry already exists for this exact ex_date
                     cursor.execute("""
                         SELECT id FROM upcoming_dividends 
@@ -244,7 +253,7 @@ def sync_upcoming_dividends(conn, force=False):
                             INSERT OR IGNORE INTO upcoming_dividends 
                             (ticker_id, ex_date, payment_date, amount, currency, status, last_updated)
                             VALUES (?, ?, ?, ?, ?, ?, ?)
-                        """, (ticker_id, current_ex.isoformat(), current_pay.isoformat(), 
+                        """, (ticker_id, current_ex.isoformat(), adjusted_pay.isoformat(), 
                               last_div_value, currency, "Estimated", now_str))
         else:
             # Fallback if no history: write a single fallback update timestamp to avoid infinite retry loops
