@@ -101,7 +101,6 @@ def init_db():
         last_price_mode TEXT,             -- Last price mode used ('intraday' or 'closing')
         currency TEXT NOT NULL,
         last_updated TEXT NOT NULL,
-        is_manual INTEGER DEFAULT 0,
         FOREIGN KEY(ticker_id) REFERENCES tickers(id) ON DELETE CASCADE
     );
 
@@ -167,6 +166,7 @@ def init_db():
         low       REAL,
         close     REAL NOT NULL,
         adj_close REAL,
+        is_manual INTEGER DEFAULT 0,
         PRIMARY KEY (symbol, date, interval)
     );
     """

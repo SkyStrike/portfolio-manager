@@ -58,34 +58,62 @@
                         </div>
                     </div>
 
-                    <!-- Override Form Box (Collapsible / Toggleable) -->
+                    <!-- Price History & Gap-Fill Section -->
                     <div v-if="showPriceOverrideForm" style="margin-top: 15px; padding: 14px; background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px;">
-                        <div style="font-weight: 600; color: #38bdf8; margin-bottom: 10px; font-size: 0.95rem;">
-                            ✏️ Manual Price Override
+                        <div style="font-weight: 600; color: #38bdf8; margin-bottom: 10px; font-size: 0.95rem; display: flex; justify-content: space-between; align-items: center;">
+                            <span>✏️ Price History & Gap-Fill Manager</span>
+                            <button type="button" class="btn btn-secondary" style="padding: 2px 8px; font-size: 0.75rem;" @click="showPriceOverrideForm = false">Hide Log</button>
                         </div>
-                        <div style="display: flex; flex-direction: column; gap: 10px;">
-                            <div>
-                                <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px;">Valuation Date</label>
-                                <input type="date" v-model="priceOverrideDate" style="width: 100%; padding: 6px 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: #fff; border-radius: 4px;">
+                        
+                        <!-- Quick Add Form -->
+                        <div style="display: flex; gap: 10px; align-items: flex-end; background: rgba(0,0,0,0.25); padding: 10px; border-radius: 6px; margin-bottom: 12px;">
+                            <div style="flex: 1;">
+                                <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 3px;">Date</label>
+                                <input type="date" v-model="priceOverrideDate" style="width: 100%; padding: 5px 8px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; border-radius: 4px; font-size: 0.85rem;">
                             </div>
-                            <div>
-                                <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px;">Manual Price ({{ activeDailyChange.currency }})</label>
-                                <input type="number" step="0.01" v-model="priceOverrideVal" placeholder="e.g. 13.08" style="width: 100%; padding: 6px 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: #fff; border-radius: 4px;">
+                            <div style="flex: 1;">
+                                <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 3px;">Price ({{ activeDailyChange.currency }})</label>
+                                <input type="number" step="0.01" v-model="priceOverrideVal" placeholder="e.g. 13.08" style="width: 100%; padding: 5px 8px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; border-radius: 4px; font-size: 0.85rem;">
                             </div>
-                            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #94a3b8; margin-top: 4px; cursor: pointer;">
-                                <input type="checkbox" v-model="priceOverrideLock" style="width: 15px; height: 15px;">
-                                <span>Lock Manual Price (Prevent automated yfinance overwrite)</span>
-                            </label>
-                            <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                                <button type="button" class="btn btn-secondary" style="padding: 4px 12px; font-size: 0.8rem;" @click="showPriceOverrideForm = false">Cancel</button>
-                                <button type="button" class="btn btn-primary" style="padding: 4px 12px; font-size: 0.8rem;" @click="submitManualPriceOverride">Save Valuation</button>
-                            </div>
+                            <button type="button" class="btn btn-primary" style="padding: 5px 12px; font-size: 0.85rem; height: 32px;" @click="submitManualPriceOverride">Save Entry</button>
+                        </div>
+
+                        <!-- Price History Log Table -->
+                        <div style="max-height: 200px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: left;">
+                                <thead style="background: rgba(255,255,255,0.05); position: sticky; top: 0; color: var(--text-secondary);">
+                                    <tr>
+                                        <th style="padding: 6px 10px;">Date</th>
+                                        <th style="padding: 6px 10px;">Close Price</th>
+                                        <th style="padding: 6px 10px;">Daily %</th>
+                                        <th style="padding: 6px 10px;">Source</th>
+                                        <th style="padding: 6px 10px; text-align: right;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="item in priceHistoryLog" :key="item.date" style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+                                        <td style="padding: 6px 10px; font-family: monospace;">{{ item.date }}</td>
+                                        <td style="padding: 6px 10px; font-weight: 600;">{{ formatCommas(item.close, false, 2) }} {{ activeDailyChange.currency }}</td>
+                                        <td style="padding: 6px 10px;" :class="getValClass(item.daily_pct)">{{ formatPct(item.daily_pct) }}</td>
+                                        <td style="padding: 6px 10px;">
+                                            <span v-if="item.is_manual" style="background: rgba(234, 179, 8, 0.2); color: #facc15; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 600;">✏️ Manual</span>
+                                            <span v-else style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem;">yfinance</span>
+                                        </td>
+                                        <td style="padding: 6px 10px; text-align: right;">
+                                            <button type="button" style="background: transparent; border: none; color: #ef4444; cursor: pointer; font-size: 0.8rem; padding: 2px 6px;" @click="deletePriceHistoryEntry(item.date)" title="Delete price entry">&times;</button>
+                                        </td>
+                                    </tr>
+                                    <tr v-if="!priceHistoryLog || priceHistoryLog.length === 0">
+                                        <td colspan="5" style="padding: 12px; text-align: center; color: var(--text-secondary);">Loading price history...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
 
                 <div class="cal-div-modal-footer spa-modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
-                    <button v-if="!showPriceOverrideForm" class="btn btn-secondary" style="font-size: 0.85rem; padding: 5px 12px;" @click="openPriceOverrideForm">✏️ Override Price</button>
+                    <button v-if="!showPriceOverrideForm" class="btn btn-secondary" style="font-size: 0.85rem; padding: 5px 12px;" @click="openPriceOverrideForm">✏️ Price History & Gap-Fill</button>
                     <div v-else></div>
                     <button class="btn cal-btn-close spa-modal-btn-close" @click="closeDailyChangeModal">Close</button>
                 </div>

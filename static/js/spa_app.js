@@ -19,7 +19,7 @@ const { createApp } = Vue;
                 showPriceOverrideForm: false,
                 priceOverrideDate: '',
                 priceOverrideVal: '',
-                priceOverrideLock: true,
+                priceHistoryLog: [],
                 portfolioData: null,
                 vueObserver: null,
                 
@@ -1812,7 +1812,7 @@ const { createApp } = Vue;
                 this.activeDailyChange = null;
                 this.showPriceOverrideForm = false;
             },
-            openPriceOverrideForm() {
+            async openPriceOverrideForm() {
                 if (!this.activeDailyChange) return;
                 const d = new Date();
                 const year = d.getFullYear();
@@ -1822,12 +1822,24 @@ const { createApp } = Vue;
                 this.priceOverrideDate = `${year}-${month}-${day}`;
                 const rawPrice = this.activeDailyChange.current_price;
                 this.priceOverrideVal = (rawPrice !== null && rawPrice !== undefined) ? Number(parseFloat(rawPrice).toFixed(2)) : '';
-                this.priceOverrideLock = true;
                 this.showPriceOverrideForm = true;
+                await this.fetchPriceHistoryLog();
+            },
+            async fetchPriceHistoryLog() {
+                if (!this.activeDailyChange || !this.activeDailyChange.symbol) return;
+                try {
+                    const res = await fetch(`/api/prices/history-log/${encodeURIComponent(this.activeDailyChange.symbol)}?limit=15`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        this.priceHistoryLog = data.history || [];
+                    }
+                } catch (e) {
+                    console.error("Failed to fetch price history log", e);
+                }
             },
             async submitManualPriceOverride() {
-                if (!this.activeDailyChange || !this.activeDailyChange.ticker_id) {
-                    if (window.showToast) window.showToast("Ticker ID not found for override.", "error");
+                if (!this.activeDailyChange || !this.activeDailyChange.symbol) {
+                    if (window.showToast) window.showToast("Ticker symbol not found for override.", "error");
                     return;
                 }
                 const priceNum = parseFloat(this.priceOverrideVal);
@@ -1837,25 +1849,44 @@ const { createApp } = Vue;
                 }
                 
                 try {
-                    const res = await fetch("/api/prices/override", {
+                    const res = await fetch("/api/prices/manual-history", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
+                            symbol: this.activeDailyChange.symbol,
                             ticker_id: this.activeDailyChange.ticker_id,
                             price: priceNum,
-                            date: this.priceOverrideDate,
-                            is_manual: this.priceOverrideLock
+                            date: this.priceOverrideDate
                         })
                     });
                     
                     if (res.ok) {
-                        if (window.showToast) window.showToast(`Price valuation for ${this.activeDailyChange.symbol} updated to ${priceNum}.`);
-                        this.showPriceOverrideForm = false;
-                        this.closeDailyChangeModal();
+                        if (window.showToast) window.showToast(`Saved ${this.activeDailyChange.symbol} price entry (${this.priceOverrideDate}: ${priceNum}).`);
+                        await this.fetchPriceHistoryLog();
                         await this.fetchPortfolioData();
                     } else {
                         const err = await res.json();
-                        if (window.showToast) window.showToast("Override failed: " + (err.detail || "Error"), "error");
+                        if (window.showToast) window.showToast("Save failed: " + (err.detail || "Error"), "error");
+                    }
+                } catch (e) {
+                    if (window.showToast) window.showToast("Error: " + e.message, "error");
+                }
+            },
+            async deletePriceHistoryEntry(dateStr) {
+                if (!this.activeDailyChange || !this.activeDailyChange.symbol) return;
+                if (!confirm(`Delete price entry for ${this.activeDailyChange.symbol} on ${dateStr}?`)) return;
+                
+                try {
+                    const res = await fetch(`/api/prices/manual-history/${encodeURIComponent(this.activeDailyChange.symbol)}/${dateStr}`, {
+                        method: "DELETE"
+                    });
+                    if (res.ok) {
+                        if (window.showToast) window.showToast(`Deleted ${this.activeDailyChange.symbol} entry for ${dateStr}.`);
+                        await this.fetchPriceHistoryLog();
+                        await this.fetchPortfolioData();
+                    } else {
+                        const err = await res.json();
+                        if (window.showToast) window.showToast("Delete failed: " + (err.detail || "Error"), "error");
                     }
                 } catch (e) {
                     if (window.showToast) window.showToast("Error: " + e.message, "error");

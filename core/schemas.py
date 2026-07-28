@@ -23,10 +23,10 @@ class TickerUpdate(BaseModel):
     is_manual: bool | int | None = None
 
 class ManualPriceOverride(BaseModel):
-    ticker_id: int
+    symbol: str | None = None
+    ticker_id: int | None = None
     price: float
     date: str | None = None
-    is_manual: bool = True
 
 class TransactionCreate(BaseModel):
     portfolio_id: int

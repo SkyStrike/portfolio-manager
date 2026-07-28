@@ -207,11 +207,10 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
         ticker_id_map = {t['symbol']: t['id'] for t in tickers}
         db_symbols = [t['symbol'] for t in tickers]
         
-        # Check last updated times and is_manual flags in ticker_prices
-        cursor.execute("SELECT ticker_id, last_updated, COALESCE(is_manual, 0) as is_manual FROM ticker_prices")
+        # Check last updated times in ticker_prices
+        cursor.execute("SELECT ticker_id, last_updated FROM ticker_prices")
         price_rows = cursor.fetchall()
         price_records = {r['ticker_id']: r['last_updated'] for r in price_rows}
-        manual_tickers = {r['ticker_id'] for r in price_rows if r['is_manual'] == 1}
         
         tickers_to_fetch = []
         
@@ -219,11 +218,6 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
             ticker_id = t['id']
             symbol = t['symbol']
             
-            # Skip price API refresh if ticker is manually locked
-            if ticker_id in manual_tickers:
-                logger.info("[price] Skipping auto-fetch for manually locked ticker: %s", symbol)
-                continue
-                
             # Determine if ticker needs update
             needs_update = False
             if force or ticker_id not in price_records:
@@ -435,7 +429,7 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                     close_col = df['Close']
                     if isinstance(close_col, pd.Series):
                         series = close_col.dropna()
-                    elif yf_sym in close_col:
+                    elif isinstance(close_col, pd.DataFrame) and yf_sym in close_col.columns:
                         series = close_col[yf_sym].dropna()
                 
                 # Check if this ticker was retried
@@ -548,15 +542,9 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                     local_date_str = local_now.strftime("%Y-%m-%d")
                     is_local_weekday = local_now.weekday() <= 4
 
-                    reset_pnl = False
-                    # 1. Holiday or Untraded Today: Stock did not trade on the current market session
-                    if (global_last_date_str and last_date_str < global_last_date_str) or (last_date_str < local_date_str):
-                        reset_pnl = True
-
-                    if reset_pnl:
-                        intraday_prev_close = intraday_current
-                        intraday_prev_close_date = last_date_str
-                    # -----------------------------------------
+                    local_now = datetime.now(tz)
+                    local_date_str = local_now.strftime("%Y-%m-%d")
+                    is_local_weekday = local_now.weekday() <= 4
 
                     # Determine if the market is open today for this exchange (using local exchange time)
                     local_time = local_now.time()
@@ -571,40 +559,51 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                             # US/Canada open: 9:30 AM - 4:00 PM EST/EDT
                             if time(9, 30) <= local_time < time(16, 0):
                                 market_closed = False
-                            
-                    today_str = local_date_str
+
+                    # Intraday PnL reset: only if market is open on stock's local exchange but stock hasn't traded today
+                    reset_pnl = False
+                    if last_date_str < local_date_str and not market_closed:
+                        reset_pnl = True
+
                     if reset_pnl:
+                        intraday_prev_close = intraday_current
+                        intraday_prev_close_date = last_date_str
+
+                    # Closing Mode: daily_close is latest COMPLETED close date and price.
+                    # If the market is currently in session today and series contains today's date, series.iloc[-1] is an in-progress intraday bar,
+                    # so the latest completed close is series.iloc[-2] and previous close is series.iloc[-3].
+                    is_in_session = is_exchange_in_session(exchange)
+                    if not series.empty:
+                        last_bar_date_str = series.index[-1].strftime("%Y-%m-%d") if hasattr(series.index[-1], 'strftime') else str(series.index[-1]).split()[0]
+                        if last_bar_date_str == local_date_str and is_in_session:
+                            if len(series) >= 2:
+                                daily_close = float(series.iloc[-2])
+                                daily_close_date = series.index[-2].strftime("%Y-%m-%d") if hasattr(series.index[-2], 'strftime') else str(series.index[-2]).split()[0]
+                                if len(series) >= 3:
+                                    daily_prev_close = float(series.iloc[-3])
+                                    daily_prev_close_date = series.index[-3].strftime("%Y-%m-%d") if hasattr(series.index[-3], 'strftime') else daily_close_date
+                                else:
+                                    daily_prev_close = daily_close
+                                    daily_prev_close_date = daily_close_date
+                            else:
+                                daily_close = intraday_current
+                                daily_close_date = last_date_str
+                                daily_prev_close = intraday_prev_close
+                                daily_prev_close_date = intraday_prev_close_date
+                        else:
+                            daily_close = float(series.iloc[-1])
+                            daily_close_date = last_bar_date_str
+                            if len(series) >= 2:
+                                daily_prev_close = float(series.iloc[-2])
+                                daily_prev_close_date = series.index[-2].strftime("%Y-%m-%d") if hasattr(series.index[-2], 'strftime') else daily_close_date
+                            else:
+                                daily_prev_close = daily_close
+                                daily_prev_close_date = daily_close_date
+                    else:
                         daily_close = intraday_current
                         daily_close_date = last_date_str
-                        daily_prev_close = intraday_current
-                        daily_prev_close_date = last_date_str
-                    elif last_date_str == today_str:
-                        if not market_closed:
-                            # Today is active/trading and market is still open,
-                            # so yesterday is the latest completed daily close price
-                            daily_close = intraday_prev_close
-                            daily_close_date = intraday_prev_close_date
-                            daily_prev_close = float(series.iloc[-3]) if len(series) >= 3 else intraday_prev_close
-                            daily_prev_close_date = series.index[-3].strftime("%Y-%m-%d") if len(series) >= 3 else intraday_prev_close_date
-                        else:
-                            # Market is closed today, so today's completed close is today's price
-                            daily_close = intraday_current
-                            daily_close_date = last_date_str
-                            daily_prev_close = intraday_prev_close
-                            daily_prev_close_date = intraday_prev_close_date
-                    else:
-                        # Today's daily bar is not yet in history,
-                        # so the latest completed close is the last bar in the main df history
-                        if not series.empty:
-                            daily_close = float(series.iloc[-1])
-                            daily_close_date = series.index[-1].strftime("%Y-%m-%d") if hasattr(series.index[-1], 'strftime') else str(series.index[-1]).split()[0]
-                            daily_prev_close = float(series.iloc[-2]) if len(series) >= 2 else daily_close
-                            daily_prev_close_date = series.index[-2].strftime("%Y-%m-%d") if len(series) >= 2 and hasattr(series.index[-2], 'strftime') else daily_close_date
-                        else:
-                            daily_close = intraday_current
-                            daily_close_date = last_date_str
-                            daily_prev_close = intraday_current
-                            daily_prev_close_date = last_date_str
+                        daily_prev_close = intraday_prev_close
+                        daily_prev_close_date = intraday_prev_close_date
                     
                     # Store currency (yfinance info isn't bulk-downloadable via history,
                     # so we preserve the existing currency or default from transactions)
@@ -654,6 +653,42 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                         currency               = excluded.currency,
                         last_updated           = excluded.last_updated
                 """, updated_records)
+
+                # Sync downloaded history bars into ticker_price_history (preserving manual entries)
+                cursor = conn.cursor()
+                for yf_sym in yf_symbols:
+                    db_sym = yf_to_db.get(yf_sym)
+                    if not db_sym:
+                        continue
+                    close_col = df['Close'] if 'Close' in df else None
+                    if close_col is None:
+                        continue
+                    if isinstance(close_col, pd.Series):
+                        s_hist = close_col.dropna()
+                    elif isinstance(close_col, pd.DataFrame) and yf_sym in close_col.columns:
+                        s_hist = close_col[yf_sym].dropna()
+                    else:
+                        s_hist = pd.Series(dtype=float)
+                    
+                    if s_hist.empty:
+                        continue
+
+                    cursor.execute("SELECT date FROM ticker_price_history WHERE symbol = ? AND is_manual = 1", (db_sym,))
+                    manual_dates = {r["date"] for r in cursor.fetchall()}
+
+                    history_inserts = []
+                    for ts, val in s_hist.items():
+                        d_str = ts.strftime("%Y-%m-%d") if hasattr(ts, "strftime") else str(ts).split()[0]
+                        if d_str in manual_dates:
+                            continue
+                        px_val = round(float(val), 6)
+                        history_inserts.append((db_sym, d_str, '1d', px_val, px_val, px_val, px_val, px_val))
+
+                    if history_inserts:
+                        cursor.executemany("""
+                            INSERT OR REPLACE INTO ticker_price_history (symbol, date, interval, open, high, low, close, adj_close, is_manual)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
+                        """, history_inserts)
                 
             logger.info("Successfully fetched and updated %d ticker prices in database.", len(updated_records))
             return {"status": "success", "message": f"Successfully updated {len(updated_records)} ticker prices."}

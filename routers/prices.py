@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Query
 from core.database import get_connection
 from core.schemas import ManualPriceOverride
@@ -46,59 +46,122 @@ def refresh_prices(background_tasks: BackgroundTasks = None, force: bool = False
         return {"status": "success", "message": "Price refresh task started in the background."}
 
 
-@router.post("/api/prices/override")
-def override_price(payload: ManualPriceOverride):
+@router.get("/api/prices/history-log/{symbol}")
+def get_price_history_log(symbol: str, limit: int = 15):
     """
-    Manually overrides price valuation and date for a ticker, updating ticker_prices
-    and inserting into ticker_price_history. Sets is_manual lock.
+    Returns recent price history log for a symbol from ticker_price_history,
+    including is_manual flag and computed daily percentage change.
     """
-    from datetime import datetime, timezone
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT symbol, date, interval, open, high, low, close, adj_close, COALESCE(is_manual, 0) as is_manual
+            FROM ticker_price_history
+            WHERE symbol = ? AND interval = '1d'
+            ORDER BY date DESC
+            LIMIT ?
+        """, (symbol, limit))
+        rows = [dict(r) for r in cursor.fetchall()]
+        
+        # Calculate daily change between consecutive rows
+        for i in range(len(rows)):
+            if i < len(rows) - 1:
+                prev_c = rows[i + 1]["close"]
+                curr_c = rows[i]["close"]
+                rows[i]["daily_pct"] = ((curr_c - prev_c) / prev_c * 100) if prev_c > 0 else 0.0
+            else:
+                rows[i]["daily_pct"] = 0.0
+                
+        return {"status": "success", "symbol": symbol, "history": rows}
+    finally:
+        conn.close()
+
+
+def _sync_ticker_prices_from_history(conn, symbol: str, ticker_id: int):
+    """Syncs ticker_prices snapshot from the 2 latest bars in ticker_price_history."""
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT date, close FROM ticker_price_history
+        WHERE symbol = ? AND interval = '1d'
+        ORDER BY date DESC LIMIT 2
+    """, (symbol,))
+    bars = cursor.fetchall()
+    if not bars:
+        return
+        
+    latest_bar = bars[0]
+    prev_bar = bars[1] if len(bars) > 1 else latest_bar
+    
+    price_val = float(latest_bar["close"])
+    prev_val = float(prev_bar["close"])
+    date_str = latest_bar["date"]
+    prev_date_str = prev_bar["date"]
+    now_iso = datetime.now(timezone.utc).isoformat()
+    
+    cursor.execute("SELECT ticker_id FROM ticker_prices WHERE ticker_id = ?", (ticker_id,))
+    if cursor.fetchone():
+        cursor.execute("""
+            UPDATE ticker_prices
+            SET price = ?,
+                intraday_current = ?,
+                daily_close = ?,
+                intraday_prev_close = ?,
+                daily_prev_close = ?,
+                intraday_current_at = ?,
+                daily_close_date = ?,
+                intraday_prev_close_date = ?,
+                daily_prev_close_date = ?,
+                last_updated = ?
+            WHERE ticker_id = ?
+        """, (price_val, price_val, price_val, prev_val, prev_val,
+              now_iso, date_str, prev_date_str, prev_date_str, now_iso, ticker_id))
+    else:
+        cursor.execute("""
+            INSERT INTO ticker_prices (ticker_id, price, intraday_current, daily_close, intraday_prev_close, daily_prev_close, currency, last_updated, daily_close_date, daily_prev_close_date)
+            VALUES (?, ?, ?, ?, ?, ?, 'USD', ?, ?, ?)
+        """, (ticker_id, price_val, price_val, price_val, prev_val, prev_val, now_iso, date_str, prev_date_str))
+
+
+@router.post("/api/prices/manual-history")
+def save_manual_price_history(payload: ManualPriceOverride):
+    """
+    Saves or updates a manual price entry (date, price) in ticker_price_history with is_manual=1,
+    then updates ticker_prices if latest date, and rebuilds dashboard cache.
+    """
     conn = get_connection()
     try:
         cursor = conn.cursor()
         
-        # Verify ticker exists
-        cursor.execute("SELECT id, symbol FROM tickers WHERE id = ?", (payload.ticker_id,))
-        ticker_row = cursor.fetchone()
-        if not ticker_row:
-            raise HTTPException(status_code=404, detail="Ticker not found")
-            
-        symbol = ticker_row["symbol"]
-        price_val = payload.price
-        date_str = payload.date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        now_iso = datetime.now(timezone.utc).isoformat()
-        is_man = 1 if payload.is_manual else 0
+        # Resolve symbol & ticker_id
+        symbol = payload.symbol
+        ticker_id = payload.ticker_id
         
-        # 1. Update or Insert into ticker_prices
-        cursor.execute("SELECT ticker_id FROM ticker_prices WHERE ticker_id = ?", (payload.ticker_id,))
-        if cursor.fetchone():
-            cursor.execute("""
-                UPDATE ticker_prices
-                SET price = ?,
-                    intraday_current = ?,
-                    daily_close = ?,
-                    intraday_prev_close = ?,
-                    daily_prev_close = ?,
-                    intraday_current_at = ?,
-                    daily_close_date = ?,
-                    intraday_prev_close_date = ?,
-                    daily_prev_close_date = ?,
-                    last_updated = ?,
-                    is_manual = ?
-                WHERE ticker_id = ?
-            """, (price_val, price_val, price_val, price_val, price_val,
-                  now_iso, date_str, date_str, date_str, now_iso, is_man, payload.ticker_id))
-        else:
-            cursor.execute("""
-                INSERT INTO ticker_prices (ticker_id, price, intraday_current, daily_close, intraday_prev_close, daily_prev_close, currency, last_updated, is_manual, daily_close_date)
-                VALUES (?, ?, ?, ?, ?, ?, 'USD', ?, ?, ?)
-            """, (payload.ticker_id, price_val, price_val, price_val, price_val, price_val, now_iso, is_man, date_str))
-
-        # 2. Insert or replace in ticker_price_history for full history reporting
+        if not symbol and ticker_id:
+            cursor.execute("SELECT symbol FROM tickers WHERE id = ?", (ticker_id,))
+            t_row = cursor.fetchone()
+            if t_row:
+                symbol = t_row["symbol"]
+        elif symbol and not ticker_id:
+            cursor.execute("SELECT id FROM tickers WHERE symbol = ?", (symbol,))
+            t_row = cursor.fetchone()
+            if t_row:
+                ticker_id = t_row["id"]
+                
+        if not symbol or not ticker_id:
+            raise HTTPException(status_code=404, detail="Ticker symbol or ID not found")
+            
+        price_val = float(payload.price)
+        date_str = payload.date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        
+        # 1. Upsert into ticker_price_history as is_manual = 1
         cursor.execute("""
-            INSERT OR REPLACE INTO ticker_price_history (symbol, date, interval, open, high, low, close, adj_close)
-            VALUES (?, ?, '1d', ?, ?, ?, ?, ?)
+            INSERT OR REPLACE INTO ticker_price_history (symbol, date, interval, open, high, low, close, adj_close, is_manual)
+            VALUES (?, ?, '1d', ?, ?, ?, ?, ?, 1)
         """, (symbol, date_str, price_val, price_val, price_val, price_val, price_val))
+
+        # 2. Sync latest price snapshot to ticker_prices
+        _sync_ticker_prices_from_history(conn, symbol, ticker_id)
 
         conn.commit()
         
@@ -106,7 +169,34 @@ def override_price(payload: ManualPriceOverride):
         rebuild_dashboard_sync(conn, "intraday")
         rebuild_dashboard_sync(conn, "closing")
         
-        return {"status": "success", "symbol": symbol, "price": price_val, "date": date_str, "is_manual": is_man}
+        return {"status": "success", "symbol": symbol, "price": price_val, "date": date_str}
+    finally:
+        conn.close()
+
+
+@router.delete("/api/prices/manual-history/{symbol}/{date}")
+def delete_manual_price_history(symbol: str, date: str):
+    """
+    Deletes a specific price history entry from ticker_price_history,
+    resyncs ticker_prices snapshot, and rebuilds dashboard cache.
+    """
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM tickers WHERE symbol = ?", (symbol,))
+        t_row = cursor.fetchone()
+        if not t_row:
+            raise HTTPException(status_code=404, detail="Ticker not found")
+        ticker_id = t_row["id"]
+        
+        cursor.execute("DELETE FROM ticker_price_history WHERE symbol = ? AND date = ?", (symbol, date))
+        _sync_ticker_prices_from_history(conn, symbol, ticker_id)
+        conn.commit()
+        
+        rebuild_dashboard_sync(conn, "intraday")
+        rebuild_dashboard_sync(conn, "closing")
+        
+        return {"status": "success", "symbol": symbol, "deleted_date": date}
     finally:
         conn.close()
 
@@ -151,15 +241,23 @@ def _fetch_and_store_history(conn, symbol: str, start_date: str, end_date: str, 
                 raw_close,
                 adj_close
             ))
-        with conn:
-            conn.executemany(
-                """INSERT OR REPLACE INTO ticker_price_history
-                   (symbol, date, interval, open, high, low, close, adj_close)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                rows,
-            )
-        logger.info("Stored %d %s rows for %s (%s to %s)", len(rows), interval, symbol, start_date, end_date)
-        return len(rows)
+        # Fetch existing manual dates to avoid overwriting user entries
+        cursor = conn.cursor()
+        cursor.execute("SELECT date FROM ticker_price_history WHERE symbol = ? AND is_manual = 1", (symbol,))
+        manual_dates = {r["date"] for r in cursor.fetchall()}
+        
+        filtered_rows = [r for r in rows if r[1] not in manual_dates]
+        
+        if filtered_rows:
+            with conn:
+                conn.executemany(
+                    """INSERT OR REPLACE INTO ticker_price_history
+                       (symbol, date, interval, open, high, low, close, adj_close, is_manual)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)""",
+                    filtered_rows,
+                )
+        logger.info("Stored %d %s rows for %s (%s to %s) [skipped %d manual dates]", len(filtered_rows), interval, symbol, start_date, end_date, len(rows) - len(filtered_rows))
+        return len(filtered_rows)
     except Exception as exc:
         logger.warning("yfinance fetch failed for %s: %s", symbol, exc)
         return 0
