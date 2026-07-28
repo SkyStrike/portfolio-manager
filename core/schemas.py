@@ -19,6 +19,14 @@ class TickerUpdate(BaseModel):
     category: str | None = None
     subclass: str | None = None
     exchange: str | None = None
+    price: float | None = None
+    is_manual: bool | int | None = None
+
+class ManualPriceOverride(BaseModel):
+    ticker_id: int
+    price: float
+    date: str | None = None
+    is_manual: bool = True
 
 class TransactionCreate(BaseModel):
     portfolio_id: int

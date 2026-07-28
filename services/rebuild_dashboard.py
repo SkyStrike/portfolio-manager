@@ -233,6 +233,7 @@ def calculate_positions(tickers_map, tx_rows, div_rows, exchange_rates, portfoli
             prev_close_date = ticker_data.get('intraday_prev_close_date') or ''
 
         pos.price_details = {
+            "ticker_id": ticker_data['id'],
             "price_mode": price_mode,
             "current_price": current_price,
             "current_price_datetime": price_datetime,

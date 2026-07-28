@@ -207,9 +207,11 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
         ticker_id_map = {t['symbol']: t['id'] for t in tickers}
         db_symbols = [t['symbol'] for t in tickers]
         
-        # Check last updated times in ticker_prices
-        cursor.execute("SELECT ticker_id, last_updated FROM ticker_prices")
-        price_records = {r['ticker_id']: r['last_updated'] for r in price_records_rows} if (price_records_rows := cursor.fetchall()) else {}
+        # Check last updated times and is_manual flags in ticker_prices
+        cursor.execute("SELECT ticker_id, last_updated, COALESCE(is_manual, 0) as is_manual FROM ticker_prices")
+        price_rows = cursor.fetchall()
+        price_records = {r['ticker_id']: r['last_updated'] for r in price_rows}
+        manual_tickers = {r['ticker_id'] for r in price_rows if r['is_manual'] == 1}
         
         tickers_to_fetch = []
         
@@ -217,6 +219,11 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
             ticker_id = t['id']
             symbol = t['symbol']
             
+            # Skip price API refresh if ticker is manually locked
+            if ticker_id in manual_tickers:
+                logger.info("[price] Skipping auto-fetch for manually locked ticker: %s", symbol)
+                continue
+                
             # Determine if ticker needs update
             needs_update = False
             if force or ticker_id not in price_records:
@@ -542,8 +549,8 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                     is_local_weekday = local_now.weekday() <= 4
 
                     reset_pnl = False
-                    # 1. Holiday: Stock missed a global trading day
-                    if global_last_date_str and last_date_str < global_last_date_str:
+                    # 1. Holiday or Untraded Today: Stock did not trade on the current market session
+                    if (global_last_date_str and last_date_str < global_last_date_str) or (last_date_str < local_date_str):
                         reset_pnl = True
 
                     if reset_pnl:
@@ -566,7 +573,12 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                                 market_closed = False
                             
                     today_str = local_date_str
-                    if last_date_str == today_str:
+                    if reset_pnl:
+                        daily_close = intraday_current
+                        daily_close_date = last_date_str
+                        daily_prev_close = intraday_current
+                        daily_prev_close_date = last_date_str
+                    elif last_date_str == today_str:
                         if not market_closed:
                             # Today is active/trading and market is still open,
                             # so yesterday is the latest completed daily close price

@@ -16,6 +16,10 @@ const { createApp } = Vue;
                 tocView: 'list',
                 activeMenu: null,
                 activeDailyChange: null,
+                showPriceOverrideForm: false,
+                priceOverrideDate: '',
+                priceOverrideVal: '',
+                priceOverrideLock: true,
                 portfolioData: null,
                 vueObserver: null,
                 
@@ -1792,6 +1796,7 @@ const { createApp } = Vue;
                 const prevCloseDate = details.prev_close_date || 'N/A';
                 
                 this.activeDailyChange = {
+                    ticker_id: details.ticker_id || (p && (p.ticker_id || p.id)) || (target && (target.ticker_id || target.id)) || null,
                     symbol: symbol,
                     friendly_name: friendlyName,
                     price_mode: priceMode,
@@ -1805,6 +1810,56 @@ const { createApp } = Vue;
             },
             closeDailyChangeModal() {
                 this.activeDailyChange = null;
+                this.showPriceOverrideForm = false;
+            },
+            openPriceOverrideForm() {
+                if (!this.activeDailyChange) return;
+                const d = new Date();
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                
+                this.priceOverrideDate = `${year}-${month}-${day}`;
+                const rawPrice = this.activeDailyChange.current_price;
+                this.priceOverrideVal = (rawPrice !== null && rawPrice !== undefined) ? Number(parseFloat(rawPrice).toFixed(2)) : '';
+                this.priceOverrideLock = true;
+                this.showPriceOverrideForm = true;
+            },
+            async submitManualPriceOverride() {
+                if (!this.activeDailyChange || !this.activeDailyChange.ticker_id) {
+                    if (window.showToast) window.showToast("Ticker ID not found for override.", "error");
+                    return;
+                }
+                const priceNum = parseFloat(this.priceOverrideVal);
+                if (isNaN(priceNum) || priceNum <= 0) {
+                    if (window.showToast) window.showToast("Please enter a valid positive price.", "error");
+                    return;
+                }
+                
+                try {
+                    const res = await fetch("/api/prices/override", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            ticker_id: this.activeDailyChange.ticker_id,
+                            price: priceNum,
+                            date: this.priceOverrideDate,
+                            is_manual: this.priceOverrideLock
+                        })
+                    });
+                    
+                    if (res.ok) {
+                        if (window.showToast) window.showToast(`Price valuation for ${this.activeDailyChange.symbol} updated to ${priceNum}.`);
+                        this.showPriceOverrideForm = false;
+                        this.closeDailyChangeModal();
+                        await this.fetchPortfolioData();
+                    } else {
+                        const err = await res.json();
+                        if (window.showToast) window.showToast("Override failed: " + (err.detail || "Error"), "error");
+                    }
+                } catch (e) {
+                    if (window.showToast) window.showToast("Error: " + e.message, "error");
+                }
             },
             async initializeDashboardCharts(skipLoading = false) {
                 if (!skipLoading) {

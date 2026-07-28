@@ -1327,8 +1327,9 @@ function renderTickersTable(tickers) {
         const deleteBtn = (!(t.shares > 0.0001))
             ? ` <button class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-left: 0.25rem;" onclick="deleteTicker(this, ${t.id})">Delete</button>`
             : '';
+        const manualBadge = t.is_manual ? ' <span style="font-size: 0.7rem; background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.3);">🔒 Manual</span>' : '';
         tr.innerHTML = `
-            <td style="font-weight: 600; color: #38bdf8;">${t.symbol}</td>
+            <td style="font-weight: 600; color: #38bdf8;">${t.symbol}${manualBadge}</td>
             <td style="font-weight: 500;">${t.friendly_name || t.symbol}</td>
             <td style="color: var(--text-secondary); font-size: 0.9rem;">${t.underlying || ""}</td>
             <td>${(t.tax_rate * 100).toFixed(0)}%</td>
@@ -1353,6 +1354,12 @@ window.editTicker = function(t) {
     document.getElementById("ticker-category").value = t.category || t.subclass || "Other";
     document.getElementById("ticker-notes").value = t.notes || "";
     document.getElementById("ticker-exchange").value = t.exchange || "US";
+    
+    const priceInput = document.getElementById("ticker-price");
+    if (priceInput) priceInput.value = (t.price !== null && t.price !== undefined) ? t.price : "";
+    
+    const manualCheckbox = document.getElementById("ticker-is-manual");
+    if (manualCheckbox) manualCheckbox.checked = !!t.is_manual;
     
     openModal("ticker-modal");
 };
@@ -1512,6 +1519,9 @@ function setupFormSubmissions() {
         tickerForm.addEventListener("submit", async (e) => {
             e.preventDefault();
             const id = document.getElementById("ticker-id").value;
+            const priceVal = document.getElementById("ticker-price") ? document.getElementById("ticker-price").value.trim() : "";
+            const isManualVal = document.getElementById("ticker-is-manual") ? document.getElementById("ticker-is-manual").checked : false;
+
             const payload = {
                 friendly_name: document.getElementById("ticker-name").value,
                 underlying: document.getElementById("ticker-underlying").value,
@@ -1519,7 +1529,9 @@ function setupFormSubmissions() {
                 category: document.getElementById("ticker-category").value,
                 subclass: document.getElementById("ticker-category").value,
                 notes: document.getElementById("ticker-notes").value,
-                exchange: document.getElementById("ticker-exchange").value
+                exchange: document.getElementById("ticker-exchange").value,
+                price: priceVal !== "" ? parseFloat(priceVal) : null,
+                is_manual: isManualVal
             };
             
             try {

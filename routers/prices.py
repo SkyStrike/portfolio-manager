@@ -2,6 +2,7 @@ import logging
 from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Query
 from core.database import get_connection
+from core.schemas import ManualPriceOverride
 from core.cache import rebuild_dashboard_sync, update_prices_and_rebuild
 from services.price_service import update_prices, can_refresh, record_refresh, REFRESH_COOLDOWN
 
@@ -43,6 +44,71 @@ def refresh_prices(background_tasks: BackgroundTasks = None, force: bool = False
             background_tasks.add_task(update_prices_and_rebuild)
         record_refresh()
         return {"status": "success", "message": "Price refresh task started in the background."}
+
+
+@router.post("/api/prices/override")
+def override_price(payload: ManualPriceOverride):
+    """
+    Manually overrides price valuation and date for a ticker, updating ticker_prices
+    and inserting into ticker_price_history. Sets is_manual lock.
+    """
+    from datetime import datetime, timezone
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        
+        # Verify ticker exists
+        cursor.execute("SELECT id, symbol FROM tickers WHERE id = ?", (payload.ticker_id,))
+        ticker_row = cursor.fetchone()
+        if not ticker_row:
+            raise HTTPException(status_code=404, detail="Ticker not found")
+            
+        symbol = ticker_row["symbol"]
+        price_val = payload.price
+        date_str = payload.date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        now_iso = datetime.now(timezone.utc).isoformat()
+        is_man = 1 if payload.is_manual else 0
+        
+        # 1. Update or Insert into ticker_prices
+        cursor.execute("SELECT ticker_id FROM ticker_prices WHERE ticker_id = ?", (payload.ticker_id,))
+        if cursor.fetchone():
+            cursor.execute("""
+                UPDATE ticker_prices
+                SET price = ?,
+                    intraday_current = ?,
+                    daily_close = ?,
+                    intraday_prev_close = ?,
+                    daily_prev_close = ?,
+                    intraday_current_at = ?,
+                    daily_close_date = ?,
+                    intraday_prev_close_date = ?,
+                    daily_prev_close_date = ?,
+                    last_updated = ?,
+                    is_manual = ?
+                WHERE ticker_id = ?
+            """, (price_val, price_val, price_val, price_val, price_val,
+                  now_iso, date_str, date_str, date_str, now_iso, is_man, payload.ticker_id))
+        else:
+            cursor.execute("""
+                INSERT INTO ticker_prices (ticker_id, price, intraday_current, daily_close, intraday_prev_close, daily_prev_close, currency, last_updated, is_manual, daily_close_date)
+                VALUES (?, ?, ?, ?, ?, ?, 'USD', ?, ?, ?)
+            """, (payload.ticker_id, price_val, price_val, price_val, price_val, price_val, now_iso, is_man, date_str))
+
+        # 2. Insert or replace in ticker_price_history for full history reporting
+        cursor.execute("""
+            INSERT OR REPLACE INTO ticker_price_history (symbol, date, interval, open, high, low, close, adj_close)
+            VALUES (?, ?, '1d', ?, ?, ?, ?, ?)
+        """, (symbol, date_str, price_val, price_val, price_val, price_val, price_val))
+
+        conn.commit()
+        
+        # 3. Rebuild dashboard cache
+        rebuild_dashboard_sync(conn, "intraday")
+        rebuild_dashboard_sync(conn, "closing")
+        
+        return {"status": "success", "symbol": symbol, "price": price_val, "date": date_str, "is_manual": is_man}
+    finally:
+        conn.close()
 
 
 # ---------------------------------------------------------------------------
@@ -191,9 +257,24 @@ def get_price_history(
         ).fetchall()
 
         prices = []
+        last_valid_close = None
+        last_valid_adj_close = None
+
         for r in rows:
-            raw_c = r["close"] or 0.0
-            adj_c = r["adj_close"] if r["adj_close"] is not None else raw_c
+            raw_c = r["close"]
+            adj_c = r["adj_close"]
+
+            # Forward-fill if raw_c is None or 0.0
+            if (raw_c is None or raw_c == 0.0) and last_valid_close is not None:
+                raw_c = last_valid_close
+                adj_c = last_valid_adj_close if last_valid_adj_close is not None else raw_c
+            elif raw_c is not None and raw_c > 0.0:
+                last_valid_close = raw_c
+                last_valid_adj_close = adj_c
+
+            raw_c = raw_c or 0.0
+            adj_c = adj_c if adj_c is not None else raw_c
+
             if adjusted and raw_c > 0 and adj_c > 0:
                 factor = adj_c / raw_c
                 prices.append({
@@ -206,9 +287,9 @@ def get_price_history(
             else:
                 prices.append({
                     "date": r["date"],
-                    "open": r["open"],
-                    "high": r["high"],
-                    "low": r["low"],
+                    "open": r["open"] or raw_c,
+                    "high": r["high"] or raw_c,
+                    "low": r["low"] or raw_c,
                     "close": raw_c
                 })
 
