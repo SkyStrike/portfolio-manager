@@ -414,10 +414,10 @@
                         </div>
                     </div>
                     <div class="text-right spa-flex-wrap-center spa-gap-15">
-                        <span class="text-lg bold-text">
-                            Net Flow: <span class="text-lg bold-text" :class="getValClass(recentTx.month_flow)">{{ formatCommas(recentTx.month_flow, true) }} SGD</span>
+                        <span class="text-sm bold-text text-muted">
+                            Net Flow: <span :class="getValClass(recentTx.month_flow)">{{ formatCommas(recentTx.month_flow, true) }} SGD</span>
                         </span>
-                        <span class="text-lg bold-text">
+                        <span class="text-sm bold-text text-muted">
                             Realized: <span :class="getValClass(recentTx.month_realized_sgd)">{{ formatCommas(recentTx.month_realized_sgd, true) }} SGD</span>
                         </span>
                     </div>
