@@ -2903,6 +2903,12 @@ body.mask-values .sensitive-value::after {
     display: inline-block;
 }
 
+.week-col-realized {
+    width: 135px;
+    text-align: left;
+    display: inline-block;
+}
+
 /* Recent Transactions Filter Links */
 .tx-filter-link {
     color: var(--text-secondary, #94a3b8);

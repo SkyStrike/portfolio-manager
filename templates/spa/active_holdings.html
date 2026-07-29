@@ -413,9 +413,14 @@
                             ) Tx
                         </div>
                     </div>
-                    <span class="text-lg bold-text" :class="getValClass(recentTx.month_flow)">
-                        4W Net Flow: {{ formatCommas(recentTx.month_flow, true) }} SGD
-                    </span>
+                    <div class="text-right spa-flex-wrap-center spa-gap-15">
+                        <span class="text-lg bold-text">
+                            Net Flow: <span class="text-lg bold-text" :class="getValClass(recentTx.month_flow)">{{ formatCommas(recentTx.month_flow, true) }} SGD</span>
+                        </span>
+                        <span class="text-lg bold-text">
+                            Realized: <span :class="getValClass(recentTx.month_realized_sgd)">{{ formatCommas(recentTx.month_realized_sgd, true) }} SGD</span>
+                        </span>
+                    </div>
                 </h2>
                 
                 <div class="weeks-container">
@@ -423,9 +428,10 @@
                         <summary class="week-details-summary">
                             <span class="week-summary-center">Week: {{ week.range }}</span>
                             <div class="week-summary-right">
-                                <span class="week-col-net bold-text" >Net: <span :class="getValClass(week.flow)">{{ formatCommas(week.flow, true) }}</span></span>
-                                <span class="week-col-buy neg-val" >Buys: <span >{{ formatCommas(week.buy_flow) }}</span></span>
-                                <span class="week-col-sell pos-val" >Sells: <span >{{ formatCommas(Math.abs(week.sell_flow)) }}</span></span>
+                                <span class="week-col-net bold-text">Net: <span :class="getValClass(week.flow)">{{ formatCommas(week.flow, true) }}</span></span>
+                                <span class="week-col-buy neg-val">Buys: <span>{{ formatCommas(week.buy_flow) }}</span></span>
+                                <span class="week-col-sell pos-val">Sells: <span>{{ formatCommas(Math.abs(week.sell_flow)) }}</span></span>
+                                <span class="week-col-realized bold-text">Realized: <span :class="getValClass(week.realized_flow)">{{ formatCommas(week.realized_flow, true) }}</span></span>
                             </div>
                         </summary>
                         <div class="week-details-content">
@@ -447,6 +453,15 @@
                                             <span :class="getValClass(tx.gainPct)">
                                                 {{ formatPct(tx.gainPct) }}, {{ formatCommas(tx.currentVal - tx.totalNet, true) }} {{ tx.currency }}
                                             </span>)
+                                        </span>
+                                        <span v-else-if="tx.action === 'Sell' && tx.realized_pl != null" class="metadata text-muted text-xs">
+                                            (Realized P&L: 
+                                            <span :class="getValClass(tx.realized_pl)">
+                                                {{ formatCommas(tx.realized_pl, true) }} {{ tx.currency }}<template v-if="tx.gainPct"> ({{ formatPct(tx.gainPct) }})</template>
+                                            </span>
+                                            <template v-if="tx.currency !== 'SGD' && tx.realized_pl_sgd != null">
+                                                / <span :class="getValClass(tx.realized_pl_sgd)">{{ formatCommas(tx.realized_pl_sgd, true) }} SGD</span>
+                                            </template>)
                                         </span>
                                     </li>
                                 </template>

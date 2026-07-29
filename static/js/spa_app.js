@@ -110,6 +110,9 @@ const { createApp } = Vue;
                                 if (tx.action === 'Buy' && !isClosed) {
                                     currentVal = tx.qty * currentPrice;
                                     gainPct = valRaw > 0 ? ((currentVal - valRaw) / valRaw) * 100 : 0;
+                                } else if (tx.action === 'Sell' && tx.realized_pl != null) {
+                                    const costBasis = valRaw - tx.realized_pl;
+                                    gainPct = costBasis > 0 ? (tx.realized_pl / costBasis) * 100 : 0;
                                 }
                                 
                                 allTxs.push({
@@ -133,6 +136,7 @@ const { createApp } = Vue;
                     netSgd: allTxs.reduce((sum, t) => sum + t.sgdImpact, 0),
                     buySgd: allTxs.filter(t => t.action === 'Buy').reduce((sum, t) => sum + t.sgdImpact, 0),
                     sellSgd: allTxs.filter(t => t.action !== 'Buy').reduce((sum, t) => sum + Math.abs(t.sgdImpact), 0),
+                    realizedSgd: allTxs.filter(t => t.action === 'Sell').reduce((sum, t) => sum + (t.realized_pl_sgd ?? (t.realized_pl != null ? t.realized_pl * t.rate : 0)), 0),
                     count: allTxs.length
                 };
                 
@@ -156,6 +160,7 @@ const { createApp } = Vue;
                     const flow = weekTxs.reduce((sum, t) => sum + t.sgdImpact, 0);
                     const buy_flow = weekTxs.filter(t => t.action === 'Buy').reduce((sum, t) => sum + t.sgdImpact, 0);
                     const sell_flow = weekTxs.filter(t => t.action !== 'Buy').reduce((sum, t) => sum + Math.abs(t.sgdImpact), 0);
+                    const realized_flow = weekTxs.filter(t => t.action === 'Sell').reduce((sum, t) => sum + (t.realized_pl_sgd ?? (t.realized_pl != null ? t.realized_pl * t.rate : 0)), 0);
                     
                     const startDay = String(start.getDate()).padStart(2, '0');
                     const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
@@ -168,6 +173,7 @@ const { createApp } = Vue;
                         flow: flow,
                         buy_flow: buy_flow,
                         sell_flow: sell_flow,
+                        realized_flow: realized_flow,
                         tx_count: weekTxs.length,
                         transactions: weekTxs
                     });
@@ -178,6 +184,7 @@ const { createApp } = Vue;
                 return {
                     month_name: "Last 4 Weeks",
                     month_flow: totals.netSgd,
+                    month_realized_sgd: totals.realizedSgd,
                     weeks: sortedWeeks,
                     transactions: allTxs,
                     totals
