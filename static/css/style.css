@@ -2971,6 +2971,12 @@ body.mask-values .sensitive-value::after {
 .txv-tooltip-value.close {
     color: #38bdf8;
 }
+.txv-tooltip-value.pos-val {
+    color: #10b981;
+}
+.txv-tooltip-value.neg-val {
+    color: #ef4444;
+}
 .txv-tooltip-tx-section {
     margin-top: 8px;
     border-top: 1px solid rgba(255, 255, 255, 0.1);

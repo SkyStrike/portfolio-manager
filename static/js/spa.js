@@ -2115,6 +2115,25 @@ function _txvRenderChart(containerEl, prices, range) {
                 const l = ohlc.y[2].toFixed(3);
                 const c = ohlc.y[3].toFixed(3);
                 
+                // Calculate percentage change for the hovered bar compared to the previous bar's close
+                let prevClose = null;
+                if (dataPointIndex > 0) {
+                    const prevOhlc = w.config.series[seriesIndex].data[dataPointIndex - 1];
+                    if (prevOhlc && prevOhlc.y && prevOhlc.y[3] !== undefined && prevOhlc.y[3] !== null) {
+                        prevClose = prevOhlc.y[3];
+                    }
+                }
+                const openVal = ohlc.y[0];
+                const closeVal = ohlc.y[3];
+                const baseVal = (prevClose !== null && prevClose > 0) ? prevClose : openVal;
+                
+                const changeAbs = closeVal - baseVal;
+                const changePct = baseVal > 0 ? (changeAbs / baseVal) * 100 : 0;
+                
+                const sign = changeAbs >= 0 ? "+" : "";
+                const changeClass = changeAbs >= 0 ? "pos-val" : "neg-val";
+                const changeFormatted = `${sign}${changeAbs.toFixed(3)} (${sign}${changePct.toFixed(2)}%)`;
+                
                 // Show transaction inside tooltip if it exists on this hovered day/period
                 const dateKey = timestampToDateMap[ohlc.x];
                 const txs = snapDateTxMap[dateKey] || [];
@@ -2148,6 +2167,7 @@ function _txvRenderChart(containerEl, prices, range) {
                         <div class="txv-tooltip-row"><span>High:</span><span class="txv-tooltip-value high">${h}</span></div>
                         <div class="txv-tooltip-row"><span>Low:</span><span class="txv-tooltip-value low">${l}</span></div>
                         <div class="txv-tooltip-row"><span>Close:</span><span class="txv-tooltip-value close">${c}</span></div>
+                        <div class="txv-tooltip-row"><span>Change:</span><span class="txv-tooltip-value ${changeClass}">${changeFormatted}</span></div>
                         ${txHtml}
                     </div>
                 `;
