@@ -500,7 +500,7 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                     # 2. Staleness guard
                     from datetime import date as _date
                     last_date_dt = datetime.strptime(last_date_str, "%Y-%m-%d").date()
-                    days_stale = (datetime.utcnow().date() - last_date_dt).days
+                    days_stale = (datetime.now(timezone.utc).date() - last_date_dt).days
                     local_weekday = True
                     try:
                         # Safely resolve wrapped helper check if exists
@@ -655,34 +655,50 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                 """, updated_records)
 
                 # Sync downloaded history bars into ticker_price_history (preserving manual entries)
+                def _get_col_series(container, sym):
+                    if container is None:
+                        return pd.Series(dtype=float)
+                    if isinstance(container, pd.Series):
+                        return container.dropna()
+                    elif isinstance(container, pd.DataFrame) and sym in container.columns:
+                        return container[sym].dropna()
+                    return pd.Series(dtype=float)
+
                 cursor = conn.cursor()
+                open_df = df.get('Open') if 'Open' in df else None
+                high_df = df.get('High') if 'High' in df else None
+                low_df = df.get('Low') if 'Low' in df else None
+                close_df = df.get('Close') if 'Close' in df else None
+                adj_df = df.get('Adj Close') if 'Adj Close' in df else None
+
                 for yf_sym in yf_symbols:
                     db_sym = yf_to_db.get(yf_sym)
                     if not db_sym:
                         continue
-                    close_col = df['Close'] if 'Close' in df else None
-                    if close_col is None:
+
+                    s_close = _get_col_series(close_df, yf_sym)
+                    if s_close.empty:
                         continue
-                    if isinstance(close_col, pd.Series):
-                        s_hist = close_col.dropna()
-                    elif isinstance(close_col, pd.DataFrame) and yf_sym in close_col.columns:
-                        s_hist = close_col[yf_sym].dropna()
-                    else:
-                        s_hist = pd.Series(dtype=float)
-                    
-                    if s_hist.empty:
-                        continue
+
+                    s_open = _get_col_series(open_df, yf_sym)
+                    s_high = _get_col_series(high_df, yf_sym)
+                    s_low = _get_col_series(low_df, yf_sym)
+                    s_adj = _get_col_series(adj_df, yf_sym)
 
                     cursor.execute("SELECT date FROM ticker_price_history WHERE symbol = ? AND is_manual = 1", (db_sym,))
                     manual_dates = {r["date"] for r in cursor.fetchall()}
 
                     history_inserts = []
-                    for ts, val in s_hist.items():
+                    for ts, close_val in s_close.items():
                         d_str = ts.strftime("%Y-%m-%d") if hasattr(ts, "strftime") else str(ts).split()[0]
                         if d_str in manual_dates:
                             continue
-                        px_val = round(float(val), 6)
-                        history_inserts.append((db_sym, d_str, '1d', px_val, px_val, px_val, px_val, px_val))
+                        c_val = round(float(close_val), 6)
+                        o_val = round(float(s_open.get(ts, c_val) if not pd.isna(s_open.get(ts, c_val)) else c_val), 6)
+                        h_val = round(float(s_high.get(ts, c_val) if not pd.isna(s_high.get(ts, c_val)) else c_val), 6)
+                        l_val = round(float(s_low.get(ts, c_val) if not pd.isna(s_low.get(ts, c_val)) else c_val), 6)
+                        a_val = round(float(s_adj.get(ts, c_val) if not pd.isna(s_adj.get(ts, c_val)) else c_val), 6)
+                        history_inserts.append((db_sym, d_str, '1d', o_val, h_val, l_val, c_val, a_val))
 
                     if history_inserts:
                         cursor.executemany("""

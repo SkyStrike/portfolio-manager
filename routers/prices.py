@@ -289,7 +289,7 @@ def get_price_history(
         }
     Transactions and avg_cost are supplied client-side from template data attributes.
     """
-    today = datetime.utcnow().date()
+    today = datetime.now(timezone.utc).date()
 
     if start and end:
         start_date = start

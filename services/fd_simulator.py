@@ -3,7 +3,7 @@ import io
 import re
 import logging
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timezone
 from core.database import get_connection
 
 logger = logging.getLogger(__name__)
@@ -246,7 +246,7 @@ def run_fd_simulation(rate_mode: str, fixed_rate: float, csv_content: str = None
         start_month = min(injections_by_fd_start.keys())
         
         # Current month
-        current_date_str = datetime.utcnow().date().isoformat()
+        current_date_str = datetime.now(timezone.utc).date().isoformat()
         current_month = current_date_str[:7]
         
         # End month is current_month + 12 months
