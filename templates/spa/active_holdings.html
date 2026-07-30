@@ -463,6 +463,10 @@
                                                 / <span :class="getValClass(tx.realized_pl_sgd)">{{ formatCommas(tx.realized_pl_sgd, true) }} SGD</span>
                                             </template>)
                                         </span>
+                                        
+                                        <span v-if="tx.notes" class="tx-notes text-muted text-xs spa-ml-5 font-italic">
+                                            — {{ tx.notes }}
+                                        </span>
                                     </li>
                                 </template>
                             </ul>
@@ -918,6 +922,10 @@
                                                         {{ formatPct((((t.qty * p.metrics.current_price) - (t.qty * t.price + t.fee)) / (t.qty * t.price + t.fee) * 100)) }},
                                                         {{ formatCommas((t.qty * p.metrics.current_price) - (t.qty * t.price + t.fee), true) }} {{ p.currency }}
                                                     </span>)
+                                                </span>
+                                                
+                                                <span v-if="t.notes" class="tx-notes text-muted text-xs spa-ml-5 font-italic">
+                                                    — {{ t.notes }}
                                                 </span>
                                             </li>
                                         </ul>

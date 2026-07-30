@@ -188,7 +188,8 @@ def calculate_positions(tickers_map, tx_rows, div_rows, exchange_rates, portfoli
                     'currency': tx['currency'],
                     'portfolio_id': tx['portfolio_id'],
                     'realized_pl': tx.get('realized_pl'),
-                    'realized_pl_sgd': tx.get('realized_pl_sgd')
+                    'realized_pl_sgd': tx.get('realized_pl_sgd'),
+                    'notes': tx.get('notes') or ''
                 })
         
         for tx_item in pos_tx_list:

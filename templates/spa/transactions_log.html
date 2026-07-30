@@ -109,6 +109,10 @@
                                                 {{ formatPct(tx.gain_pct) }}, {{ formatCommas(tx.current_val - tx.total_net, true) }} {{ tx.currency }}
                                             </span>)
                                         </span>
+                                        
+                                        <span v-if="tx.notes" class="tx-notes text-muted text-xs spa-ml-5 font-italic">
+                                            — {{ tx.notes }}
+                                        </span>
                                     </li>
                                 </ul>
                             </details>

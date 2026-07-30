@@ -168,6 +168,9 @@
                                                     {{ t.qty }} @ {{ formatCommas(t.price) }} {{ p.currency }}, 
                                                     Fees: {{ formatCommas(t.fee) }} 
                                                     ({{ formatCommas(t.qty * t.price + (t.action.toLowerCase() === 'buy' ? t.fee : -t.fee)) }} {{ p.currency }})
+                                                    <span v-if="t.notes" class="tx-notes text-muted text-xs spa-ml-5 font-italic">
+                                                        — {{ t.notes }}
+                                                    </span>
                                                 </li>
                                             </ul>
                                         </div>
