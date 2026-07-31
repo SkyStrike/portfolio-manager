@@ -1290,6 +1290,8 @@ li {
 .toc-controls {
     margin-bottom: 15px;
     display: flex;
+    align-items: center;
+    flex-wrap: wrap;
     gap: 10px;
 }
 
@@ -1302,6 +1304,12 @@ li {
     cursor: pointer;
     font-size: 0.9rem;
     transition: all 0.2s;
+}
+
+.view-btn:hover {
+    background: var(--hover-bg);
+    border-color: var(--secondary-color);
+    color: var(--primary-color);
 }
 
 .view-btn.active {
@@ -1343,6 +1351,12 @@ li {
     border-bottom: none;
 }
 
+.holdings-summary tr.class-row {
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s ease;
+}
+
 .holdings-summary tr.class-row td {
     background: rgba(56, 189, 248, 0.05);
     font-weight: bold;
@@ -1350,12 +1364,50 @@ li {
     padding: 8px 15px;
 }
 
+.holdings-summary tr.class-row:hover td {
+    background: rgba(56, 189, 248, 0.12);
+}
+
+.holdings-summary tr.underlying-row {
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s ease;
+}
+
 .holdings-summary tr.underlying-row td {
     font-weight: 600;
 }
 
+.holdings-summary tr.underlying-row:hover td {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.collapse-toggle-icon {
+    display: inline-block;
+    width: 14px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    transition: transform 0.15s ease;
+    margin-right: 4px;
+}
+
+.toc-table-controls {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.holdings-summary tr.class-row td:first-child {
+    padding-left: 15px;
+}
+
+.holdings-summary tr.underlying-row td:first-child {
+    padding-left: 32px;
+}
+
 .holdings-summary tr.ticker-row td:first-child {
-    padding-left: 35px;
+    padding-left: 52px;
 }
 
 .holdings-summary tr.ticker-row td {

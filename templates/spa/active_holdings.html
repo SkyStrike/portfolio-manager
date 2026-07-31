@@ -574,6 +574,14 @@
             <div class="toc-controls spa-mb-20">
                 <button class="view-btn" :class="{ active: tocView === 'list' }" @click="tocView = 'list'">List View</button>
                 <button class="view-btn" :class="{ active: tocView === 'table' }" @click="tocView = 'table'">Table View</button>
+                <template v-if="tocView === 'table'">
+                    <button type="button" class="view-btn" @click="expandAllTableGroups()" title="Expand all categories and underlyings">
+                        ➕ Expand All
+                    </button>
+                    <button type="button" class="view-btn" @click="collapseAllTableGroups(activeReport)" title="Collapse all categories and underlyings">
+                        ➖ Collapse All
+                    </button>
+                </template>
             </div>
 
             <!-- TOC List View -->
@@ -615,7 +623,7 @@
                         <tr>
                             <th>Name / Ticker</th>
                             <th>Share %</th>
-                            <th>Cost Basis (SGD)</th>
+                            <th>Cost Basis</th>
                             <th>Daily P&L</th>
                             <th>Realized P&L</th>
                             <th>Div Received</th>
@@ -625,8 +633,11 @@
                     </thead>
                     <tbody>
                         <template v-for="cl in activeReport.body_groups">
-                            <tr class="class-row">
-                                <td>📂 {{ cl.title }}</td>
+                            <tr class="class-row" @click="toggleTableGroup(cl.title)" title="Click to expand/collapse category">
+                                <td>
+                                    <span class="collapse-toggle-icon">{{ isTableGroupCollapsed(cl.title) ? '▶' : '▼' }}</span>
+                                    📂 {{ cl.title }}
+                                </td>
                                 <td v-text="formatPct(cl.total_pct)"></td>
                                 <td v-text="formatCommas(cl.inv)"></td>
                                 <td :class="getValClass(cl.daily_val)" v-text="formatCommas(cl.daily_val, true)"></td>
@@ -636,8 +647,11 @@
                                 <td :class="getValClass(cl.gl)" v-text="formatCommas(cl.gl, true)"></td>
                             </tr>
                             <template v-for="u in cl.underlyings">
-                                <tr class="underlying-row">
-                                    <td><a :href="'#' + slugify(u.title)" v-text="u.title"></a></td>
+                                <tr v-show="!isTableGroupCollapsed(cl.title)" class="underlying-row" @click="toggleTableGroup(cl.title + '::' + u.title)" title="Click to expand/collapse underlying">
+                                    <td>
+                                        <span class="collapse-toggle-icon">{{ isTableGroupCollapsed(cl.title + '::' + u.title) ? '▶' : '▼' }}</span>
+                                        <a :href="'#' + slugify(u.title)" @click.stop v-text="u.title"></a>
+                                    </td>
                                     <td v-text="formatPct(u.alloc_pct)"></td>
                                     <td v-text="formatCommas(u.inv)"></td>
                                     <td :class="getValClass(u.daily_val)">
@@ -652,8 +666,8 @@
                                         <div class="sub-val" v-text="'(' + formatPct(u.roi) + ')'"></div>
                                     </td>
                                 </tr>
-                                <tr v-for="p in u.symbols" :key="p.symbol" class="ticker-row">
-                                    <td class="spa-pl-30">
+                                <tr v-for="p in u.symbols" :key="p.symbol" v-show="!isTableGroupCollapsed(cl.title) && !isTableGroupCollapsed(cl.title + '::' + u.title)" class="ticker-row">
+                                    <td>
                                         <a :href="'#' + slugify(u.title + '-' + p.symbol)" v-text="p.symbol"></a>
                                         <span v-if="p.ib_mismatch" class="warning-indicator tooltip-trigger spa-warning-indicator" :title="getIbMismatchTooltip(p)" style="margin-left: 4px;">⚠</span>
                                     </td>

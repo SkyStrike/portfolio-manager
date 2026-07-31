@@ -14,6 +14,7 @@ const { createApp } = Vue;
                 priceMode: 'intraday',
                 txFilter: 'both',
                 tocView: 'list',
+                collapsedTableGroups: {},
                 activeMenu: null,
                 activeDailyChange: null,
                 showPriceOverrideForm: false,
@@ -681,6 +682,42 @@ const { createApp } = Vue;
             }
         },
         methods: {
+            toggleTableGroup(key) {
+                this.collapsedTableGroups = {
+                    ...this.collapsedTableGroups,
+                    [key]: !this.collapsedTableGroups[key]
+                };
+            },
+            isTableGroupCollapsed(key) {
+                return !!this.collapsedTableGroups[key];
+            },
+            expandAllTableGroups() {
+                this.collapsedTableGroups = {};
+            },
+            collapseAllTableGroups(activeReport) {
+                const newCollapsed = {};
+                if (activeReport && activeReport.body_groups) {
+                    const bodyGroups = Array.isArray(activeReport.body_groups)
+                        ? activeReport.body_groups
+                        : Object.values(activeReport.body_groups);
+                    bodyGroups.forEach(cl => {
+                        if (cl && cl.title) {
+                            newCollapsed[cl.title] = true;
+                            if (cl.underlyings) {
+                                const underlyingsList = Array.isArray(cl.underlyings)
+                                    ? cl.underlyings
+                                    : Object.values(cl.underlyings);
+                                underlyingsList.forEach(u => {
+                                    if (u && u.title) {
+                                        newCollapsed[cl.title + '::' + u.title] = true;
+                                    }
+                                });
+                            }
+                        }
+                    });
+                }
+                this.collapsedTableGroups = newCollapsed;
+            },
             safeFormatChartVal(v, mode) {
                 try {
                     if (v === null || v === undefined) return '';
