@@ -1357,10 +1357,36 @@ const { createApp } = Vue;
                 });
                 return list.sort((a, b) => b.curr - a.curr);
             },
+            prepareUnderlyingBreakdown() {
+                if (!this.portfolioData || !this.portfolioData.positions) return [];
+                const undVals = {};
+                this.portfolioData.positions.forEach(p => {
+                    if (p.is_closed) return;
+                    const val = p.sgd_metrics?.current_sgd || 0;
+                    if (val <= 0) return;
+                    const undName = (p.underlying || p.symbol || "Other").trim();
+                    if (!undVals[undName]) undVals[undName] = 0;
+                    undVals[undName] += val;
+                });
+                const totalVal = Object.values(undVals).reduce((sum, v) => sum + v, 0);
+                const list = [];
+                Object.keys(undVals).forEach(name => {
+                    const val = undVals[name];
+                    if (val > 0) {
+                        list.push({
+                            name: name,
+                            value: val,
+                            pct: totalVal > 0 ? (val / totalVal) * 100 : 0
+                        });
+                    }
+                });
+                return list.sort((a, b) => b.value - a.value);
+            },
             initGlobalCharts() {
                 if (!this.portfolioData) return;
                 if (!this.portfolioData.dashboard) this.portfolioData.dashboard = {};
                 this.portfolioData.dashboard.categories = this.prepareCategoryBreakdown();
+                this.portfolioData.dashboard.underlyings = this.prepareUnderlyingBreakdown();
                 this.portfolioData.dashboard.countries = this.prepareCountryBreakdown();
                 
                 if (window.chartInstances) {

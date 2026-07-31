@@ -515,6 +515,13 @@ function initCharts(chartData) {
         catData.map(s => s.name), 
         catData.map(s => s.inv)
     );
+    const underlyingData = chartData.underlyings || [];
+    renderPieChart(
+        "#chart-underlying-pie",
+        "Underlying Value Allocation",
+        underlyingData.map(u => u.name),
+        underlyingData.map(u => u.value)
+    );
     const countryData = chartData.countries || [];
     renderPieChart(
         "#chart-country-pie", 

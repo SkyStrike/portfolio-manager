@@ -2980,9 +2980,9 @@ body.mask-values .sensitive-value::after {
     text-decoration: none;
 }
 
-/* Country Allocation Breakdown Grid */
+/* Underlying & Country Allocation Breakdown Grid */
 .country-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr;
 }
 
 .country-chart-container {
