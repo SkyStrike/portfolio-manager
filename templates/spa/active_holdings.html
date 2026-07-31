@@ -624,6 +624,7 @@
                             <th>Name / Ticker</th>
                             <th>Share %</th>
                             <th>Cost Basis</th>
+                            <th>Current Value</th>
                             <th>Daily P&L</th>
                             <th>Realized P&L</th>
                             <th>Div Received</th>
@@ -640,6 +641,7 @@
                                 </td>
                                 <td v-text="formatPct(cl.total_pct)"></td>
                                 <td v-text="formatCommas(cl.inv)"></td>
+                                <td v-text="formatCommas(cl.curr)"></td>
                                 <td :class="getValClass(cl.daily_val)" v-text="formatCommas(cl.daily_val, true)"></td>
                                 <td :class="getValClass(cl.realized_pnl)" v-text="formatCommas(cl.realized_pnl, true)"></td>
                                 <td v-text="formatCommas(cl.inc)"></td>
@@ -654,6 +656,7 @@
                                     </td>
                                     <td v-text="formatPct(u.alloc_pct)"></td>
                                     <td v-text="formatCommas(u.inv)"></td>
+                                    <td v-text="formatCommas(u.curr)"></td>
                                     <td :class="getValClass(u.daily_val)">
                                         {{ formatCommas(u.daily_val, true) }}
                                         <div class="sub-val" v-text="'(' + formatPct(u.daily_pct) + ')'"></div>
@@ -675,6 +678,10 @@
                                     <td>
                                         <span class="top-val" v-text="formatCommas(p.sgd_metrics.invested_sgd)"></span>
                                         <span class="sub-val" v-text="'Avg: ' + formatCommas(p.metrics.average_buy_price) + ' ' + p.currency"></span>
+                                    </td>
+                                    <td>
+                                        <span class="top-val" v-text="formatCommas(p.sgd_metrics.current_sgd)"></span>
+                                        <span class="sub-val" v-text="'Px: ' + formatCommas(p.metrics.current_price) + ' ' + p.currency"></span>
                                     </td>
                                     <td :class="getValClass(p.sgd_metrics.daily_val_sgd)">
                                         {{ formatCommas(p.sgd_metrics.daily_val_sgd, true) }}
