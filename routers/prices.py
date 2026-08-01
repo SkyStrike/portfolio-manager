@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Query
 from core.database import get_connection
-from core.schemas import ManualPriceOverride
+from core.schemas import ManualPriceOverride, ManualPriceDetailOverride
 from core.cache import rebuild_dashboard_sync, update_prices_and_rebuild
 from services.price_service import update_prices, can_refresh, record_refresh, REFRESH_COOLDOWN
 
@@ -195,6 +195,121 @@ def save_manual_price_history(payload: ManualPriceOverride):
         rebuild_dashboard_sync(conn, "closing")
         
         return {"status": "success", "symbol": symbol, "price": price_val, "date": date_str}
+    finally:
+        conn.close()
+
+
+@router.post("/api/prices/manual-history-detail")
+def save_manual_price_history_detail(payload: ManualPriceDetailOverride):
+    """
+    Saves or updates a detailed manual OHLC bar entry for a specific date in ticker_price_history.
+    """
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        symbol = payload.symbol
+        ticker_id = payload.ticker_id
+        
+        if not symbol and ticker_id:
+            cursor.execute("SELECT symbol FROM tickers WHERE id = ?", (ticker_id,))
+            t_row = cursor.fetchone()
+            if t_row:
+                symbol = t_row["symbol"]
+        elif symbol and not ticker_id:
+            cursor.execute("SELECT id FROM tickers WHERE symbol = ?", (symbol,))
+            t_row = cursor.fetchone()
+            if t_row:
+                ticker_id = t_row["id"]
+                
+        if not symbol or not ticker_id:
+            raise HTTPException(status_code=404, detail="Ticker symbol or ID not found")
+
+        o_val = round(float(payload.open), 3)
+        h_val = round(float(payload.high), 3)
+        l_val = round(float(payload.low), 3)
+        c_val = round(float(payload.close), 3)
+        a_val = round(float(payload.adj_close if payload.adj_close is not None else payload.close), 3)
+        is_manual = 1 if payload.is_manual else 0
+        date_str = payload.date
+
+        cursor.execute("""
+            INSERT OR REPLACE INTO ticker_price_history (symbol, date, interval, open, high, low, close, adj_close, is_manual)
+            VALUES (?, ?, '1d', ?, ?, ?, ?, ?, ?)
+        """, (symbol, date_str, o_val, h_val, l_val, c_val, a_val, is_manual))
+
+        _sync_ticker_prices_from_history(conn, symbol, ticker_id)
+        conn.commit()
+        
+        rebuild_dashboard_sync(conn, "intraday")
+        rebuild_dashboard_sync(conn, "closing")
+        
+        return {"status": "success", "symbol": symbol, "date": date_str}
+    finally:
+        conn.close()
+
+
+@router.post("/api/prices/refetch-date/{symbol}/{date}")
+def refetch_price_history_date(symbol: str, date: str):
+    """
+    Refetches single date OHLC bar from yfinance for symbol and overwrites ticker_price_history with is_manual=0.
+    """
+    import yfinance as yf
+    from services.price_service import get_yfinance_symbol
+    
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, exchange FROM tickers WHERE symbol = ?", (symbol,))
+        t_row = cursor.fetchone()
+        if not t_row:
+            raise HTTPException(status_code=404, detail="Ticker not found")
+        ticker_id = t_row["id"]
+        exchange = t_row["exchange"] or ""
+        
+        yf_symbol = get_yfinance_symbol(symbol, exchange)
+        dt = datetime.strptime(date, "%Y-%m-%d")
+        next_dt = dt + timedelta(days=3)
+        start_dt = dt - timedelta(days=1)
+        
+        ticker_obj = yf.Ticker(yf_symbol)
+        df = ticker_obj.history(start=start_dt.strftime("%Y-%m-%d"), end=next_dt.strftime("%Y-%m-%d"), interval="1d")
+        
+        if df.empty:
+            raise HTTPException(status_code=404, detail=f"No yfinance market data found for {symbol} around {date}")
+            
+        matched_row = None
+        for idx_dt, row in df.iterrows():
+            idx_str = idx_dt.strftime("%Y-%m-%d")
+            if idx_str == date:
+                matched_row = row
+                break
+                
+        if matched_row is None:
+            matched_row = df.iloc[0]
+            
+        o_val = round(float(matched_row["Open"]), 3)
+        h_val = round(float(matched_row["High"]), 3)
+        l_val = round(float(matched_row["Low"]), 3)
+        c_val = round(float(matched_row["Close"]), 3)
+        a_val = round(float(matched_row.get("Adj Close", matched_row["Close"])), 3)
+        
+        cursor.execute("""
+            INSERT OR REPLACE INTO ticker_price_history (symbol, date, interval, open, high, low, close, adj_close, is_manual)
+            VALUES (?, ?, '1d', ?, ?, ?, ?, ?, 0)
+        """, (symbol, date, o_val, h_val, l_val, c_val, a_val))
+
+        _sync_ticker_prices_from_history(conn, symbol, ticker_id)
+        conn.commit()
+        
+        rebuild_dashboard_sync(conn, "intraday")
+        rebuild_dashboard_sync(conn, "closing")
+        
+        return {
+            "status": "success", 
+            "symbol": symbol, 
+            "date": date, 
+            "bar": {"open": o_val, "high": h_val, "low": l_val, "close": c_val, "adj_close": a_val}
+        }
     finally:
         conn.close()
 

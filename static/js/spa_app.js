@@ -21,6 +21,7 @@ const { createApp } = Vue;
                 priceOverrideDate: '',
                 priceOverrideVal: '',
                 priceHistoryLog: [],
+                editingPriceRow: null,
                 portfolioData: null,
                 vueObserver: null,
                 
@@ -1938,6 +1939,71 @@ const { createApp } = Vue;
                     } else {
                         const err = await res.json();
                         if (window.showToast) window.showToast("Save failed: " + (err.detail || "Error"), "error");
+                    }
+                } catch (e) {
+                    if (window.showToast) window.showToast("Error: " + e.message, "error");
+                }
+            },
+            startEditPriceRow(item) {
+                this.editingPriceRow = {
+                    date: item.date,
+                    open: Number(parseFloat(item.open ?? item.close).toFixed(3)),
+                    high: Number(parseFloat(item.high ?? item.close).toFixed(3)),
+                    low: Number(parseFloat(item.low ?? item.close).toFixed(3)),
+                    close: Number(parseFloat(item.close).toFixed(3)),
+                    adj_close: Number(parseFloat(item.adj_close ?? item.close).toFixed(3)),
+                    is_manual: item.is_manual ? 1 : 0
+                };
+            },
+            cancelEditPriceRow() {
+                this.editingPriceRow = null;
+            },
+            async saveDetailedPriceRow() {
+                if (!this.editingPriceRow || !this.activeDailyChange || !this.activeDailyChange.symbol) return;
+                try {
+                    const res = await fetch("/api/prices/manual-history-detail", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            symbol: this.activeDailyChange.symbol,
+                            ticker_id: this.activeDailyChange.ticker_id,
+                            date: this.editingPriceRow.date,
+                            open: parseFloat(this.editingPriceRow.open),
+                            high: parseFloat(this.editingPriceRow.high),
+                            low: parseFloat(this.editingPriceRow.low),
+                            close: parseFloat(this.editingPriceRow.close),
+                            adj_close: parseFloat(this.editingPriceRow.adj_close),
+                            is_manual: this.editingPriceRow.is_manual ? 1 : 0
+                        })
+                    });
+                    if (res.ok) {
+                        if (window.showToast) window.showToast(`Updated ${this.activeDailyChange.symbol} bar for ${this.editingPriceRow.date}.`);
+                        this.editingPriceRow = null;
+                        await this.fetchPriceHistoryLog();
+                        await this.fetchPortfolioData();
+                    } else {
+                        const err = await res.json();
+                        if (window.showToast) window.showToast("Update failed: " + (err.detail || "Error"), "error");
+                    }
+                } catch (e) {
+                    if (window.showToast) window.showToast("Error: " + e.message, "error");
+                }
+            },
+            async refetchPriceHistoryDate(dateStr) {
+                if (!this.activeDailyChange || !this.activeDailyChange.symbol) return;
+                if (!confirm(`Refetch yfinance market bar for ${this.activeDailyChange.symbol} on ${dateStr}?`)) return;
+                
+                try {
+                    const res = await fetch(`/api/prices/refetch-date/${encodeURIComponent(this.activeDailyChange.symbol)}/${dateStr}`, {
+                        method: "POST"
+                    });
+                    if (res.ok) {
+                        if (window.showToast) window.showToast(`Refetched ${this.activeDailyChange.symbol} data for ${dateStr}.`);
+                        await this.fetchPriceHistoryLog();
+                        await this.fetchPortfolioData();
+                    } else {
+                        const err = await res.json();
+                        if (window.showToast) window.showToast("Refetch failed: " + (err.detail || "Error"), "error");
                     }
                 } catch (e) {
                     if (window.showToast) window.showToast("Error: " + e.message, "error");

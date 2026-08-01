@@ -28,6 +28,17 @@ class ManualPriceOverride(BaseModel):
     price: float
     date: str | None = None
 
+class ManualPriceDetailOverride(BaseModel):
+    symbol: str | None = None
+    ticker_id: int | None = None
+    date: str
+    open: float
+    high: float
+    low: float
+    close: float
+    adj_close: float | None = None
+    is_manual: int = 1
+
 class TransactionCreate(BaseModel):
     portfolio_id: int
     ticker: str        # Ticker symbol

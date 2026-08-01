@@ -3395,11 +3395,20 @@ body.mask-values .sensitive-value::after {
         border: 1px solid var(--card-border);
         border-radius: 1rem;
         width: 580px;
-        max-width: 95%;
+        max-width: 95vw;
         padding: 1.75rem;
         box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
         display: flex;
         flex-direction: column;
+        transition: width 0.25s ease-in-out;
+    }
+    .cal-div-modal-box.expanded-modal {
+        width: 880px;
+    }
+    .daily-change-top-summary {
+        max-width: 520px;
+        margin: 0 auto;
+        width: 100%;
     }
     .cal-div-modal-header {
         display: flex;
