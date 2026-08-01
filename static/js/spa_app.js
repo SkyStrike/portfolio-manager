@@ -114,8 +114,14 @@ const { createApp } = Vue;
                                     currentVal = tx.qty * currentPrice;
                                     gainPct = valRaw > 0 ? ((currentVal - valRaw) / valRaw) * 100 : 0;
                                 } else if (tx.action === 'Sell' && tx.realized_pl != null) {
-                                    const costBasis = valRaw - tx.realized_pl;
-                                    gainPct = costBasis > 0 ? (tx.realized_pl / costBasis) * 100 : 0;
+                                    const costBasis = totalNet - tx.realized_pl;
+                                    if (costBasis > 0) {
+                                        gainPct = (tx.realized_pl / costBasis) * 100;
+                                    } else if (valRaw > 0) {
+                                        gainPct = (tx.realized_pl / valRaw) * 100;
+                                    } else {
+                                        gainPct = 0;
+                                    }
                                 }
                                 
                                 allTxs.push({

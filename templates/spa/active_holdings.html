@@ -457,7 +457,7 @@
                                         <span v-else-if="tx.action === 'Sell' && tx.realized_pl != null" class="metadata text-muted text-xs">
                                             (Realized P&L: 
                                             <span :class="getValClass(tx.realized_pl)">
-                                                {{ formatCommas(tx.realized_pl, true) }} {{ tx.currency }}<template v-if="tx.gainPct"> ({{ formatPct(tx.gainPct) }})</template>
+                                                {{ formatCommas(tx.realized_pl, true) }} {{ tx.currency }}<template v-if="tx.gainPct != null"> ({{ formatPct(tx.gainPct) }})</template>
                                             </span>
                                             <template v-if="tx.currency !== 'SGD' && tx.realized_pl_sgd != null">
                                                 / <span :class="getValClass(tx.realized_pl_sgd)">{{ formatCommas(tx.realized_pl_sgd, true) }} SGD</span>
@@ -976,6 +976,15 @@
                                                         {{ formatPct((((t.qty * p.metrics.current_price) - (t.qty * t.price + t.fee)) / (t.qty * t.price + t.fee) * 100)) }},
                                                         {{ formatCommas((t.qty * p.metrics.current_price) - (t.qty * t.price + t.fee), true) }} {{ p.currency }}
                                                     </span>)
+                                                </span>
+                                                <span v-else-if="t.action === 'Sell' && t.realized_pl != null" class="metadata text-muted text-xs">
+                                                    (Realized P&L: 
+                                                    <span :class="getValClass(t.realized_pl)">
+                                                        {{ formatCommas(t.realized_pl, true) }} {{ p.currency }}<template v-if="(t.qty * t.price - t.fee - t.realized_pl) > 0"> ({{ formatPct((t.realized_pl / (t.qty * t.price - t.fee - t.realized_pl)) * 100) }})</template>
+                                                    </span>
+                                                    <template v-if="p.currency !== 'SGD' && t.realized_pl_sgd != null">
+                                                        / <span :class="getValClass(t.realized_pl_sgd)">{{ formatCommas(t.realized_pl_sgd, true) }} SGD</span>
+                                                    </template>)
                                                 </span>
                                                 
                                                 <span v-if="t.notes" class="tx-notes text-muted text-xs spa-ml-5 font-italic">
