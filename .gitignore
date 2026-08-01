@@ -33,3 +33,6 @@ Thumbs.db
 static/generated/
 
 tasks/
+
+# Systemd watcher trigger files
+triggers/

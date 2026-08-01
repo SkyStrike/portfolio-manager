@@ -231,3 +231,58 @@ def delete_backup(filename: str):
         return {"message": f"Successfully deleted backup file {clean_name}."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Delete failed: {str(e)}")
+
+SYSTEM_IB_DIR = "/app/triggers/ib"
+
+class SystemdTriggerRequest(BaseModel):
+    action: str = Field(..., pattern=r'^[a-zA-Z0-9_\-]+$')
+
+@router.get("/maintenance/system-ib-status")
+def get_system_ib_status():
+    """Checks for existing pending trigger files in /app/triggers/ib/."""
+    os.makedirs(SYSTEM_IB_DIR, exist_ok=True)
+    download_data_file = os.path.join(SYSTEM_IB_DIR, "download_data.json")
+    flex_dividend_file = os.path.join(SYSTEM_IB_DIR, "flex_dividend.json")
+    
+    return {
+        "download_data_pending": os.path.exists(download_data_file),
+        "flex_dividend_pending": os.path.exists(flex_dividend_file)
+    }
+
+@router.post("/maintenance/trigger-ib-action")
+def trigger_ib_systemd_action(req: SystemdTriggerRequest):
+    """Writes a JSON trigger file to /app/triggers/ib/ for external systemd/file watcher execution."""
+    action = req.action.strip()
+    if action not in ["download_data", "flex_dividend"]:
+        raise HTTPException(status_code=400, detail=f"Unsupported action: '{action}'. Allowed actions: 'download_data', 'flex_dividend'")
+        
+    try:
+        from datetime import datetime
+        os.makedirs(SYSTEM_IB_DIR, exist_ok=True)
+        filename = f"{action}.json"
+        target_filepath = os.path.join(SYSTEM_IB_DIR, filename)
+        
+        if os.path.exists(target_filepath):
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Trigger file '{filename}' already exists. Action is pending processing by external watcher."
+            )
+        
+        payload = {
+            "action": action,
+            "created_at": datetime.now().isoformat()
+        }
+        
+        with open(target_filepath, "w") as f:
+            json.dump(payload, f, indent=2)
+            
+        return {
+            "status": "success",
+            "message": f"Successfully created trigger file '{filename}' in '{SYSTEM_IB_DIR}'",
+            "action": action,
+            "filepath": target_filepath
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create systemd trigger file: {str(e)}")

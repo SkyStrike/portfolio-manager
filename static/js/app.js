@@ -3789,7 +3789,46 @@ function setupTransactionModalCalculation() {
 let cachedPatches = [];
 
 async function loadMaintenanceTab() {
-    await Promise.all([loadDatabaseBackups(), loadPatchesList()]);
+    await Promise.all([loadDatabaseBackups(), loadPatchesList(), checkSystemIbStatus()]);
+}
+
+async function checkSystemIbStatus() {
+    const btnDownload = document.getElementById("btn-ib-download-data");
+    const btnDividend = document.getElementById("btn-ib-flex-dividend");
+    if (!btnDownload || !btnDividend) return;
+    
+    try {
+        const res = await fetch("/api/maintenance/system-ib-status");
+        if (res.ok) {
+            const status = await res.json();
+            
+            if (status.download_data_pending) {
+                btnDownload.disabled = true;
+                btnDownload.style.opacity = "0.5";
+                btnDownload.style.cursor = "not-allowed";
+                btnDownload.innerText = "⏳ Download Data (Pending)";
+            } else {
+                btnDownload.disabled = false;
+                btnDownload.style.opacity = "1";
+                btnDownload.style.cursor = "pointer";
+                btnDownload.innerText = "🔄 Trigger IBKR Data Download";
+            }
+            
+            if (status.flex_dividend_pending) {
+                btnDividend.disabled = true;
+                btnDividend.style.opacity = "0.5";
+                btnDividend.style.cursor = "not-allowed";
+                btnDividend.innerText = "⏳ Dividend Flex Report (Pending)";
+            } else {
+                btnDividend.disabled = false;
+                btnDividend.style.opacity = "1";
+                btnDividend.style.cursor = "pointer";
+                btnDividend.innerText = "💰 Trigger Dividend Flex Report";
+            }
+        }
+    } catch (err) {
+        console.error("Error checking system IB status:", err);
+    }
 }
 
 async function loadDatabaseBackups() {
@@ -3911,5 +3950,31 @@ window.handleAdminRebuildCache = async function() {
             btn.style.opacity = "1";
             btn.innerText = "🔄 Rebuild Dashboard Cache";
         }
+    }
+};
+
+window.triggerIbSystemdAction = async function(action) {
+    const actionLabel = action === 'download_data' ? 'IBKR Data Download' : 'Dividend Flex Report';
+    try {
+        const res = await fetch("/api/maintenance/trigger-ib-action", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: action })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            showToast(`Triggered ${actionLabel}! (${action}.json created in /app/triggers/ib/)`);
+            const consoleOutput = document.getElementById("patch-console-log");
+            if (consoleOutput) {
+                consoleOutput.innerText += `\n[${new Date().toLocaleTimeString()}] SUCCESS: ${data.message}`;
+            }
+        } else {
+            showToast(data.detail || `Failed to trigger ${actionLabel}`, "error");
+        }
+    } catch (err) {
+        console.error("Systemd trigger error:", err);
+        showToast("Network error triggering system action.", "error");
+    } finally {
+        await checkSystemIbStatus();
     }
 };

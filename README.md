@@ -226,6 +226,7 @@ Additional step-by-step documentation guides are available in the [docs/](docs/)
 10. **[JSON Data Files Reference](docs/data_files.md)**: Catalog and structural JSON schemas for system configurations and IBKR inventory caches.
 11. **[Advanced Scripting & API Guide](docs/advanced_scripting.md)**: Custom automation scripts, programmatic database pre-warming triggers, RESTful schema lookups, and interactive Swagger UI configurations.
 12. **[Illiquid Stock & Price History Guide](docs/illiquid_stock_price_update.md)**: Managing illiquid security prices, manual bar gap-filling, date-level overrides, and Closing vs Intraday P&L behavior.
+13. **[Systemd & File-Watcher Triggers Guide](docs/systemd_triggers.md)**: External trigger JSON payloads (`/app/triggers/ib/`), pending lock prevention, REST APIs, and systemd path unit configurations.
 
 ---
 

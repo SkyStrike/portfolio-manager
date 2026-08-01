@@ -7,6 +7,7 @@ services:
     volumes:
       - ./data:/app/data
       - ./config:/app/config
+      - ./triggers:/app/triggers
     environment:
       - PORTFOLIO_DB_FILE=/app/data/portfolio.db
       - exchange_rates_file=/app/data/exchange_rates.json

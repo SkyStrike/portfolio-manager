@@ -132,7 +132,13 @@ else:
 async def startup_event():
     from core.logging_config import configure_logging
     configure_logging()
-    logger.info("[startup] Portfolio Manager starting up...")
+    try:
+        from routers.patches import SYSTEM_IB_DIR
+        os.makedirs(SYSTEM_IB_DIR, exist_ok=True)
+        logger.info("[startup] Ensured systemd trigger directory exists: %s", SYSTEM_IB_DIR)
+    except Exception as e:
+        logger.warning("[startup] Could not create systemd trigger directory: %s", e)
+
     try:
         from services.fetch_exchange_rates import warm_today_exchange_rates
         warm_today_exchange_rates()
