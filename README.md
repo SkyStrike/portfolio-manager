@@ -3,16 +3,9 @@
 A self-hosted, lightweight investment portfolio manager built with a Python (FastAPI + SQLite) backend and a modern HTML5 + Vanilla CSS + JS frontend.
 
 ### 🎯 Project Origins & Intention
-This tracker originally started as a simple tool to monitor cash flows and dividend distributions, focusing on custom asset groupings for **thematic plays** or for consolidated tracking of **stocks with multiple tickers** (e.g. mapping single-stock YieldMax ETFs alongside their actual underlying equities and/or ADRs in a single view).
+This tracker originally started as a simple tool to monitor cash flows and dividend distributions, focusing on custom asset groupings for **thematic plays** or for consolidated tracking of **stocks with multiple tickers** (e.g. mapping single-stock ETFs alongside their actual underlying equities and/or ADRs in a single view).
 
-Over time, the project evolved into a full-featured dashboard. The codebase heavily favors **Interactive Brokers (IBKR)** integration because it is my primary brokerage account and supports easy API connectivity using the `ib_insync` library. The system also supports manual entries and CSV sheets for other brokers like **Moomoo**, though full API automation is not implemented for them due to limitations with their official SDKs.
-
-### 🌟 Dashboard 2.0 (Single Page Application Architecture)
-Version 2.0 represents a major architectural modernization, completely replacing the legacy Static Site Generator (SSG) pipeline with a reactive **Vue 3 Single Page Application (SPA)** and a **FastAPI REST API**:
-* **Reactive Single-Page App (Vue 3)**: Instant tab switching (`/active`, `/closed`, `/history`, `/charts`, `/performance`, `/dividend-calendar`) without full page reloads.
-* **In-Memory API Caching**: Replaced static `.html` file disk generation with an $O(1)$ RAM cache (`core/cache.py`) streaming JSON payloads to FastAPI REST endpoints in sub-5ms response times.
-* **Clean RESTful Routing**: Deprecated static SSG filename routing (`.html`) in favor of standard, RESTful clean paths.
-* **Dynamic Refactoring & Technical Debt Cleanup**: Deprecated legacy Jinja rendering pipelines and reorganized services into modular backend dependencies (`dividend_calendar_service.py`, `performance_report_service.py`).
+Over time, the project evolved into a full-featured dashboard. The codebase heavily favors **Interactive Brokers (IBKR)** integration because it is my primary brokerage account and supports easy API connectivity using the `ib_async` library. The system also supports manual entries and CSV sheets for other brokers like **Moomoo**, though full API automation is not implemented for them due to limitations with their official SDKs.
 
 ---
 
@@ -184,10 +177,15 @@ The project has been refactored into a modern, modular architecture:
   - [ingestion/importer.py](ingestion/importer.py): Parses Holdings and Transactions CSV exports.
 * **`routers/`**: Decoupled, modular controller endpoints:
   - [routers/views.py](routers/views.py): Single Page Application dashboard shell view routing.
-  - [routers/prices.py](routers/prices.py): Price history queries, synchronous/background Yahoo Finance price refreshes.
+  - [routers/prices.py](routers/prices.py): Price history queries, manual bar gap-filling, date-level overrides, and yfinance price refreshes.
   - [routers/dashboard.py](routers/dashboard.py): REST payload streaming for active, closed, history, and performance views.
-  - [routers/api_v1.py](routers/api_v1.py): CRUD endpoints for trades, brokers, and settings.
-  - [routers/patches.py](routers/patches.py): Maintenance patch listing and parameter execution engine.
+  - [routers/dividends.py](routers/dividends.py): Dividend transactions management and IBKR flex report ingestion.
+  - [routers/portfolios.py](routers/portfolios.py): Portfolio creation, updates, and classification management.
+  - [routers/tickers.py](routers/tickers.py): Ticker metadata updates, tax rates, and friendly name assignments.
+  - [routers/transactions.py](routers/transactions.py): Trade transaction CRUD operations and cost basis recalculations.
+  - [routers/api_v1.py](routers/api_v1.py): System parameters, brokers, and settings endpoints.
+  - [routers/patches.py](routers/patches.py): Maintenance patch execution engine, database backup/restore, and systemd IPC action triggers.
+* **`triggers/`**: Directory for external systemd watcher IPC trigger payload files (`triggers/ib/download_data.json` and `triggers/ib/flex_dividend.json`).
 * **`templates/`**: Single Page Application views and HTML component templates:
   - [templates/spa_shell.html](templates/spa_shell.html): Unified SPA shell layout, Vue 3 root instance, and modal dialogs.
   - [templates/control_center.html](templates/control_center.html): Administrative dashboard for settings, data imports, database backups, and maintenance operations.
@@ -196,6 +194,7 @@ The project has been refactored into a modern, modular architecture:
 * **`static/`**: Client-side styling and scripts:
   - **`static/css/style.css`**: Design tokens, component styles, and glassmorphism layouts.
   - **`static/js/app.js`**: Administrative Control Center application scripts.
+  - **`static/js/spa_app.js`**: Core Single Page Application Vue 3 instance and interactive state.
 
 ---
 
@@ -207,6 +206,7 @@ The system relies on supplemental data files (typically placed in the `/data` or
 | :--- | :--- | :--- | :--- |
 | **`data/config.json`** | Application parameters (conversion rates, color schemes, allowed uploads). | Loaded on startup and UI render. Primary config. | Falls back to **`config/config.json`**. |
 | **`data/ib_data.json`** | Broker position report containing actual holdings size, cost basis, and balances (NetLiquidation, GrossPositionValue, TotalCashValue) for IBKR. | Used for stock reconciliation (`IB Sync` badge / `IB Mismatch` warning) and cash reporting. | Reconciliation checks are skipped; cash reports default to database-only. |
+| **`triggers/ib/`** | Directory holding JSON payload files (`download_data.json`, `flex_dividend.json`) monitored by external systemd `.path` units or background file-watcher scripts. | Generated via Maintenance tab in Control Center or `POST /api/maintenance/trigger-ib-action`. Disallows duplicate runs while pending. | Created automatically on startup and when triggers are requested. |
 
 ---
 
