@@ -574,6 +574,9 @@
             <div class="toc-controls spa-mb-20">
                 <button class="view-btn" :class="{ active: tocView === 'list' }" @click="tocView = 'list'">List View</button>
                 <button class="view-btn" :class="{ active: tocView === 'table' }" @click="tocView = 'table'">Table View</button>
+                <button v-if="(cashReport && cashReport.cash_on_hand > 0) || (summary && summary.cash_report && summary.cash_report.cash_on_hand > 0)" class="view-btn" :class="{ active: includeCashInAlloc }" @click="includeCashInAlloc = !includeCashInAlloc" title="Toggle between Stock-Only and Portfolio + Cash allocation percentages">
+                    {{ includeCashInAlloc ? '💵 Cash Included' : '📈 Stocks Only' }}
+                </button>
                 <template v-if="tocView === 'table'">
                     <button type="button" class="view-btn" @click="expandAllTableGroups()" title="Expand all categories and underlyings">
                         ➕ Expand All
@@ -588,12 +591,12 @@
             <div v-show="tocView === 'list'" id="toc-list-view">
                 <ul class="toc">
                     <li v-for="cl in activeReport.body_groups" :key="cl.title">
-                        <strong>📂 {{ cl.title }}</strong> ({{ formatPct(cl.total_pct) }})
+                        <strong>📂 {{ cl.title }}</strong> ({{ formatPct(getCategoryAllocPct(cl)) }})
                         <ul>
                             <li v-for="u in cl.underlyings" :key="u.title">
                                 <a :href="'#' + slugify(u.title)" class="toc-item-link" v-text="u.title"></a>
                                 <span class="toc-item-stats">
-                                    Size: <span class="stat">{{ formatPct(u.alloc_pct) }}, {{ formatCommas(u.curr) }} SGD</span> 
+                                    Size: <span class="stat">{{ formatPct(getUnderlyingAllocPct(u)) }}, {{ formatCommas(u.curr) }} SGD</span> 
                                     (<span :class="getValClass(u.gl)">{{ formatPct(u.roi) }}</span>)
                                     <br>
                                     Daily: <span :class="getValClass(u.daily_val)">{{ formatCommas(u.daily_val, true) }} SGD</span>
@@ -604,10 +607,28 @@
                                     <li v-for="p in u.symbols" :key="p.symbol">
                                         <a :href="'#' + slugify(u.title + '-' + p.symbol)" class="toc-sublist-link" v-text="p.symbol"></a>
                                         <span v-if="p.ib_mismatch" class="warning-indicator tooltip-trigger spa-warning-indicator" :title="getIbMismatchTooltip(p)">⚠</span>
-                                        <span class="toc-sublist-val">{{ formatPct(p.sgd_metrics.current_sgd / summary.total_market_value_sgd * 100) }} | </span>
+                                        <span class="toc-sublist-val">{{ formatPct(getTickerAllocPct(p)) }} | </span>
                                         <span class="toc-sublist-val" :class="getValClass(p.sgd_metrics.daily_val_sgd)">
                                             <span class="sensitive-value">{{ formatCommas(p.sgd_metrics.daily_val_sgd, true) }} SGD</span> <span class="daily-change-clickable" @click="openDailyChangeModal(p)" title="Click to view daily change calculation breakdown">({{ formatPct(p.metrics.daily_pct) }})</span>
                                         </span>
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                    <!-- Cash & Liquidity Block (List View) -->
+                    <li v-if="includeCashInAlloc && (cashReport || (summary && summary.cash_report)) && ((cashReport || summary.cash_report).cash_on_hand > 0)">
+                        <strong>📂 💵 Cash & Liquidity</strong> ({{ formatPct(getCashAllocPct()) }})
+                        <ul>
+                            <li>
+                                <span class="toc-item-link">Uninvested Cash Balances</span>
+                                <span class="toc-item-stats">
+                                    Size: <span class="stat">{{ formatPct(getCashAllocPct()) }}, {{ formatCommas((cashReport || summary.cash_report).cash_on_hand) }} SGD</span>
+                                </span>
+                                <ul v-if="(cashReport || summary.cash_report).by_broker && Object.keys((cashReport || summary.cash_report).by_broker).length > 0" class="toc-sublist">
+                                    <li v-for="(bData, bName) in (cashReport || summary.cash_report).by_broker" :key="bName">
+                                        <span class="toc-sublist-link">{{ bName }} Cash</span>
+                                        <span class="toc-sublist-val">{{ formatPct((bData.cash_on_hand !== undefined ? bData.cash_on_hand : bData) / getHoldingsTotalDenominator() * 100) }} | {{ formatCommas(bData.cash_on_hand !== undefined ? bData.cash_on_hand : bData) }} SGD</span>
                                     </li>
                                 </ul>
                             </li>
@@ -639,7 +660,7 @@
                                     <span class="collapse-toggle-icon">{{ isTableGroupCollapsed(cl.title) ? '▶' : '▼' }}</span>
                                     📂 {{ cl.title }}
                                 </td>
-                                <td v-text="formatPct(cl.total_pct)"></td>
+                                <td v-text="formatPct(getCategoryAllocPct(cl))"></td>
                                 <td v-text="formatCommas(cl.inv)"></td>
                                 <td v-text="formatCommas(cl.curr)"></td>
                                 <td :class="getValClass(cl.daily_val)" v-text="formatCommas(cl.daily_val, true)"></td>
@@ -654,7 +675,7 @@
                                         <span class="collapse-toggle-icon">{{ isTableGroupCollapsed(cl.title + '::' + u.title) ? '▶' : '▼' }}</span>
                                         <a :href="'#' + slugify(u.title)" @click.stop v-text="u.title"></a>
                                     </td>
-                                    <td v-text="formatPct(u.alloc_pct)"></td>
+                                    <td v-text="formatPct(getUnderlyingAllocPct(u))"></td>
                                     <td v-text="formatCommas(u.inv)"></td>
                                     <td v-text="formatCommas(u.curr)"></td>
                                     <td :class="getValClass(u.daily_val)">
@@ -674,7 +695,7 @@
                                         <a :href="'#' + slugify(u.title + '-' + p.symbol)" v-text="p.symbol"></a>
                                         <span v-if="p.ib_mismatch" class="warning-indicator tooltip-trigger spa-warning-indicator" :title="getIbMismatchTooltip(p)" style="margin-left: 4px;">⚠</span>
                                     </td>
-                                    <td v-text="formatPct(p.sgd_metrics.current_sgd / summary.total_market_value_sgd * 100)"></td>
+                                    <td v-text="formatPct(getTickerAllocPct(p))"></td>
                                     <td>
                                         <span class="top-val" v-text="formatCommas(p.sgd_metrics.invested_sgd)"></span>
                                         <span class="sub-val" v-text="'Avg: ' + formatCommas(p.metrics.average_buy_price) + ' ' + p.currency"></span>
@@ -697,6 +718,18 @@
                                 </tr>
                             </template>
                         </template>
+                        <!-- Cash & Liquidity Row (Table View) -->
+                        <tr v-if="includeCashInAlloc && (cashReport || (summary && summary.cash_report)) && ((cashReport || summary.cash_report).cash_on_hand > 0)" class="class-row" style="background: rgba(56, 189, 248, 0.1);">
+                            <td>📂 💵 Cash & Liquidity</td>
+                            <td v-text="formatPct(getCashAllocPct())"></td>
+                            <td v-text="formatCommas((cashReport || summary.cash_report).cash_on_hand)"></td>
+                            <td v-text="formatCommas((cashReport || summary.cash_report).cash_on_hand)"></td>
+                            <td class="text-secondary">-</td>
+                            <td class="text-secondary">-</td>
+                            <td class="text-secondary">-</td>
+                            <td class="text-secondary">-</td>
+                            <td class="text-secondary">-</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>

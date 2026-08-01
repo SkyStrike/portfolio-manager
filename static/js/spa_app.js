@@ -14,6 +14,7 @@ const { createApp } = Vue;
                 priceMode: 'intraday',
                 txFilter: 'both',
                 tocView: 'list',
+                includeCashInAlloc: false,
                 collapsedTableGroups: {},
                 activeMenu: null,
                 activeDailyChange: null,
@@ -718,6 +719,37 @@ const { createApp } = Vue;
                     });
                 }
                 this.collapsedTableGroups = newCollapsed;
+            },
+            getHoldingsTotalDenominator() {
+                const stockMarketVal = this.summary?.total_market_value_sgd || 0;
+                const cashData = this.cashReport || this.summary?.cash_report;
+                const cashVal = (this.includeCashInAlloc && cashData?.cash_on_hand)
+                    ? (cashData.cash_on_hand || 0)
+                    : 0;
+                return stockMarketVal + cashVal;
+            },
+            getCategoryAllocPct(cl) {
+                const denom = this.getHoldingsTotalDenominator();
+                if (!denom || denom <= 0) return 0;
+                return ((cl.curr || 0) / denom) * 100;
+            },
+            getUnderlyingAllocPct(u) {
+                const denom = this.getHoldingsTotalDenominator();
+                if (!denom || denom <= 0) return 0;
+                return ((u.curr || 0) / denom) * 100;
+            },
+            getTickerAllocPct(p) {
+                const denom = this.getHoldingsTotalDenominator();
+                if (!denom || denom <= 0) return 0;
+                const val = p.sgd_metrics?.current_sgd || 0;
+                return (val / denom) * 100;
+            },
+            getCashAllocPct() {
+                const denom = this.getHoldingsTotalDenominator();
+                const cashData = this.cashReport || this.summary?.cash_report;
+                const cashVal = cashData?.cash_on_hand || 0;
+                if (!denom || denom <= 0) return 0;
+                return (cashVal / denom) * 100;
             },
             safeFormatChartVal(v, mode) {
                 try {
