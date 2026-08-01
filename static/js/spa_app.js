@@ -1891,7 +1891,7 @@ const { createApp } = Vue;
                 
                 this.priceOverrideDate = `${year}-${month}-${day}`;
                 const rawPrice = this.activeDailyChange.current_price;
-                this.priceOverrideVal = (rawPrice !== null && rawPrice !== undefined) ? Number(parseFloat(rawPrice).toFixed(2)) : '';
+                this.priceOverrideVal = (rawPrice !== null && rawPrice !== undefined) ? Number(parseFloat(rawPrice).toFixed(3)) : '';
                 this.showPriceOverrideForm = true;
                 await this.fetchPriceHistoryLog();
             },
@@ -1912,11 +1912,12 @@ const { createApp } = Vue;
                     if (window.showToast) window.showToast("Ticker symbol not found for override.", "error");
                     return;
                 }
-                const priceNum = parseFloat(this.priceOverrideVal);
-                if (isNaN(priceNum) || priceNum <= 0) {
+                const rawNum = parseFloat(this.priceOverrideVal);
+                if (isNaN(rawNum) || rawNum <= 0) {
                     if (window.showToast) window.showToast("Please enter a valid positive price.", "error");
                     return;
                 }
+                const priceNum = Math.round(rawNum * 1000) / 1000;
                 
                 try {
                     const res = await fetch("/api/prices/manual-history", {

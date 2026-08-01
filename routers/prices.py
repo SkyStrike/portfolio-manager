@@ -151,14 +151,39 @@ def save_manual_price_history(payload: ManualPriceOverride):
         if not symbol or not ticker_id:
             raise HTTPException(status_code=404, detail="Ticker symbol or ID not found")
             
-        price_val = float(payload.price)
+        price_val = round(float(payload.price), 3)
         date_str = payload.date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
         
-        # 1. Upsert into ticker_price_history as is_manual = 1
+        # 1. Check if existing row exists to preserve OHLC bar structure
         cursor.execute("""
-            INSERT OR REPLACE INTO ticker_price_history (symbol, date, interval, open, high, low, close, adj_close, is_manual)
-            VALUES (?, ?, '1d', ?, ?, ?, ?, ?, 1)
-        """, (symbol, date_str, price_val, price_val, price_val, price_val, price_val))
+            SELECT open, high, low, close, adj_close 
+            FROM ticker_price_history 
+            WHERE symbol = ? AND date = ? AND interval = '1d'
+        """, (symbol, date_str))
+        existing = cursor.fetchone()
+
+        if existing and dict(existing).get("open") is not None:
+            ex_open = existing["open"]
+            ex_high = max(existing["high"] or price_val, price_val)
+            ex_low = min(existing["low"] or price_val, price_val)
+            ex_close = existing["close"]
+            ex_adj = existing["adj_close"]
+            
+            # Maintain split/dividend adjustment factor for adj_close if present
+            if ex_close and ex_close > 0 and ex_adj is not None:
+                new_adj = round((ex_adj / ex_close) * price_val, 6)
+            else:
+                new_adj = price_val
+
+            cursor.execute("""
+                INSERT OR REPLACE INTO ticker_price_history (symbol, date, interval, open, high, low, close, adj_close, is_manual)
+                VALUES (?, ?, '1d', ?, ?, ?, ?, ?, 1)
+            """, (symbol, date_str, ex_open, ex_high, ex_low, price_val, new_adj))
+        else:
+            cursor.execute("""
+                INSERT OR REPLACE INTO ticker_price_history (symbol, date, interval, open, high, low, close, adj_close, is_manual)
+                VALUES (?, ?, '1d', ?, ?, ?, ?, ?, 1)
+            """, (symbol, date_str, price_val, price_val, price_val, price_val, price_val))
 
         # 2. Sync latest price snapshot to ticker_prices
         _sync_ticker_prices_from_history(conn, symbol, ticker_id)
