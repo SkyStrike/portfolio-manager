@@ -3642,7 +3642,11 @@ function setupTransactionModalCalculation() {
             const patch = cachedPatches.find(p => p.id === patchId);
             if (!patch) return;
 
-            descText.textContent = patch.description || "No description provided.";
+            let descContent = patch.description || "No description provided.";
+            if (patch.applicable_version) {
+                descContent += `\n\n📌 Applicable Version: ${patch.applicable_version}`;
+            }
+            descText.innerText = descContent;
             descCard.style.display = "block";
 
             paramsFields.innerHTML = "";
@@ -3891,7 +3895,10 @@ async function loadPatchesList() {
         if (res.ok) {
             cachedPatches = await res.json();
             let html = '<option value="">-- Select a patch to load --</option>';
-            html += cachedPatches.map(p => `<option value="${p.id}">${p.id} - ${p.name}</option>`).join("");
+            html += cachedPatches.map(p => {
+                const verTag = p.applicable_version ? ` (${p.applicable_version})` : '';
+                return `<option value="${p.id}">${p.id} - ${p.name}${verTag}</option>`;
+            }).join("");
             patchSelect.innerHTML = html;
         }
     } catch (e) {

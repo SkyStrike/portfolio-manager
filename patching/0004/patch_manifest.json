@@ -3,5 +3,6 @@
   "name": "Fix Untraded & Holiday Ticker Daily P/L Base Prices",
   "description": "Sets intraday_prev_close = intraday_current and daily_prev_close = daily_close for untraded/holiday tickers to prevent zero-volume or holiday sessions from producing false P/L changes.",
   "script": "patch_holiday_untraded_prices.py",
+  "applicable_version": "<= v2.0.51",
   "parameters": []
 }

@@ -3,5 +3,6 @@
   "name": "Refetch Corrupted Price History OHLC Bars",
   "description": "Scans ticker_price_history for flat bars (open=high=low=close) including manual entries, refetching actual OHLC data from yfinance while preserving user-entered manual nominal close prices.",
   "script": "patch_refetch_corrupted_history.py",
+  "applicable_version": "<= v2.0.41",
   "parameters": []
 }

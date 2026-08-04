@@ -52,9 +52,12 @@ Every patch must reside in a subfolder inside the `patching/` directory named wi
   "name": "Recalculate Dividend Quantities",
   "description": "Calculates and updates missing dividend quantities ('qty' IS NULL) based on holding shares on the dividend payment date.",
   "script": "patch_dividends_qty.py",
+  "applicable_version": "<= v1.0.0",
   "parameters": []
 }
 ```
+
+* `applicable_version` (optional string): States version compatibility constraints (e.g. `<= v1.4.2`). Displayed in the Maintenance tab dropdown and description card.
 
 #### Parameter Field Definition
 For patches requiring inputs, specify them in the `parameters` list:
