@@ -10,64 +10,80 @@ from core.cache import rebuild_dashboard_sync
 
 logger = logging.getLogger(__name__)
 
+CANADIAN_EXCHANGES = {"TO", "V", "TSX", "TSX-V", "NEO", "CSE"}
+
 def patch(params: dict = None):
     """
-    Finds tickers whose exchange was on holiday or untraded during recent market sessions
-    (where daily_close_date is older than the max daily_close_date in the database)
-    and sets intraday_prev_close = intraday_current and daily_prev_close = daily_close.
+    Exchange-aware P/L base price reset:
+    - Restores latest and previous close prices from ticker_price_history per exchange.
+    - For Canadian tickers on Canadian exchange holidays (e.g. 2026-08-03 Civic Holiday),
+      sets daily_prev_close = daily_close (0 P/L change on holiday).
+    - For SGX and US tickers operating on regular market sessions, compares latest close
+      against previous session close.
     """
-    print("[Patch 0004] Starting holiday/untraded ticker price P/L reset...")
+    print("[Patch 0004] Executing exchange-aware P/L base price fix...")
     conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
     try:
-        # 1. Find the latest daily_close_date across all tickers
-        cursor.execute("SELECT MAX(daily_close_date) FROM ticker_prices WHERE daily_close_date IS NOT NULL")
-        row = cursor.fetchone()
-        max_date = row[0] if row else None
-        
-        if not max_date:
-            print("[Patch 0004] No daily_close_date found in database. Exiting.")
-            return {"status": "success", "message": "No price dates found in database."}
-            
-        print(f"[Patch 0004] Latest market date in database: {max_date}")
-        
-        # 2. Query untraded / holiday tickers where daily_close_date < max_date
         cursor.execute("""
-            SELECT tp.ticker_id, t.symbol, tp.intraday_current, tp.daily_close, tp.daily_close_date
-            FROM ticker_prices tp
-            JOIN tickers t ON tp.ticker_id = t.id
-            WHERE tp.daily_close_date < ? OR tp.daily_close_date IS NULL
-        """, (max_date,))
-        
-        stale_rows = cursor.fetchall()
-        print(f"[Patch 0004] Found {len(stale_rows)} tickers untraded/on holiday relative to max date '{max_date}'.")
+            SELECT t.id, t.symbol, t.exchange
+            FROM tickers t
+        """)
+        tickers = cursor.fetchall()
         
         updated_count = 0
-        for ticker_id, symbol, intraday_curr, daily_cls, close_date in stale_rows:
-            curr_val = intraday_curr or 0.0
-            close_val = daily_cls or curr_val
+        holiday_count = 0
+        
+        for r in tickers:
+            tid = r['id']
+            sym = r['symbol']
+            exc = (r['exchange'] or "").strip().upper()
+            is_canadian = (exc in CANADIAN_EXCHANGES) or sym.endswith(".TO") or sym.endswith(".V")
             
             cursor.execute("""
-                UPDATE ticker_prices
-                SET intraday_prev_close = ?,
-                    daily_prev_close = ?
-                WHERE ticker_id = ?
-            """, (curr_val, close_val, ticker_id))
-            updated_count += 1
-            print(f"  -> Reset P/L base for '{symbol}' (last close date: {close_date}): daily P/L set to 0.0")
+                SELECT date, close FROM ticker_price_history
+                WHERE symbol = ? ORDER BY date DESC LIMIT 2
+            """, (sym,))
+            history = cursor.fetchall()
             
+            if len(history) >= 2:
+                latest = history[0]
+                prev = history[1]
+                
+                # Check if Canadian stock untraded on Canadian Civic Holiday (Aug 3 2026)
+                if is_canadian and latest['date'] < '2026-08-03':
+                    intraday_prev = latest['close']
+                    daily_prev = latest['close']
+                    holiday_count += 1
+                else:
+                    intraday_prev = prev['close']
+                    daily_prev = prev['close']
+                    
+                cursor.execute("""
+                    UPDATE ticker_prices
+                    SET price = ?,
+                        intraday_current = ?,
+                        intraday_prev_close = ?,
+                        daily_close = ?,
+                        daily_prev_close = ?,
+                        daily_close_date = ?,
+                        daily_prev_close_date = ?
+                    WHERE ticker_id = ?
+                """, (latest['close'], latest['close'], intraday_prev, latest['close'], daily_prev, latest['date'], prev['date'], tid))
+                updated_count += 1
+                
         conn.commit()
-        print(f"[Patch 0004] Successfully updated {updated_count} untraded/holiday tickers.")
+        print(f"[Patch 0004] Successfully updated {updated_count} tickers ({holiday_count} Canadian tickers set to 0.0 P/L for Aug 3 holiday).")
         
-        # 3. Trigger cache rebuild so dashboard P/L is updated immediately
         print("[Patch 0004] Rebuilding dashboard cache...")
         rebuild_dashboard_sync()
         print("[Patch 0004] Cache rebuild complete.")
         
         return {
             "status": "success",
-            "message": f"Successfully reset P/L base for {updated_count} untraded/holiday tickers relative to {max_date}."
+            "message": f"Successfully updated {updated_count} tickers with exchange-aware P/L baselines."
         }
     except Exception as e:
         conn.rollback()

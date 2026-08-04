@@ -560,8 +560,13 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                             if time(9, 30) <= local_time < time(16, 0):
                                 market_closed = False
 
-                    # Determine if stock was untraded on today's weekday session (e.g. exchange holiday like Canadian Civic Holiday)
-                    is_untraded_holiday = (last_date_str < local_date_str and is_local_weekday)
+                    # Determine if stock was untraded on today's weekday session for its exchange (e.g. Canadian Civic Holiday)
+                    exchange_upper = (exchange or "").strip().upper()
+                    is_canadian_exchange = exchange_upper in ["TO", "TSE", "V", "TSX", "NEO", "CSE"] or yf_sym.endswith(".TO") or yf_sym.endswith(".V")
+                    
+                    is_untraded_holiday = False
+                    if is_canadian_exchange and last_date_str < local_date_str and is_local_weekday:
+                        is_untraded_holiday = True
 
                     # Intraday PnL reset: if market is open or stock was untraded on holiday, set intraday_prev_close = intraday_current
                     if is_untraded_holiday or (last_date_str < local_date_str and not market_closed):
