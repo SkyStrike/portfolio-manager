@@ -1,6 +1,9 @@
-name: Manual Versioning & Release Tagging
+name: Manual & Weekly Release Tagging
 
 on:
+  schedule:
+    # Monday 02:00 AM SGT (Sunday 18:00 UTC)
+    - cron: '0 18 * * 0'
   workflow_dispatch:
     inputs:
       bump_type:
@@ -35,6 +38,7 @@ jobs:
           WITH_V: true
 
       - name: Create GitHub Release
+        if: ${{ steps.tag_version.outputs.new_tag }}
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.tag_version.outputs.new_tag }}
