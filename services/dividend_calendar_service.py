@@ -109,7 +109,7 @@ class DividendCalendarService:
         
         # 3. Fetch Paid dividends
         cursor.execute("""
-            SELECT d.id, d.portfolio_id, d.ticker_id, d.date, d.amount, d.currency, d.tax, d.notes,
+            SELECT d.id, d.portfolio_id, d.ticker_id, d.date, d.amount, d.currency, d.tax, d.notes, d.qty,
                    p.name as portfolio_name
             FROM dividends d
             JOIN portfolios p ON d.portfolio_id = p.id
@@ -205,8 +205,11 @@ class DividendCalendarService:
             shares_at_date, avg_cost_at_date = get_holdings_at_date(p["portfolio_id"], tk_id, date_str)
             total_invested = shares_at_date * avg_cost_at_date
             
-            # Gross is total gross payout. Derive amount per share: gross / shares (if shares > 0)
-            amount_per_share = p["amount"] / shares_at_date if shares_at_date > 0 else p["amount"]
+            # Use explicit dividend record qty if provided, otherwise fallback to transaction history shares at date
+            effective_qty = p.get("qty") if (p.get("qty") is not None and p.get("qty") > 0) else shares_at_date
+            
+            # Gross is total gross payout. Derive amount per share: gross / effective_qty (if effective_qty > 0)
+            amount_per_share = p["amount"] / effective_qty if effective_qty > 0 else p["amount"]
             
             yield_pct = 0.0
             if total_invested > 0:
@@ -215,6 +218,7 @@ class DividendCalendarService:
             
             calendar_items.append({
                 "id": f"paid-{p['id']}",
+                "div_id": p["id"],
                 "portfolio_id": p["portfolio_id"],
                 "portfolio_name": p["portfolio_name"],
                 "ticker_id": tk_id,
@@ -222,12 +226,15 @@ class DividendCalendarService:
                 "friendly_name": friendly_name,
                 "date": date_str,
                 "gross_amount": p["amount"],
+                "tax": p["tax"] if p.get("tax") is not None else (p["amount"] - net_foreign),
+                "notes": p.get("notes") or "",
+                "qty": effective_qty,
                 "net_amount_foreign": net_foreign,
                 "net_amount_sgd": net_sgd,
                 "currency": p["currency"],
                 "status": "Paid",
                 "yield_pct": round(yield_pct, 2),
-                "shares": shares_at_date,
+                "shares": effective_qty,
                 "amount_per_share": amount_per_share
             })
             

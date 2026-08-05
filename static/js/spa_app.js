@@ -1583,6 +1583,82 @@ const { createApp } = Vue;
                 // Hide the details popup modal
                 this.activeDividend = null;
             },
+            openEditDividendModal(p) {
+                if (!p) return;
+                const divId = p.div_id || (typeof p.id === 'string' && p.id.startsWith('paid-') ? parseInt(p.id.replace('paid-', '')) : p.id);
+                
+                // 1. Hide trades and expenses tabs to keep focus on incomes tab
+                document.querySelectorAll("#transaction-modal .modal-tab-btn").forEach(btn => {
+                    if (btn.dataset.tab !== "incomes") {
+                        btn.style.display = "none";
+                    } else {
+                        btn.style.display = "block";
+                        btn.classList.add("active");
+                    }
+                });
+
+                // 2. Select Incomes wrapper and hide others
+                const tabInput = document.getElementById("tx-tab");
+                if (tabInput) tabInput.value = "incomes";
+                
+                const wTrades = document.getElementById("wrapper-trades");
+                if (wTrades) wTrades.style.display = "none";
+                const wExpenses = document.getElementById("wrapper-expenses");
+                if (wExpenses) wExpenses.style.display = "none";
+                const wIncomes = document.getElementById("wrapper-incomes");
+                if (wIncomes) wIncomes.style.display = "block";
+
+                // 3. Hide Save and add more button
+                const btnSaveAddMore = document.getElementById("btn-save-add-more-transaction");
+                if (btnSaveAddMore) btnSaveAddMore.style.display = "none";
+
+                const titleEl = document.getElementById("transaction-modal-title");
+                if (titleEl) titleEl.textContent = "Edit Dividend";
+
+                // 4. Prepopulate fields with existing dividend data
+                const txId = document.getElementById("tx-id");
+                if (txId) txId.value = divId || "";
+                
+                const txPort = document.getElementById("tx-portfolio");
+                if (txPort && p.portfolio_id) txPort.value = p.portfolio_id;
+                
+                const divTicker = document.getElementById("div-ticker");
+                if (divTicker) divTicker.value = p.ticker || p.symbol || "";
+                
+                const divCurr = document.getElementById("div-currency");
+                if (divCurr) divCurr.value = p.currency || "USD";
+                
+                const divDate = document.getElementById("div-date");
+                if (divDate) divDate.value = p.date ? p.date.substring(0, 10) : "";
+                
+                const divQty = document.getElementById("div-qty");
+                if (divQty) divQty.value = (p.qty !== undefined && p.qty !== null) ? p.qty : (p.shares || "");
+                
+                const divAmount = document.getElementById("div-amount");
+                if (divAmount) divAmount.value = (p.gross_amount !== undefined && p.gross_amount !== null) ? parseFloat(p.gross_amount).toFixed(2) : "";
+                
+                const divTax = document.getElementById("div-tax");
+                const taxVal = (p.tax !== undefined && p.tax !== null) ? p.tax : (p.gross_amount - p.net_amount_foreign);
+                if (divTax) divTax.value = (taxVal !== undefined && taxVal !== null && !isNaN(taxVal)) ? parseFloat(taxVal).toFixed(2) : "0.00";
+                
+                const txNotes = document.getElementById("tx-notes");
+                if (txNotes) txNotes.value = p.notes || "";
+
+                // Trigger input event to run auto-calculations inside transaction modal
+                if (divQty) divQty.dispatchEvent(new Event("input"));
+
+                // 5. Open Modal directly
+                this.activeDividend = null;
+                if (window.openModal) {
+                    window.openModal("transaction-modal");
+                } else {
+                    const m = document.getElementById("transaction-modal");
+                    if (m) {
+                        m.classList.add("show");
+                        m.style.display = "flex";
+                    }
+                }
+            },
             async handleSyncDividends() {
                 const syncBtn = document.getElementById("sync-dividends-btn-spa");
                 const syncIcon = document.getElementById("sync-dividends-icon");
@@ -2511,6 +2587,13 @@ const { createApp } = Vue;
                 this.activeMenu = null;
             });
 
+            // Listen for global transaction saved events to trigger SPA re-fetches
+            window.addEventListener("transaction-saved", async () => {
+                await this.fetchCalendarData();
+                await this.fetchPortfolioData();
+                await this.initializeDashboardCharts(true);
+            });
+
             // Bind transaction save button listener for "mark as received"
             const saveBtn = document.getElementById("btn-save-transaction");
             if (saveBtn) {
@@ -2549,8 +2632,13 @@ const { createApp } = Vue;
                     saveBtn.disabled = true;
                     try {
                         const bp = this.getBasePath();
-                        const res = await fetch(`${bp}/api/dividends`, {
-                            method: "POST",
+                        const txId = document.getElementById("tx-id").value;
+                        const isEdit = !!txId;
+                        const url = isEdit ? `${bp}/api/dividends/${txId}` : `${bp}/api/dividends`;
+                        const method = isEdit ? "PUT" : "POST";
+
+                        const res = await fetch(url, {
+                            method: method,
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify(payload)
                         });
@@ -2559,13 +2647,21 @@ const { createApp } = Vue;
                                 window.closeModal("transaction-modal");
                             } else {
                                 const m = document.getElementById("transaction-modal");
-                                if (m) m.classList.remove("show");
+                                if (m) {
+                                    m.classList.remove("show");
+                                    m.style.display = "none";
+                                }
                             }
-                            // Refresh data inside SPA
-                            await this.fetchCalendarData();
-                            await this.fetchPortfolioData();
-                            await this.initializeDashboardCharts(true);
-                            this.showToast("Dividend transaction logged successfully.", "success");
+                            
+                            // Show toast INSTANTLY upon modal close
+                            this.showToast(isEdit ? "Dividend updated successfully." : "Dividend transaction logged successfully.", "success");
+
+                            // Refresh SPA data asynchronously in parallel
+                            Promise.all([
+                                this.fetchCalendarData(),
+                                this.fetchPortfolioData(),
+                                this.initializeDashboardCharts(true)
+                            ]).catch(err => console.error("Error refreshing SPA data:", err));
                         } else {
                             const err = await res.json();
                             this.showToast("Error saving dividend: " + (err.detail || "Unknown error"), "error");

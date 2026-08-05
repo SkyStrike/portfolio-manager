@@ -58,6 +58,8 @@ class DividendCreate(BaseModel):
     amount: float
     currency: str
     tax: float | None = None  # If None, auto-calculated from ticker tax rate
+    qty: float | None = None
+    notes: str | None = None
 
 class SystemdTriggerRequest(BaseModel):
     action: str

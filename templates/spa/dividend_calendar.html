@@ -96,7 +96,7 @@
 
             <!-- List View -->
             <div v-show="calViewMode === 'list'" id="calendar-list-wrapper" class="calendar-list-wrapper">
- <div class="calendar-list-header spa-list-header" >
+                <div class="calendar-list-header spa-list-header" >
                     <input type="text" v-model="calListSearch" placeholder="Search by ticker, portfolio or status..." class="calendar-list-search spa-calendar-search">
                     <div class="calendar-list-count spa-modal-label">{{ filteredCalList.length }} payouts found for this month</div>
                 </div>
@@ -112,6 +112,7 @@
                             <th class="cal-list-th-right spa-ta-right">Net (Foreign)</th>
                             <th class="cal-list-th-right spa-ta-right">Net (SGD)</th>
                             <th class="cal-list-th-right spa-ta-right">Yield</th>
+                            <th class="cal-list-th-right spa-ta-right">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -126,9 +127,13 @@
                             <td class="spa-ta-right">{{ formatCommas(p.net_amount_foreign) }} {{ p.currency }}</td>
                             <td class="spa-cal-net-sgd">{{ formatCommas(p.net_amount_sgd) }} SGD</td>
                             <td class="spa-cal-yield">{{ (p.yield_pct !== null && p.yield_pct !== undefined) ? p.yield_pct.toFixed(2) + '%' : '-' }}</td>
+                            <td class="spa-ta-right" @click.stop>
+                                <button v-if="p.status === 'Paid'" class="cal-btn-edit-inline" @click="openEditDividendModal(p)" title="Edit Dividend">✏️ Edit</button>
+                                <button v-else class="cal-btn-receive-inline" @click="openMarkAsReceivedModal(p)" title="Mark as Received">✓ Receive</button>
+                            </td>
                         </tr>
                         <tr v-if="filteredCalList.length === 0">
-                            <td colspan="8" class="spa-table-empty">No dividend payouts for this period matching search filters.</td>
+                            <td colspan="9" class="spa-table-empty">No dividend payouts for this period matching search filters.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -175,7 +180,7 @@
                         <span class="cal-modal-label spa-modal-label">Expected Net (SGD)</span>
                         <span class="cal-div-net-sgd spa-modal-net-sgd">+SG${{ formatCommas(activeDividend.net_amount_sgd) }}</span>
                     </div>
- <div class="cal-modal-row spa-modal-row-last" >
+                    <div class="cal-modal-row spa-modal-row-last" >
                         <span class="cal-modal-label spa-modal-label">Estimated Yield on Cost</span>
                         <span class="cal-modal-val text-accent spa-color-blue">{{ activeDividend.yield_pct ? activeDividend.yield_pct.toFixed(2) + '%' : '-' }}</span>
                     </div>
@@ -183,6 +188,7 @@
                 
                 <div class="cal-div-modal-footer spa-modal-footer">
                     <button v-if="activeDividend.status !== 'Paid'" class="btn cal-btn-received spa-modal-btn-success" @click="openMarkAsReceivedModal(activeDividend)">Mark as received</button>
+                    <button v-if="activeDividend.status === 'Paid'" class="btn cal-btn-edit-modal" @click="openEditDividendModal(activeDividend)">✏️ Edit Dividend</button>
                     <button class="btn cal-btn-close spa-modal-btn-close" @click="activeDividend = null">Close</button>
                 </div>
             </div>

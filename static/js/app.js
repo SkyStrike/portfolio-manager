@@ -92,11 +92,19 @@ function showToast(message, type = "success") {
 
 // Modal management helpers
 window.openModal = function(id) {
-    document.getElementById(id).classList.add("show");
+    const el = document.getElementById(id);
+    if (el) {
+        el.classList.add("show");
+        el.style.display = "flex";
+    }
 };
 
 window.closeModal = function(id) {
-    document.getElementById(id).classList.remove("show");
+    const el = document.getElementById(id);
+    if (el) {
+        el.classList.remove("show");
+        el.style.display = "none";
+    }
 };
 
 // Document Ready
@@ -2307,7 +2315,7 @@ function updateQuantityStepAndMin() {
 }
 
 function checkExistingTicker(value, inputId) {
-    const symbol = value.trim().toUpperCase();
+    const symbol = (value || "").toString().trim().toUpperCase();
     const match = tickersList.find(t => t.symbol.toUpperCase() === symbol);
     
     let currencySelect = null;
@@ -2374,7 +2382,7 @@ function checkExistingTicker(value, inputId) {
     }
 }
 
-function openTransactionModal(tabName = "trades", editingData = null) {
+window.openTransactionModal = function openTransactionModal(tabName = "trades", editingData = null) {
     editingTransactionData = editingData; // Store original editing data
     const form = document.getElementById("transaction-form");
     form.reset();
@@ -2415,17 +2423,16 @@ function openTransactionModal(tabName = "trades", editingData = null) {
     switchTab(tabName);
     
     const tabButtons = document.querySelectorAll("#transaction-modal .modal-tab-btn");
-    if (editingData) {
-        tabButtons.forEach(btn => {
+    tabButtons.forEach(btn => {
+        btn.style.display = "block";
+        if (editingData) {
             btn.style.pointerEvents = "none";
             btn.style.opacity = "0.5";
-        });
-    } else {
-        tabButtons.forEach(btn => {
+        } else {
             btn.style.pointerEvents = "auto";
             btn.style.opacity = "1";
-        });
-    }
+        }
+    });
     
     // Initialize calculations for Trades tab
     if (tabName === "trades") {
@@ -2483,13 +2490,13 @@ function populateEditingData(tabName, data) {
         }
         checkExistingTicker(data.symbol, "tx-ticker");
     } else if (tabName === "incomes") {
-        document.getElementById("div-ticker").value = data.symbol;
-        document.getElementById("div-date").value = data.date.substring(0, 10);
-        document.getElementById("div-amount").value = data.amount;
-        document.getElementById("div-currency").value = data.currency;
-        document.getElementById("div-tax").value = data.tax;
+        document.getElementById("div-ticker").value = data.symbol || "";
+        document.getElementById("div-date").value = data.date ? data.date.toString().substring(0, 10) : "";
+        document.getElementById("div-amount").value = data.amount !== undefined && data.amount !== null ? data.amount : "";
+        document.getElementById("div-currency").value = data.currency || "USD";
+        document.getElementById("div-tax").value = data.tax !== undefined && data.tax !== null ? data.tax : "";
         document.getElementById("div-qty").value = data.qty !== undefined && data.qty !== null ? data.qty : "";
-        checkExistingTicker(data.symbol, "div-ticker");
+        checkExistingTicker(data.symbol || "", "div-ticker");
         updateDividendCalculations();
     } else if (tabName === "expenses") {
         document.getElementById("exp-date").value = data.date.substring(0, 10);
@@ -2677,6 +2684,9 @@ async function saveTransaction(closeModalOnSuccess = true) {
         if (res.ok) {
             showToast("Saved successfully.");
             currentModalPortfolioId = null; // Clear cached holdings
+            
+            // Dispatch global event for SPA reactivity
+            window.dispatchEvent(new CustomEvent("transaction-saved", { detail: { tab, id, method } }));
             
             if (closeModalOnSuccess) {
                 closeModal("transaction-modal");
@@ -3299,11 +3309,11 @@ function updateDividendCalculations() {
         const grossPerShare = amount / qty;
         
         let taxPaid = 0;
-        const taxVal = taxInput.value.trim();
+        const taxVal = (taxInput && taxInput.value !== undefined && taxInput.value !== null) ? taxInput.value.toString().trim() : "";
         if (taxVal !== "") {
             taxPaid = parseFloat(taxVal);
         } else {
-            const taxRateVal = taxRateInput ? taxRateInput.value.trim() : "";
+            const taxRateVal = (taxRateInput && taxRateInput.value !== undefined && taxRateInput.value !== null) ? taxRateInput.value.toString().trim() : "";
             if (taxRateVal !== "") {
                 const taxRate = parseFloat(taxRateVal) / 100;
                 taxPaid = amount * taxRate;

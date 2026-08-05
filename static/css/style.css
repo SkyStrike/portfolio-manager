@@ -3711,6 +3711,12 @@ body.mask-values .sensitive-value::after {
     .spa-modal-footer { display: flex; justify-content: flex-end; gap: 10px; }
     .spa-modal-btn-success { background: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); color: white; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; }
     .spa-modal-btn-close { background: rgba(255,255,255,0.08); border: 1px solid var(--card-border); color: var(--text-primary); padding: 8px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    .cal-btn-edit-modal { background: rgba(52, 152, 219, 0.15); border: 1px solid rgba(52, 152, 219, 0.4); color: #3498db; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.2s ease; }
+    .cal-btn-edit-modal:hover { background: rgba(52, 152, 219, 0.3); border-color: #3498db; color: #5dade2; }
+    .cal-btn-edit-inline { background: rgba(52, 152, 219, 0.12); border: 1px solid rgba(52, 152, 219, 0.3); color: #3498db; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+    .cal-btn-edit-inline:hover { background: rgba(52, 152, 219, 0.25); color: #5dade2; }
+    .cal-btn-receive-inline { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #10b981; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+    .cal-btn-receive-inline:hover { background: rgba(16, 185, 129, 0.3); color: #34d399; }
 
     /* --- Additional SPA Layout Classes (pass 2) --- */
     .spa-summary-grid { margin-bottom: 20px; grid-template-columns: 1fr; }
