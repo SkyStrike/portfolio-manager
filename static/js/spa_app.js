@@ -2309,6 +2309,22 @@ const { createApp } = Vue;
                     try { window.chartInstances["filtered-chart"].destroy(); } catch (e) {}
                 }
                 window.chartInstances["filtered-chart"] = chart;
+            },
+            scrollToHash(hashVal = window.location.hash) {
+                if (!hashVal) return;
+                try {
+                    const decodedHash = decodeURIComponent(hashVal);
+                    this.$nextTick(() => {
+                        setTimeout(() => {
+                            const targetEl = document.querySelector(decodedHash);
+                            if (targetEl) {
+                                targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                        }, 150);
+                    });
+                } catch (e) {
+                    console.warn("Could not scroll to hash target:", e);
+                }
             }
         },
         async mounted() {
@@ -2341,16 +2357,22 @@ const { createApp } = Vue;
             }
             this.updateHeaderActiveLinks(this.currentView);
 
-            // Handle browser back/forward navigation
+            // Handle browser hash navigation & smooth scrolling
+            window.addEventListener('hashchange', () => {
+                this.scrollToHash();
+            });
+
             window.addEventListener('popstate', (e) => {
                 const path = window.location.pathname;
                 const norm = basePath ? path.replace(basePath, '') : path;
                 const view = pathViewMap[norm] || pathViewMap[path] || 'dashboard';
                 this.currentView = view;
                 this.currentFilter = new URLSearchParams(window.location.search).get('filter') || 'all';
+                this.scrollToHash();
             });
 
             await this.initializeDashboardCharts();
+            this.scrollToHash();
 
             // Intercept global navigation header links to switch views inline in the SPA
             const navActive = document.getElementById("nav-active-main");
