@@ -611,6 +611,14 @@ const { createApp } = Vue;
         watch: {
             currentView(newView) {
                 this.updateHeaderActiveLinks(newView);
+
+                // Reset scroll position to top on tab switch unless deep-linking to an anchor hash
+                if (window.location.hash && newView === 'dashboard') {
+                    this.scrollToHash();
+                } else {
+                    window.scrollTo(0, 0);
+                }
+
                 // Sync URL with active view (enables bookmarks + browser back button)
                 const viewPathMap = {
                     'dashboard':    '/',
@@ -2318,7 +2326,7 @@ const { createApp } = Vue;
                         setTimeout(() => {
                             const targetEl = document.querySelector(decodedHash);
                             if (targetEl) {
-                                targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                targetEl.scrollIntoView({ behavior: 'instant', block: 'start' });
                             }
                         }, 150);
                     });
