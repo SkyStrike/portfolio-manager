@@ -107,7 +107,13 @@
                                         </div>
                                         <div class="stat-item">
                                             <span class="stat-label">Total Income</span>
-                                            <span class="stat-value pos-val" v-text="'+' + formatCommas(p.sgd_metrics.income_sgd) + ' SGD'"></span>
+                                            <template v-if="p.currency !== 'SGD'">
+                                                <span class="stat-value pos-val" v-text="'+' + formatCommas(p.metrics.dividends_net) + ' ' + p.currency"></span>
+                                                <span class="stat-subvalue pos-val" v-text="'+' + formatCommas(p.sgd_metrics.income_sgd) + ' SGD'"></span>
+                                            </template>
+                                            <template v-else>
+                                                <span class="stat-value pos-val" v-text="'+' + formatCommas(p.sgd_metrics.income_sgd) + ' SGD'"></span>
+                                            </template>
                                         </div>
                                         <div class="stat-item">
                                             <span class="stat-label">Total Fees</span>
