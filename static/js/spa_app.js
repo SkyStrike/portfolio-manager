@@ -64,7 +64,23 @@ const { createApp } = Vue;
                 fdFile: null,
 
                 // Active Portfolio Prefix
-                activePrefix: 'portfolio_data'
+                activePrefix: 'portfolio_data',
+
+                // FX History fields
+                fxCurrency: 'USD',
+                fxTimeframe: 'monthly',
+                fxRange: '1y',
+                fxAvailableCurrencies: ['USD', 'CAD', 'EUR'],
+                fxSummary: null,
+                fxChartInstance: null
+            }
+        },
+        watch: {
+            currentView(newView) {
+                window.scrollTo(0, 0);
+                if (newView === 'charts') {
+                    this.fetchFxHistory();
+                }
             }
         },
         computed: {
@@ -2409,6 +2425,99 @@ const { createApp } = Vue;
                 } catch (e) {
                     console.warn("Could not scroll to hash target:", e);
                 }
+            },
+            async fetchFxHistory() {
+                try {
+                    const bp = this.getBasePath();
+                    const res = await fetch(`${bp}/api/v1/reports/fx-history?currency=${this.fxCurrency}&timeframe=${this.fxTimeframe}&range=${this.fxRange}`);
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    
+                    if (data.available_currencies) {
+                        this.fxAvailableCurrencies = data.available_currencies;
+                    }
+                    this.fxSummary = data.summary || null;
+                    
+                    this.$nextTick(() => {
+                        this.renderFxHistoryChart(data);
+                    });
+                } catch (err) {
+                    console.error("Failed to fetch FX history:", err);
+                }
+            },
+            changeFxCurrency(curr) {
+                this.fxCurrency = curr;
+                this.fetchFxHistory();
+            },
+            changeFxTimeframe(tf) {
+                this.fxTimeframe = tf;
+                this.fetchFxHistory();
+            },
+            changeFxRange(range) {
+                this.fxRange = range;
+                this.fetchFxHistory();
+            },
+            renderFxHistoryChart(data) {
+                const container = document.getElementById("chart-fx-history");
+                if (!container) return;
+
+                if (this.fxChartInstance) {
+                    try { this.fxChartInstance.destroy(); } catch(e){}
+                    this.fxChartInstance = null;
+                }
+
+                if (!data || !data.dates || data.dates.length === 0) {
+                    container.innerHTML = "<div class='spa-table-empty'>No FX rate history found.</div>";
+                    return;
+                }
+
+                container.innerHTML = "";
+
+                const options = {
+                    chart: {
+                        type: 'area',
+                        height: 320,
+                        toolbar: { show: true },
+                        background: 'transparent'
+                    },
+                    theme: { mode: 'dark' },
+                    stroke: { curve: 'smooth', width: 2 },
+                    fill: {
+                        type: 'gradient',
+                        gradient: {
+                            shadeIntensity: 1,
+                            opacityFrom: 0.4,
+                            opacityTo: 0.05,
+                            stops: [0, 90, 100]
+                        }
+                    },
+                    colors: ['#38bdf8'],
+                    series: [{
+                        name: `1 ${data.currency} in SGD`,
+                        data: data.rates
+                    }],
+                    xaxis: {
+                        categories: data.dates,
+                        labels: {
+                            style: { colors: '#94a3b8', fontSize: '11px' },
+                            rotate: -30
+                        }
+                    },
+                    yaxis: {
+                        labels: {
+                            style: { colors: '#94a3b8', fontSize: '11px' },
+                            formatter: (val) => val ? val.toFixed(4) : ''
+                        }
+                    },
+                    grid: { borderColor: 'rgba(255, 255, 255, 0.06)' },
+                    tooltip: {
+                        theme: 'dark',
+                        y: { formatter: (val) => `${val.toFixed(4)} SGD` }
+                    }
+                };
+
+                this.fxChartInstance = new ApexCharts(container, options);
+                this.fxChartInstance.render();
             }
         },
         async mounted() {
@@ -2456,6 +2565,9 @@ const { createApp } = Vue;
             });
 
             await this.initializeDashboardCharts();
+            if (this.currentView === 'charts') {
+                this.fetchFxHistory();
+            }
             this.scrollToHash();
 
             // Intercept global navigation header links to switch views inline in the SPA

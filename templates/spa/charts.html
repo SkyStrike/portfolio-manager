@@ -66,6 +66,56 @@
                 </div>
             </div>
 
+            <!-- Exchange Rate Trends & Currency History -->
+            <div class="dashboard-grid spa-mb-25">
+                <div class="chart-container full-width spa-summary-card-container">
+                    <div class="chart-controls spa-chart-header" style="flex-wrap: wrap; gap: 12px; justify-content: space-between;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <h4 class="spa-chart-section-title">💱 Exchange Rate History ({{ fxCurrency }}/SGD)</h4>
+                            <div style="display: flex; gap: 6px;">
+                                <button v-for="curr in fxAvailableCurrencies" :key="curr"
+                                        class="toggle-btn" :class="{ active: fxCurrency === curr }"
+                                        @click="changeFxCurrency(curr)">
+                                    {{ curr }}
+                                </button>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                            <!-- Date Range Selector -->
+                            <div style="display: flex; gap: 4px;">
+                                <button class="toggle-btn" :class="{ active: fxRange === '3m' }" @click="changeFxRange('3m')">3M</button>
+                                <button class="toggle-btn" :class="{ active: fxRange === '6m' }" @click="changeFxRange('6m')">6M</button>
+                                <button class="toggle-btn" :class="{ active: fxRange === '1y' }" @click="changeFxRange('1y')">1Y</button>
+                                <button class="toggle-btn" :class="{ active: fxRange === 'ytd' }" @click="changeFxRange('ytd')">YTD</button>
+                                <button class="toggle-btn" :class="{ active: fxRange === 'all' }" @click="changeFxRange('all')">ALL</button>
+                            </div>
+                            <!-- Aggregation Timeframe Toggles -->
+                            <div style="display: flex; gap: 4px;">
+                                <button class="toggle-btn" :class="{ active: fxTimeframe === 'daily' }" @click="changeFxTimeframe('daily')">Daily</button>
+                                <button class="toggle-btn" :class="{ active: fxTimeframe === 'weekly' }" @click="changeFxTimeframe('weekly')">Weekly</button>
+                                <button class="toggle-btn" :class="{ active: fxTimeframe === 'monthly' }" @click="changeFxTimeframe('monthly')">Monthly</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Summary Stats Bar -->
+                    <div v-if="fxSummary" style="display: flex; flex-wrap: wrap; gap: 16px; padding: 10px 16px; margin: 12px 0 6px 0; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px solid rgba(255,255,255,0.06); font-size: 0.85rem;">
+                        <div><span style="color: var(--text-secondary);">Latest Rate:</span> <strong style="color: #38bdf8;">1 {{ fxCurrency }} = {{ fxSummary.latest }} SGD</strong></div>
+                        <div><span style="color: var(--text-secondary);">High:</span> <strong style="color: #4ade80;">{{ fxSummary.high }}</strong></div>
+                        <div><span style="color: var(--text-secondary);">Low:</span> <strong style="color: #f87171;">{{ fxSummary.low }}</strong></div>
+                        <div><span style="color: var(--text-secondary);">Average:</span> <strong>{{ fxSummary.avg }}</strong></div>
+                        <div>
+                            <span style="color: var(--text-secondary);">Change:</span> 
+                            <strong :style="{ color: fxSummary.pct_change >= 0 ? '#4ade80' : '#f87171' }">
+                                {{ fxSummary.pct_change >= 0 ? '+' : '' }}{{ fxSummary.pct_change }}%
+                            </strong>
+                        </div>
+                    </div>
+
+                    <div id="chart-fx-history" class="spa-min-h-320"></div>
+                </div>
+            </div>
+
             <!-- Category Chart -->
             <div class="dashboard-grid spa-mb-25">
                 <div class="chart-container full-width spa-summary-card-container">

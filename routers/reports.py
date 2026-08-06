@@ -330,3 +330,124 @@ def get_performance_report():
         "broker_cash_ytd": data.get("broker_cash_ytd", {}),
         "chart_data": chart_data
     }
+
+@router.get("/api/v1/reports/fx-history")
+def get_fx_history(currency: str = "USD", timeframe: str = "monthly", range: str = "all"):
+    """
+    Returns historical exchange rate time series and summary metrics.
+    Supported currencies: USD, CAD, EUR, etc. (where date != 'latest')
+    Timeframe options: daily, weekly, monthly.
+    Range options: 3m, 6m, 1y, ytd, all.
+    """
+    from core.database import get_connection
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT DISTINCT currency FROM exchange_rates WHERE date != 'latest' AND currency != 'SGD' ORDER BY currency ASC")
+        available_currencies = [r['currency'] for r in cursor.fetchall()]
+        if not available_currencies:
+            available_currencies = ["USD", "CAD", "EUR"]
+            
+        target_currency = currency.upper().strip()
+        if target_currency not in available_currencies and available_currencies:
+            target_currency = available_currencies[0]
+
+        cursor.execute("""
+            SELECT date, rate FROM exchange_rates 
+            WHERE date != 'latest' AND currency = ? 
+            ORDER BY date ASC
+        """, (target_currency,))
+        rows = cursor.fetchall()
+        
+        if not rows:
+            return {
+                "available_currencies": available_currencies,
+                "currency": target_currency,
+                "timeframe": timeframe,
+                "range": range,
+                "dates": [],
+                "rates": [],
+                "summary": {"latest": 0.0, "high": 0.0, "low": 0.0, "avg": 0.0, "pct_change": 0.0}
+            }
+
+        raw_daily = [(r['date'], float(r['rate'])) for r in rows]
+        
+        # Apply Date Range Filtering before aggregation
+        today = datetime.now().date()
+        range_key = range.lower().strip()
+        if range_key == "3m":
+            cutoff = (today - timedelta(days=90)).strftime("%Y-%m-%d")
+            daily_data = [(d, r) for d, r in raw_daily if d >= cutoff]
+        elif range_key == "6m":
+            cutoff = (today - timedelta(days=180)).strftime("%Y-%m-%d")
+            daily_data = [(d, r) for d, r in raw_daily if d >= cutoff]
+        elif range_key == "1y":
+            cutoff = (today - timedelta(days=365)).strftime("%Y-%m-%d")
+            daily_data = [(d, r) for d, r in raw_daily if d >= cutoff]
+        elif range_key == "ytd":
+            cutoff = f"{today.year}-01-01"
+            daily_data = [(d, r) for d, r in raw_daily if d >= cutoff]
+        else:
+            daily_data = raw_daily
+
+        if not daily_data:
+            daily_data = raw_daily
+
+        tf = timeframe.lower()
+        if tf == "weekly":
+            groups = defaultdict(list)
+            for d_str, rate in daily_data:
+                try:
+                    dt = datetime.strptime(d_str, "%Y-%m-%d")
+                    yw = dt.strftime("%Y-W%U")
+                    groups[yw].append((d_str, rate))
+                except ValueError:
+                    continue
+            aggregated_data = []
+            for yw in sorted(groups.keys()):
+                items = groups[yw]
+                last_date = items[-1][0]
+                avg_rate = round(sum(r for _, r in items) / len(items), 4)
+                aggregated_data.append((last_date, avg_rate))
+        elif tf == "monthly":
+            groups = defaultdict(list)
+            for d_str, rate in daily_data:
+                ym = d_str[:7]
+                groups[ym].append((d_str, rate))
+            aggregated_data = []
+            for ym in sorted(groups.keys()):
+                items = groups[ym]
+                last_date = items[-1][0]
+                avg_rate = round(sum(r for _, r in items) / len(items), 4)
+                aggregated_data.append((last_date, avg_rate))
+        else:
+            aggregated_data = daily_data
+
+        dates = [d for d, _ in aggregated_data]
+        rates = [r for _, r in aggregated_data]
+        
+        latest = rates[-1] if rates else 0.0
+        first = rates[0] if rates else 0.0
+        high = max(rates) if rates else 0.0
+        low = min(rates) if rates else 0.0
+        avg = round(sum(rates) / len(rates), 4) if rates else 0.0
+        pct_change = round(((latest - first) / first * 100), 2) if first > 0 else 0.0
+        
+        return {
+            "available_currencies": available_currencies,
+            "currency": target_currency,
+            "timeframe": tf,
+            "range": range_key,
+            "dates": dates,
+            "rates": rates,
+            "summary": {
+                "latest": round(latest, 4),
+                "high": round(high, 4),
+                "low": round(low, 4),
+                "avg": avg,
+                "pct_change": pct_change
+            }
+        }
+    finally:
+        conn.close()
