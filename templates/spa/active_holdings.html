@@ -7,13 +7,63 @@
                     <span>Portfolio Summary</span>
                     
                     <!-- Price Mode Selection & Force Refresh / Rebuild -->
+                    <!-- Price Mode Selection & Force Refresh / Rebuild / Auto-Refresh -->
                     <div class="price-mode-container spa-price-mode-container">
                         <span class="spa-label-secondary">Price Mode:</span>
                         <select id="price-mode-select" v-model="priceMode" @change="handlePriceModeChange" class="spa-select-custom">
                             <option value="intraday">⚡ Live Intraday</option>
                             <option value="closing">🕒 Latest Close</option>
                         </select>
-                        <button id="force-refresh-btn" @click="handleForceRefresh" title="Refresh Live Prices (min. 5mins interval)" class="spa-btn-icon">
+
+                        <!-- Auto Price Refresh Toggle & Settings Dropdown -->
+                        <div class="auto-refresh-wrapper" style="position: relative; display: inline-flex; align-items: center;">
+                            <button id="auto-refresh-toggle-btn"
+                                    @click.stop="autoRefreshMenuOpen = !autoRefreshMenuOpen"
+                                    class="auto-refresh-badge-btn"
+                                    :class="{ 'auto-refresh-active': autoRefreshEnabled && priceMode !== 'closing' }"
+                                    :title="!autoRefreshEnabled ? 'Auto Refresh Disabled' : (priceMode === 'closing' ? 'Auto Refresh Paused in Closing Mode' : 'Auto Refresh Enabled (' + formatCountdown(autoRefreshSecondsLeft) + ')')">
+                                <span class="auto-refresh-dot" :class="{ pulsing: autoRefreshEnabled && priceMode === 'intraday' && !autoRefreshPaused }"></span>
+                                <span>
+                                    <template v-if="!autoRefreshEnabled">⚡ Refresh: Off</template>
+                                    <template v-else-if="priceMode === 'closing'">⚡ Paused (Closing)</template>
+                                    <template v-else>⚡ {{ formatCountdown(autoRefreshSecondsLeft) }}</template>
+                                </span>
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 2px;">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </button>
+
+                            <!-- Dropdown Popover -->
+                            <div v-show="autoRefreshMenuOpen" class="auto-refresh-popover" @click.stop="">
+                                <div class="auto-refresh-popover-header">
+                                    <span>⚡ Auto Price Refresh</span>
+                                    <button class="auto-refresh-close-btn" @click="autoRefreshMenuOpen = false">&times;</button>
+                                </div>
+                                
+                                <div class="auto-refresh-row" @click="toggleAutoRefreshState" style="cursor: pointer;">
+                                    <span style="font-size: 0.85rem; color: #e2e8f0;">Enable Auto Refresh</span>
+                                    <input type="checkbox" :checked="autoRefreshEnabled" style="cursor: pointer; accent-color: var(--accent-color);" />
+                                </div>
+
+                                <div class="auto-refresh-divider"></div>
+
+                                <div style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 6px;">Refresh Interval:</div>
+                                <div style="display: flex; gap: 6px; margin-bottom: 10px;">
+                                    <button class="toggle-btn" :class="{ active: autoRefreshInterval === 900 }" @click="setAutoRefreshInterval(900)">15m</button>
+                                    <button class="toggle-btn" :class="{ active: autoRefreshInterval === 1800 }" @click="setAutoRefreshInterval(1800)">30m</button>
+                                    <button class="toggle-btn" :class="{ active: autoRefreshInterval === 3600 }" @click="setAutoRefreshInterval(3600)">1h</button>
+                                </div>
+
+                                <div class="auto-refresh-divider"></div>
+
+                                <button class="auto-refresh-action-btn" @click="triggerAutoRefreshNow" :disabled="isRefreshingPrices">
+                                    <span v-if="isRefreshingPrices">Refreshing...</span>
+                                    <span v-else>🔄 Sync Market Prices Now</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <button id="force-refresh-btn" @click="handleForceRefresh" title="Refresh Live Prices (min. 10-15m interval)" class="spa-btn-icon">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" id="refresh-icon">
                                 <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
                             </svg>

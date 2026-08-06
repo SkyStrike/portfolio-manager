@@ -72,7 +72,17 @@ const { createApp } = Vue;
                 fxRange: '1y',
                 fxAvailableCurrencies: ['USD', 'CAD', 'EUR'],
                 fxSummary: null,
-                fxChartInstance: null
+                fxChartInstance: null,
+
+                // Auto Price Refresh fields
+                autoRefreshEnabled: localStorage.getItem('auto_refresh_enabled') === 'true',
+                autoRefreshInterval: parseInt(localStorage.getItem('auto_refresh_interval') || '900'),
+                autoRefreshSecondsLeft: parseInt(localStorage.getItem('auto_refresh_interval') || '900'),
+                lastRefreshTimestamp: parseInt(localStorage.getItem('auto_refresh_last_timestamp') || '0') || Date.now(),
+                autoRefreshTimer: null,
+                autoRefreshMenuOpen: false,
+                autoRefreshPaused: false,
+                isRefreshingPrices: false
             }
         },
         watch: {
@@ -1860,6 +1870,11 @@ const { createApp } = Vue;
             handlePriceModeChange() {
                 localStorage.setItem("price_mode", this.priceMode);
                 this.initializeDashboardCharts(true);
+                if (this.autoRefreshEnabled) {
+                    if (this.priceMode === 'intraday') {
+                        this.startAutoRefreshTimer(false);
+                    }
+                }
             },
             async handleForceRefresh() {
                 const refreshIcon = document.getElementById("refresh-icon");
@@ -1873,6 +1888,8 @@ const { createApp } = Vue;
                 try {
                     const res = await fetch("/api/prices/refresh", { method: "POST" });
                     if (res.ok) {
+                        this.lastRefreshTimestamp = Date.now();
+                        localStorage.setItem('auto_refresh_last_timestamp', this.lastRefreshTimestamp.toString());
                         await this.initializeDashboardCharts(true);
                         this.showToast("Prices refreshed successfully.", "success");
                     } else {
@@ -2518,7 +2535,115 @@ const { createApp } = Vue;
 
                 this.fxChartInstance = new ApexCharts(container, options);
                 this.fxChartInstance.render();
-            }
+            },
+            formatCountdown(totalSeconds) {
+                if (isNaN(totalSeconds) || totalSeconds <= 0) return "00:00";
+                const mins = Math.floor(totalSeconds / 60);
+                const secs = totalSeconds % 60;
+                const minsStr = mins < 10 ? `0${mins}` : `${mins}`;
+                const secsStr = secs < 10 ? `0${secs}` : `${secs}`;
+                return `${minsStr}:${secsStr}`;
+            },
+            toggleAutoRefreshState() {
+                this.autoRefreshEnabled = !this.autoRefreshEnabled;
+                localStorage.setItem('auto_refresh_enabled', this.autoRefreshEnabled ? 'true' : 'false');
+                if (this.autoRefreshEnabled) {
+                    this.startAutoRefreshTimer(true);
+                    this.showToast('Auto price refresh enabled', 'info');
+                } else {
+                    this.stopAutoRefreshTimer();
+                    this.showToast('Auto price refresh disabled', 'info');
+                }
+            },
+            setAutoRefreshInterval(seconds) {
+                this.autoRefreshInterval = seconds;
+                this.autoRefreshSecondsLeft = seconds;
+                localStorage.setItem('auto_refresh_interval', seconds.toString());
+                if (this.autoRefreshEnabled) {
+                    this.startAutoRefreshTimer(true);
+                }
+            },
+            parseSgtTimestamp(str) {
+                if (!str) return null;
+                let clean = str.replace(' SGT', '').replace(' ', 'T').trim();
+                if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(clean)) {
+                    clean += '+08:00';
+                }
+                const ts = Date.parse(clean);
+                return isNaN(ts) ? null : ts;
+            },
+            startAutoRefreshTimer(resetTimestamp = false) {
+                this.stopAutoRefreshTimer();
+
+                const quotesStr = this.portfolioData?.metadata?.quotes_last_updated_sgt || this.portfolioData?.summary?.quotes_last_updated_sgt;
+                const dbQuoteTs = this.parseSgtTimestamp(quotesStr);
+
+                if (resetTimestamp) {
+                    this.lastRefreshTimestamp = Date.now();
+                    localStorage.setItem('auto_refresh_last_timestamp', this.lastRefreshTimestamp.toString());
+                } else if (dbQuoteTs) {
+                    this.lastRefreshTimestamp = dbQuoteTs;
+                    localStorage.setItem('auto_refresh_last_timestamp', dbQuoteTs.toString());
+                } else if (!this.lastRefreshTimestamp) {
+                    this.lastRefreshTimestamp = Date.now();
+                    localStorage.setItem('auto_refresh_last_timestamp', this.lastRefreshTimestamp.toString());
+                }
+                
+                const updateCountdown = () => {
+                    if (!this.autoRefreshEnabled) return;
+
+                    if (this.priceMode === 'closing') {
+                        this.autoRefreshPaused = true;
+                        return;
+                    }
+                    this.autoRefreshPaused = false;
+
+                    const elapsedSec = Math.floor((Date.now() - this.lastRefreshTimestamp) / 1000);
+                    const remaining = this.autoRefreshInterval - elapsedSec;
+
+                    if (remaining <= 0) {
+                        this.lastRefreshTimestamp = Date.now();
+                        localStorage.setItem('auto_refresh_last_timestamp', this.lastRefreshTimestamp.toString());
+                        this.autoRefreshSecondsLeft = this.autoRefreshInterval;
+                        this.triggerAutoRefreshNow();
+                    } else {
+                        this.autoRefreshSecondsLeft = remaining;
+                    }
+                };
+
+                updateCountdown();
+                this.autoRefreshTimer = setInterval(updateCountdown, 1000);
+            },
+            stopAutoRefreshTimer() {
+                if (this.autoRefreshTimer) {
+                    clearInterval(this.autoRefreshTimer);
+                    this.autoRefreshTimer = null;
+                }
+            },
+            async triggerAutoRefreshNow() {
+                if (this.isRefreshingPrices) return;
+                this.isRefreshingPrices = true;
+                this.lastRefreshTimestamp = Date.now();
+                localStorage.setItem('auto_refresh_last_timestamp', this.lastRefreshTimestamp.toString());
+                
+                try {
+                    const bp = this.getBasePath();
+                    const res = await fetch(`${bp}/api/prices/refresh?force=false`, { method: 'POST' });
+                    if (res.ok) {
+                        const resData = await res.json();
+                        this.showToast(resData.message || 'Prices refreshed successfully.', 'success');
+                    }
+                } catch (err) {
+                    console.warn("Auto refresh API call warning:", err);
+                } finally {
+                    this.isRefreshingPrices = false;
+                    this.autoRefreshSecondsLeft = this.autoRefreshInterval;
+                    await Promise.all([
+                        this.fetchPortfolioData(true),
+                        this.fetchCalendarData()
+                    ]);
+                }
+            },
         },
         async mounted() {
             // Load price mode from localStorage
@@ -2569,6 +2694,15 @@ const { createApp } = Vue;
                 this.fetchFxHistory();
             }
             this.scrollToHash();
+
+            // Auto Refresh setup
+            document.addEventListener('click', () => {
+                this.autoRefreshMenuOpen = false;
+            });
+
+            if (this.autoRefreshEnabled) {
+                this.startAutoRefreshTimer(false);
+            }
 
             // Intercept global navigation header links to switch views inline in the SPA
             const navActive = document.getElementById("nav-active-main");
