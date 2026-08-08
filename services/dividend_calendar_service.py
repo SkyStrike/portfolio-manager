@@ -177,6 +177,44 @@ class DividendCalendarService:
                     break
             return last_shares, last_avg_cost
             
+        def get_eligible_dividend_shares(pid, tid, pay_date_str, ex_date_str=None, frequency=4):
+            """
+            Calculates eligible dividend shares based on Ex-Date or Pay Date cutoff:
+            1. Primary Rule: If ex_date_str is present, cutoff = Ex-Date - 1 day.
+            2. Fallback Rule (when ex_date is missing):
+               - Monthly Tickers (frequency >= 12):
+                 * Payment Date Days 1-14: Cutoff = End of previous month (YYYY-MM-01 - 1 day).
+                 * Payment Date Days 15-31: Cutoff = Payment Date - 10 days.
+               - Non-Monthly Tickers: Cutoff = Payment Date - 14 days.
+            """
+            try:
+                pay_dt = datetime.datetime.strptime(pay_date_str[:10], "%Y-%m-%d").date()
+            except Exception:
+                shares_at_pay, _ = get_holdings_at_date(pid, tid, pay_date_str[:10])
+                return shares_at_pay
+
+            cutoff_dt = None
+            if ex_date_str and len(str(ex_date_str).strip()) >= 10:
+                try:
+                    ex_dt = datetime.datetime.strptime(str(ex_date_str)[:10], "%Y-%m-%d").date()
+                    cutoff_dt = ex_dt - datetime.timedelta(days=1)
+                except Exception:
+                    cutoff_dt = None
+
+            if not cutoff_dt:
+                if frequency >= 12:
+                    if pay_dt.day <= 14:
+                        first_of_month = pay_dt.replace(day=1)
+                        cutoff_dt = first_of_month - datetime.timedelta(days=1)
+                    else:
+                        cutoff_dt = pay_dt - datetime.timedelta(days=10)
+                else:
+                    cutoff_dt = pay_dt - datetime.timedelta(days=14)
+
+            cutoff_str = cutoff_dt.strftime("%Y-%m-%d")
+            shares_at_cutoff, _ = get_holdings_at_date(pid, tid, cutoff_str)
+            return shares_at_cutoff
+
         # Consolidated calendar items
         calendar_items = []
         
@@ -202,10 +240,11 @@ class DividendCalendarService:
             freq_info = ticker_calendar_info.get(tk_id, {"window": 15, "frequency": 4})
             frequency = freq_info["frequency"]
             
-            shares_at_date, avg_cost_at_date = get_holdings_at_date(p["portfolio_id"], tk_id, date_str)
+            shares_at_date = get_eligible_dividend_shares(p["portfolio_id"], tk_id, date_str, ex_date_str=p.get("ex_date"), frequency=frequency)
+            _, avg_cost_at_date = get_holdings_at_date(p["portfolio_id"], tk_id, date_str)
             total_invested = shares_at_date * avg_cost_at_date
             
-            # Use explicit dividend record qty if provided, otherwise fallback to transaction history shares at date
+            # Use explicit dividend record qty if provided, otherwise fallback to eligible shares at date
             effective_qty = p.get("qty") if (p.get("qty") is not None and p.get("qty") > 0) else shares_at_date
             
             # Gross is total gross payout. Derive amount per share: gross / effective_qty (if effective_qty > 0)
@@ -285,8 +324,13 @@ class DividendCalendarService:
                 p_row = cursor.fetchone()
                 portfolio_name = p_row["name"] if p_row else "Unknown"
                 
+                # Calculate eligible shares as of cutoff date
+                eligible_shares = get_eligible_dividend_shares(pid, tk_id, pay_date_str, ex_date_str=u.get("ex_date"), frequency=frequency)
+                if eligible_shares <= 0.0001:
+                    continue
+                
                 # Calculations
-                gross_amount = shares * u["amount"]
+                gross_amount = eligible_shares * u["amount"]
                 net_foreign = gross_amount * (1.0 - tax_rate)
                 rate = exchange_rates.get(u["currency"], 1.0)
                 net_sgd = net_foreign * rate
@@ -307,13 +351,15 @@ class DividendCalendarService:
                     "ticker": symbol,
                     "friendly_name": friendly_name,
                     "date": pay_date_str,
+                    "ex_date": u.get("ex_date"),
                     "gross_amount": gross_amount,
                     "net_amount_foreign": net_foreign,
                     "net_amount_sgd": net_sgd,
                     "currency": u["currency"],
                     "status": u["status"],
                     "yield_pct": round(yield_pct, 2),
-                    "shares": shares,
+                    "shares": eligible_shares,
+                    "qty": eligible_shares,
                     "amount_per_share": u["amount"]
                 })
                 

@@ -205,25 +205,21 @@ def sync_upcoming_dividends(conn, force=False):
             
             # Last payout event date (ex-date)
             last_payout_ex = hist_dates[-1]
-            last_payout_pay = declared_pay_date or (last_payout_ex + timedelta(days=10))
             
-            # If the latest declared date is even newer, start projections after that
+            # Start dates (prefer declared, fallback to historical)
             start_ex = declared_ex_date if declared_ex_date else last_payout_ex
-            start_pay = declared_pay_date if declared_pay_date else last_payout_pay
+            start_pay = declared_pay_date if declared_pay_date else (start_ex + timedelta(days=10))
+            
+            pay_gap_days = (start_pay - start_ex).days if start_pay > start_ex else 10
+            if pay_gap_days < 1 or pay_gap_days > 45:
+                pay_gap_days = 10
             
             # Offset interval in days
             interval_days = int(365.25 / freq)
             
             # Project up to 12 payouts
             projected_count = 12
-            current_ex = start_ex
-            current_pay = start_pay
-            
-            # If the start payout date is in the future, offset backward so the first
-            # loop iteration lands exactly on start_ex/start_pay to include it.
-            if start_pay >= today:
-                current_ex = current_ex - timedelta(days=interval_days)
-                current_pay = current_pay - timedelta(days=interval_days)
+            current_ex = start_ex - timedelta(days=interval_days) if (start_pay and start_pay >= today) else start_ex
             
             def adjust_to_business_day(d: datetime.date) -> datetime.date:
                 """If date falls on Saturday or Sunday, shift to Monday."""
@@ -235,16 +231,21 @@ def sync_upcoming_dividends(conn, force=False):
 
             for _ in range(projected_count):
                 current_ex = current_ex + timedelta(days=interval_days)
-                current_pay = current_pay + timedelta(days=interval_days)
+                current_pay = current_ex + timedelta(days=pay_gap_days)
                 adjusted_pay = adjust_to_business_day(current_pay)
                 
                 # Only insert if it is in the future (ex-date or payment_date is future)
                 if (current_ex >= today or adjusted_pay >= today) and last_div_value:
-                    # Skip if a Declared entry already exists for this exact ex_date
+                    # Deduplication: Skip if a Declared entry already exists for this exact ex_date OR in the same month/window
                     cursor.execute("""
                         SELECT id FROM upcoming_dividends 
-                        WHERE ticker_id = ? AND ex_date = ?
-                    """, (ticker_id, current_ex.isoformat()))
+                        WHERE ticker_id = ? AND (
+                            ex_date = ? 
+                            OR strftime('%Y-%m', payment_date) = ?
+                            OR abs(julianday(payment_date) - julianday(?)) <= 20
+                        )
+                    """, (ticker_id, current_ex.isoformat(), adjusted_pay.strftime('%Y-%m'), adjusted_pay.isoformat()))
+                    
                     if cursor.fetchone():
                         continue
                         
