@@ -560,29 +560,12 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                             if time(9, 30) <= local_time < time(16, 0):
                                 market_closed = False
 
-                    # Determine if stock was untraded on today's weekday session for its exchange (e.g. SG National Day, Labor Day, Canadian Civic Holiday)
-                    is_untraded_holiday = False
-                    if last_date_str < local_date_str and is_local_weekday:
-                        is_untraded_holiday = True
-
-                    # Intraday PnL reset: if market is open or stock was untraded on holiday, set intraday_prev_close = intraday_current
-                    if is_untraded_holiday or (last_date_str < local_date_str and not market_closed):
-                        intraday_prev_close = intraday_current
-                        intraday_prev_close_date = last_date_str
-
-                    # Closing Mode: daily_close is latest COMPLETED close date and price.
-                    # If the market is currently in session today and series contains today's date, series.iloc[-1] is an in-progress intraday bar,
-                    # so the latest completed close is series.iloc[-2] and previous close is series.iloc[-3].
+                    # Closing Mode: daily_close is the latest completed close date and price, and daily_prev_close is the preceding completed close bar.
                     is_in_session = is_exchange_in_session(exchange)
                     if not series.empty:
                         last_bar_date_str = series.index[-1].strftime("%Y-%m-%d") if hasattr(series.index[-1], 'strftime') else str(series.index[-1]).split()[0]
-                        if is_untraded_holiday:
-                            # Stock was on holiday / untraded during current market day — zero out daily change
-                            daily_close = float(series.iloc[-1])
-                            daily_close_date = last_bar_date_str
-                            daily_prev_close = daily_close
-                            daily_prev_close_date = last_bar_date_str
-                        elif last_bar_date_str == local_date_str and is_in_session:
+                        if last_bar_date_str == local_date_str and is_in_session:
+                            # Current in-session bar is incomplete, so use series.iloc[-2] as completed close and series.iloc[-3] as previous close
                             if len(series) >= 2:
                                 daily_close = float(series.iloc[-2])
                                 daily_close_date = series.index[-2].strftime("%Y-%m-%d") if hasattr(series.index[-2], 'strftime') else str(series.index[-2]).split()[0]
@@ -598,6 +581,7 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                                 daily_prev_close = intraday_prev_close
                                 daily_prev_close_date = intraday_prev_close_date
                         else:
+                            # Standard completed bars: series.iloc[-1] is latest close, series.iloc[-2] is previous close
                             daily_close = float(series.iloc[-1])
                             daily_close_date = last_bar_date_str
                             if len(series) >= 2:
