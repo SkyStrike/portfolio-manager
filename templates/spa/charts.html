@@ -99,17 +99,19 @@
                     </div>
 
                     <!-- Summary Stats Bar -->
-                    <div v-if="fxSummary" style="display: flex; flex-wrap: wrap; gap: 16px; padding: 10px 16px; margin: 12px 0 6px 0; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px solid rgba(255,255,255,0.06); font-size: 0.85rem;">
-                        <div><span style="color: var(--text-secondary);">Latest Rate:</span> <strong style="color: #38bdf8;">1 {{ fxCurrency }} = {{ fxSummary.latest }} SGD</strong></div>
-                        <div><span style="color: var(--text-secondary);">High:</span> <strong style="color: #4ade80;">{{ fxSummary.high }}</strong></div>
-                        <div><span style="color: var(--text-secondary);">Low:</span> <strong style="color: #f87171;">{{ fxSummary.low }}</strong></div>
-                        <div><span style="color: var(--text-secondary);">Average:</span> <strong>{{ fxSummary.avg }}</strong></div>
-                        <div>
-                            <span style="color: var(--text-secondary);">Change:</span> 
-                            <strong :style="{ color: fxSummary.pct_change >= 0 ? '#4ade80' : '#f87171' }">
-                                {{ fxSummary.pct_change >= 0 ? '+' : '' }}{{ fxSummary.pct_change }}%
-                            </strong>
-                        </div>
+                    <div style="min-height: 42px; display: flex; flex-wrap: wrap; gap: 16px; padding: 10px 16px; margin: 12px 0 6px 0; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px solid rgba(255,255,255,0.06); font-size: 0.85rem;">
+                        <template v-if="fxSummary">
+                            <div><span style="color: var(--text-secondary);">Latest Rate:</span> <strong style="color: #38bdf8;">1 {{ fxCurrency }} = {{ fxSummary.latest }} SGD</strong></div>
+                            <div><span style="color: var(--text-secondary);">High:</span> <strong style="color: #4ade80;">{{ fxSummary.high }}</strong></div>
+                            <div><span style="color: var(--text-secondary);">Low:</span> <strong style="color: #f87171;">{{ fxSummary.low }}</strong></div>
+                            <div><span style="color: var(--text-secondary);">Average:</span> <strong>{{ fxSummary.avg }}</strong></div>
+                            <div>
+                                <span style="color: var(--text-secondary);">Change:</span> 
+                                <strong :style="{ color: fxSummary.pct_change >= 0 ? '#4ade80' : '#f87171' }">
+                                    {{ fxSummary.pct_change >= 0 ? '+' : '' }}{{ fxSummary.pct_change }}%
+                                </strong>
+                            </div>
+                        </template>
                     </div>
 
                     <div id="chart-fx-history" class="spa-min-h-320"></div>

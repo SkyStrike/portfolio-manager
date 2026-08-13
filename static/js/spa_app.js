@@ -70,7 +70,7 @@ const { createApp } = Vue;
                 fxCurrency: 'USD',
                 fxTimeframe: 'monthly',
                 fxRange: '1y',
-                fxAvailableCurrencies: ['USD', 'CAD', 'EUR'],
+                fxAvailableCurrencies: ['USD', 'CAD'],
                 fxSummary: null,
                 fxChartInstance: null,
 
@@ -83,14 +83,6 @@ const { createApp } = Vue;
                 autoRefreshMenuOpen: false,
                 autoRefreshPaused: false,
                 isRefreshingPrices: false
-            }
-        },
-        watch: {
-            currentView(newView) {
-                window.scrollTo(0, 0);
-                if (newView === 'charts') {
-                    this.fetchFxHistory();
-                }
             }
         },
         computed: {
@@ -693,6 +685,7 @@ const { createApp } = Vue;
                 } else if (newView === 'charts') {
                     this.$nextTick(() => {
                         this.initGlobalCharts();
+                        this.fetchFxHistory();
                     });
                 } else if (newView === 'performance') {
                     if (!this.perfData) {
@@ -2450,13 +2443,18 @@ const { createApp } = Vue;
                     if (!res.ok) return;
                     const data = await res.json();
                     
-                    if (data.available_currencies) {
+                    if (data.available_currencies && data.available_currencies.length > 0) {
                         this.fxAvailableCurrencies = data.available_currencies;
+                        if (!this.fxAvailableCurrencies.includes(this.fxCurrency)) {
+                            this.fxCurrency = this.fxAvailableCurrencies[0];
+                        }
                     }
                     this.fxSummary = data.summary || null;
                     
                     this.$nextTick(() => {
-                        this.renderFxHistoryChart(data);
+                        setTimeout(() => {
+                            this.renderFxHistoryChart(data);
+                        }, 50);
                     });
                 } catch (err) {
                     console.error("Failed to fetch FX history:", err);
@@ -2494,6 +2492,7 @@ const { createApp } = Vue;
                     chart: {
                         type: 'area',
                         height: 320,
+                        width: '100%',
                         toolbar: { show: true },
                         background: 'transparent'
                     },

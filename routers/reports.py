@@ -345,9 +345,10 @@ def get_fx_history(currency: str = "USD", timeframe: str = "monthly", range: str
         cursor = conn.cursor()
         
         cursor.execute("SELECT DISTINCT currency FROM exchange_rates WHERE date != 'latest' AND currency != 'SGD' ORDER BY currency ASC")
-        available_currencies = [r['currency'] for r in cursor.fetchall()]
+        raw_currencies = [r['currency'] for r in cursor.fetchall()]
+        available_currencies = sorted(raw_currencies, key=lambda c: (0 if c == 'USD' else 1, c))
         if not available_currencies:
-            available_currencies = ["USD", "CAD", "EUR"]
+            available_currencies = ["USD", "CAD"]
             
         target_currency = currency.upper().strip()
         if target_currency not in available_currencies and available_currencies:
