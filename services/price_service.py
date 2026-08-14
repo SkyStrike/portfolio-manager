@@ -590,12 +590,29 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                             else:
                                 daily_prev_close = daily_close
                                 daily_prev_close_date = daily_close_date
-                    else:
-                        daily_close = intraday_current
-                        daily_close_date = last_date_str
-                        daily_prev_close = intraday_prev_close
-                        daily_prev_close_date = intraday_prev_close_date
-                    
+                    # Overlay DB history entries (e.g. manual user entries in ticker_price_history)
+                    try:
+                        cursor.execute("""
+                            SELECT date, close FROM ticker_price_history 
+                            WHERE symbol = ? AND date < ? 
+                            ORDER BY date DESC LIMIT 2
+                        """, (db_symbol, local_date_str))
+                        db_hist_rows = cursor.fetchall()
+                        if db_hist_rows:
+                            latest_db_date = db_hist_rows[0]['date']
+                            latest_db_close = float(db_hist_rows[0]['close'])
+                            if latest_db_date >= intraday_prev_close_date:
+                                intraday_prev_close = latest_db_close
+                                intraday_prev_close_date = latest_db_date
+                            if latest_db_date >= daily_close_date:
+                                daily_close = latest_db_close
+                                daily_close_date = latest_db_date
+                                if len(db_hist_rows) >= 2:
+                                    daily_prev_close = float(db_hist_rows[1]['close'])
+                                    daily_prev_close_date = db_hist_rows[1]['date']
+                    except Exception as db_ex:
+                        logger.warning("[price] Error checking ticker_price_history for %s: %s", db_symbol, db_ex)
+
                     # Store currency (yfinance info isn't bulk-downloadable via history,
                     # so we preserve the existing currency or default from transactions)
                     cursor.execute("SELECT currency FROM transactions WHERE ticker_id = ? LIMIT 1", (ticker_id,))
