@@ -444,23 +444,47 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                     elif yf_sym in close_col_retry:
                         series_retry = close_col_retry[yf_sym].dropna()
                 
+                # Resolve exchange timezone to check if latest bar is today or yesterday
+                exchange_upper = (exchange or "").strip().upper()
+                if exchange_upper == "SG":
+                    tz = pytz.timezone('Asia/Singapore')
+                elif exchange_upper in ["TO", "TSE", "V", "TSX", "NEO", "CSE"]:
+                    tz = pytz.timezone('America/Toronto')
+                else:
+                    tz = pytz.timezone('America/New_York')
+                local_date_str = datetime.now(tz).strftime("%Y-%m-%d")
+
                 # Determine standard fields based on which datasets have data
                 has_data = False
                 if not series_retry.empty:
-                    # Use retry data for the latest price (e.g. today's 19.96)
-                    intraday_current = float(series_retry.iloc[-1])
-                    # For intraday_prev_close, use the latest valid price from df, fallback to retry's second-to-last or same price
-                    if not series.empty:
-                        intraday_prev_close = float(series.iloc[-1])
-                    else:
-                        intraday_prev_close = float(series_retry.iloc[-2]) if len(series_retry) >= 2 else intraday_current
                     last_date = series_retry.index[-1]
+                    last_date_str = last_date.strftime("%Y-%m-%d") if hasattr(last_date, "strftime") else str(last_date).split()[0]
+                    intraday_current = float(series_retry.iloc[-1])
+                    if last_date_str == local_date_str:
+                        if len(series_retry) >= 2:
+                            intraday_prev_close = float(series_retry.iloc[-2])
+                            prev_bar_date = series_retry.index[-2]
+                        else:
+                            intraday_prev_close = intraday_current
+                            prev_bar_date = last_date
+                    else:
+                        intraday_prev_close = float(series_retry.iloc[-1])
+                        prev_bar_date = last_date
                     has_data = True
                 elif not series.empty:
-                    # Normal flow using main df
-                    intraday_current = float(series.iloc[-1])
-                    intraday_prev_close = float(series.iloc[-2]) if len(series) >= 2 else intraday_current
                     last_date = series.index[-1]
+                    last_date_str = last_date.strftime("%Y-%m-%d") if hasattr(last_date, "strftime") else str(last_date).split()[0]
+                    intraday_current = float(series.iloc[-1])
+                    if last_date_str == local_date_str:
+                        if len(series) >= 2:
+                            intraday_prev_close = float(series.iloc[-2])
+                            prev_bar_date = series.index[-2]
+                        else:
+                            intraday_prev_close = intraday_current
+                            prev_bar_date = last_date
+                    else:
+                        intraday_prev_close = float(series.iloc[-1])
+                        prev_bar_date = last_date
                     has_data = True
                 
                 if has_data:
@@ -470,19 +494,6 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                         has_data = False
                         
                 if has_data:
-                    # Determine latest closing price vs intraday price
-                    if hasattr(last_date, "strftime"):
-                        last_date_str = last_date.strftime("%Y-%m-%d")
-                    else:
-                        last_date_str = str(last_date).split()[0]
-
-                    # Determine the date of the previous bar (used for intraday_prev_close_date)
-                    if not series_retry.empty and len(series_retry) >= 2:
-                        prev_bar_date = series_retry.index[-2]
-                    elif not series.empty and len(series) >= 2:
-                        prev_bar_date = series.index[-2]
-                    else:
-                        prev_bar_date = last_date
                     if hasattr(prev_bar_date, "strftime"):
                         intraday_prev_close_date = prev_bar_date.strftime("%Y-%m-%d")
                     else:
