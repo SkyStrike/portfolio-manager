@@ -237,16 +237,48 @@ SYSTEM_IB_DIR = "/app/triggers/ib"
 class SystemdTriggerRequest(BaseModel):
     action: str = Field(..., pattern=r'^[a-zA-Z0-9_\-]+$')
 
+def check_and_clean_trigger_file(filename: str):
+    """
+    Checks if a trigger file exists in /app/triggers/ib/.
+    If it exists and is older than 5 minutes (300s), deletes it and returns status dict with error message.
+    Otherwise returns pending status.
+    """
+    import time
+    os.makedirs(SYSTEM_IB_DIR, exist_ok=True)
+    filepath = os.path.join(SYSTEM_IB_DIR, filename)
+    if not os.path.exists(filepath):
+        return {"pending": False, "error": None, "elapsed_seconds": 0}
+    
+    try:
+        mtime = os.path.getmtime(filepath)
+        elapsed = time.time() - mtime
+        if elapsed > 300:  # 5 minutes timeout
+            os.remove(filepath)
+            action_name = filename.replace('.json', '').replace('_', ' ').title()
+            logger.warning("[trigger] Trigger file '%s' was older than 5 minutes (%.1fs) — automatically deleted due to error/timeout", filename, elapsed)
+            return {
+                "pending": False,
+                "error": f"Error processing {action_name}: Trigger file timed out after 5 minutes and was automatically deleted.",
+                "elapsed_seconds": int(elapsed)
+            }
+        return {"pending": True, "error": None, "elapsed_seconds": int(elapsed)}
+    except Exception as e:
+        logger.error("[trigger] Error inspecting trigger file '%s': %s", filename, e)
+        return {"pending": os.path.exists(filepath), "error": None, "elapsed_seconds": 0}
+
 @router.get("/maintenance/system-ib-status")
 def get_system_ib_status():
-    """Checks for existing pending trigger files in /app/triggers/ib/."""
-    os.makedirs(SYSTEM_IB_DIR, exist_ok=True)
-    download_data_file = os.path.join(SYSTEM_IB_DIR, "download_data.json")
-    flex_dividend_file = os.path.join(SYSTEM_IB_DIR, "flex_dividend.json")
+    """Checks for existing pending trigger files in /app/triggers/ib/, cleaning up files older than 5 minutes."""
+    download_status = check_and_clean_trigger_file("download_data.json")
+    flex_status = check_and_clean_trigger_file("flex_dividend.json")
     
     return {
-        "download_data_pending": os.path.exists(download_data_file),
-        "flex_dividend_pending": os.path.exists(flex_dividend_file)
+        "download_data_pending": download_status["pending"],
+        "download_data_error": download_status["error"],
+        "download_data_elapsed": download_status["elapsed_seconds"],
+        "flex_dividend_pending": flex_status["pending"],
+        "flex_dividend_error": flex_status["error"],
+        "flex_dividend_elapsed": flex_status["elapsed_seconds"]
     }
 
 @router.post("/maintenance/trigger-ib-action")
@@ -260,14 +292,15 @@ def trigger_ib_systemd_action(req: SystemdTriggerRequest):
         from datetime import datetime
         os.makedirs(SYSTEM_IB_DIR, exist_ok=True)
         filename = f"{action}.json"
-        target_filepath = os.path.join(SYSTEM_IB_DIR, filename)
         
-        if os.path.exists(target_filepath):
+        status_check = check_and_clean_trigger_file(filename)
+        if status_check["pending"]:
             raise HTTPException(
                 status_code=400, 
-                detail=f"Trigger file '{filename}' already exists. Action is pending processing by external watcher."
+                detail=f"Trigger file '{filename}' is already pending processing by external watcher ({status_check['elapsed_seconds']}s elapsed)."
             )
         
+        target_filepath = os.path.join(SYSTEM_IB_DIR, filename)
         payload = {
             "action": action,
             "created_at": datetime.now().isoformat()

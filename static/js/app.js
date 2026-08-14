@@ -3806,6 +3806,9 @@ async function loadMaintenanceTab() {
     await Promise.all([loadDatabaseBackups(), loadPatchesList(), checkSystemIbStatus()]);
 }
 
+let systemIbStatusInterval = null;
+let lastKnownErrors = { download_data: null, flex_dividend: null };
+
 async function checkSystemIbStatus() {
     const btnDownload = document.getElementById("btn-ib-download-data");
     const btnDividend = document.getElementById("btn-ib-flex-dividend");
@@ -3816,11 +3819,31 @@ async function checkSystemIbStatus() {
         if (res.ok) {
             const status = await res.json();
             
+            // Check for timeout errors reported from backend
+            if (status.download_data_error && status.download_data_error !== lastKnownErrors.download_data) {
+                lastKnownErrors.download_data = status.download_data_error;
+                showToast(status.download_data_error, "error");
+                const consoleOutput = document.getElementById("patch-console-log");
+                if (consoleOutput) {
+                    consoleOutput.innerText += `\n[${new Date().toLocaleTimeString()}] ERROR: ${status.download_data_error}`;
+                }
+            }
+            if (status.flex_dividend_error && status.flex_dividend_error !== lastKnownErrors.flex_dividend) {
+                lastKnownErrors.flex_dividend = status.flex_dividend_error;
+                showToast(status.flex_dividend_error, "error");
+                const consoleOutput = document.getElementById("patch-console-log");
+                if (consoleOutput) {
+                    consoleOutput.innerText += `\n[${new Date().toLocaleTimeString()}] ERROR: ${status.flex_dividend_error}`;
+                }
+            }
+
+            // Update Download Data Button state
             if (status.download_data_pending) {
                 btnDownload.disabled = true;
                 btnDownload.style.opacity = "0.5";
                 btnDownload.style.cursor = "not-allowed";
-                btnDownload.innerText = "⏳ Download Data (Pending)";
+                const elapsedStr = status.download_data_elapsed ? ` (${status.download_data_elapsed}s)` : '';
+                btnDownload.innerText = `⏳ Download Data Pending${elapsedStr}`;
             } else {
                 btnDownload.disabled = false;
                 btnDownload.style.opacity = "1";
@@ -3828,16 +3851,27 @@ async function checkSystemIbStatus() {
                 btnDownload.innerText = "🔄 Trigger IBKR Data Download";
             }
             
+            // Update Flex Dividend Button state
             if (status.flex_dividend_pending) {
                 btnDividend.disabled = true;
                 btnDividend.style.opacity = "0.5";
                 btnDividend.style.cursor = "not-allowed";
-                btnDividend.innerText = "⏳ Dividend Flex Report (Pending)";
+                const elapsedStr = status.flex_dividend_elapsed ? ` (${status.flex_dividend_elapsed}s)` : '';
+                btnDividend.innerText = `⏳ Dividend Flex Pending${elapsedStr}`;
             } else {
                 btnDividend.disabled = false;
                 btnDividend.style.opacity = "1";
                 btnDividend.style.cursor = "pointer";
                 btnDividend.innerText = "💰 Trigger Dividend Flex Report";
+            }
+
+            // Manage polling loop: if any trigger is pending, poll every 5s until completed or timed out
+            const anyPending = status.download_data_pending || status.flex_dividend_pending;
+            if (anyPending && !systemIbStatusInterval) {
+                systemIbStatusInterval = setInterval(checkSystemIbStatus, 5000);
+            } else if (!anyPending && systemIbStatusInterval) {
+                clearInterval(systemIbStatusInterval);
+                systemIbStatusInterval = null;
             }
         }
     } catch (err) {
