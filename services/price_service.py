@@ -493,7 +493,7 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                     if meta:
                         if meta.get('lastPrice') is not None and not pd.isna(meta['lastPrice']) and float(meta['lastPrice']) > 0:
                             intraday_current = float(meta['lastPrice'])
-                        if meta.get('previousClose') is not None and not pd.isna(meta['previousClose']) and float(meta['previousClose']) > 0:
+                        if (not intraday_prev_close or intraday_prev_close <= 0) and meta.get('previousClose') is not None and not pd.isna(meta['previousClose']) and float(meta['previousClose']) > 0:
                             intraday_prev_close = float(meta['previousClose'])
 
                     
