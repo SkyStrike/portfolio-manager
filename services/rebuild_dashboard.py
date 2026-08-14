@@ -417,6 +417,9 @@ def generate_views_in_memory(conn=None, price_mode="intraday"):
                     ib_data = json.load(f)
                     ib_balances = ib_data.get("balances", {})
                     for pos in ib_data.get("portfolio", []):
+                        asset_type = str(pos.get("type") or pos.get("secType") or "STK").strip().upper()
+                        if asset_type in ["OPT", "OPTION", "FUT", "FOP"]:
+                            continue
                         sym = pos.get("symbol", "").replace(".", "-").upper()
                         ib_positions[sym] = {
                             "position": float(pos.get("position", 0.0) or 0.0),
@@ -929,6 +932,9 @@ def render_all_views_in_memory(all_positions, options_data, cash_report_data, co
             with open(ib_data_path, 'r', encoding='utf-8') as f:
                 ib_data = json.load(f)
                 for pos in ib_data.get("portfolio", []):
+                    asset_type = str(pos.get("type") or pos.get("secType") or "STK").strip().upper()
+                    if asset_type in ["OPT", "OPTION", "FUT", "FOP"]:
+                        continue
                     sym = pos.get("symbol", "").replace(".", "-").upper()
                     ib_positions[sym] = {
                         "position": float(pos.get("position", 0.0) or 0.0),
