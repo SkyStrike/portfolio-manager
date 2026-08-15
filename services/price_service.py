@@ -607,14 +607,25 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                     try:
                         cursor.execute("""
                             SELECT date, close FROM ticker_price_history 
-                            WHERE symbol = ? AND date < ? 
+                            WHERE symbol = ? 
                             ORDER BY date DESC LIMIT 2
-                        """, (db_symbol, last_date_str))
+                        """, (db_symbol,))
                         db_hist_rows = cursor.fetchall()
                         if db_hist_rows:
                             latest_db_date = db_hist_rows[0]['date']
                             latest_db_close = float(db_hist_rows[0]['close'])
-                            if latest_db_date >= intraday_prev_close_date:
+                            
+                            # If DB history has a bar newer than or equal to yfinance's last bar (e.g. manual entry for 2026-08-14)
+                            if latest_db_date >= last_date_str:
+                                intraday_current = latest_db_close
+                                daily_close = latest_db_close
+                                daily_close_date = latest_db_date
+                                if len(db_hist_rows) >= 2:
+                                    intraday_prev_close = float(db_hist_rows[1]['close'])
+                                    intraday_prev_close_date = db_hist_rows[1]['date']
+                                    daily_prev_close = float(db_hist_rows[1]['close'])
+                                    daily_prev_close_date = db_hist_rows[1]['date']
+                            elif latest_db_date >= intraday_prev_close_date:
                                 intraday_prev_close = latest_db_close
                                 intraday_prev_close_date = latest_db_date
                     except Exception as db_ex:
