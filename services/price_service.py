@@ -364,7 +364,7 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                 # First try fast_info to avoid HTTP 404 fundamentals queries
                 fast_info = getattr(t, "fast_info", {})
                 prev_close = fast_info.get('regularMarketPreviousClose') or fast_info.get('previousClose')
-                last_price = fast_info.get('lastPrice') or fast_info.get('regularMarketPrice')
+                last_price = fast_info.get('regularMarketPrice') or fast_info.get('lastPrice')
                 
                 # If fast_info fields are missing/None, fallback to standard Ticker.info lookup
                 if prev_close is None or last_price is None:
