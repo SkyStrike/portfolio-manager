@@ -452,7 +452,9 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                     tz = pytz.timezone('America/Toronto')
                 else:
                     tz = pytz.timezone('America/New_York')
-                local_date_str = datetime.now(tz).strftime("%Y-%m-%d")
+                local_now = datetime.now(tz)
+                local_date_str = local_now.strftime("%Y-%m-%d")
+                is_weekend = (local_now.weekday() >= 5)  # Saturday=5, Sunday=6
 
                 # Determine standard fields based on which datasets have data
                 has_data = False
@@ -460,7 +462,7 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                     last_date = series_retry.index[-1]
                     last_date_str = last_date.strftime("%Y-%m-%d") if hasattr(last_date, "strftime") else str(last_date).split()[0]
                     intraday_current = float(series_retry.iloc[-1])
-                    if last_date_str == local_date_str:
+                    if last_date_str == local_date_str or is_weekend:
                         if len(series_retry) >= 2:
                             intraday_prev_close = float(series_retry.iloc[-2])
                             prev_bar_date = series_retry.index[-2]
@@ -475,7 +477,7 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                     last_date = series.index[-1]
                     last_date_str = last_date.strftime("%Y-%m-%d") if hasattr(last_date, "strftime") else str(last_date).split()[0]
                     intraday_current = float(series.iloc[-1])
-                    if last_date_str == local_date_str:
+                    if last_date_str == local_date_str or is_weekend:
                         if len(series) >= 2:
                             intraday_prev_close = float(series.iloc[-2])
                             prev_bar_date = series.index[-2]
@@ -607,7 +609,7 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                             SELECT date, close FROM ticker_price_history 
                             WHERE symbol = ? AND date < ? 
                             ORDER BY date DESC LIMIT 2
-                        """, (db_symbol, local_date_str))
+                        """, (db_symbol, last_date_str))
                         db_hist_rows = cursor.fetchall()
                         if db_hist_rows:
                             latest_db_date = db_hist_rows[0]['date']
@@ -615,12 +617,6 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
                             if latest_db_date >= intraday_prev_close_date:
                                 intraday_prev_close = latest_db_close
                                 intraday_prev_close_date = latest_db_date
-                            if latest_db_date >= daily_close_date:
-                                daily_close = latest_db_close
-                                daily_close_date = latest_db_date
-                                if len(db_hist_rows) >= 2:
-                                    daily_prev_close = float(db_hist_rows[1]['close'])
-                                    daily_prev_close_date = db_hist_rows[1]['date']
                     except Exception as db_ex:
                         logger.warning("[price] Error checking ticker_price_history for %s: %s", db_symbol, db_ex)
 
