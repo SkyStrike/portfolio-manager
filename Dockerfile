@@ -10,19 +10,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# Copy requirements first to leverage Docker layer caching
+COPY requirements.txt .
+
 # Install python packages
-RUN pip install --no-cache-dir \
-    fastapi \
-    uvicorn \
-    yfinance \
-    python-multipart \
-    pandas \
-    requests \
-    python-dotenv \
-    jinja2 \
-    pytz \
-    alembic \
-    sqlalchemy
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the application code into the container
 COPY . /app
