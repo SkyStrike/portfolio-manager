@@ -650,7 +650,7 @@
                                     (<span :class="getValClass(u.gl)">{{ formatPct(u.roi) }}</span>)
                                     <br>
                                     Daily: <span :class="getValClass(u.daily_val)">{{ formatCommas(u.daily_val, true) }} SGD</span>
-                                    (<span :class="getValClass(u.daily_pct)">{{ formatPct(u.daily_pct) }}</span>)
+                                    (<span :class="[getValClass(u.daily_pct), { 'daily-change-clickable': u.symbols && u.symbols.length === 1 }]" @click="u.symbols && u.symbols.length === 1 ? openDailyChangeModal(u.symbols[0]) : null" :title="u.symbols && u.symbols.length === 1 ? 'Click to view daily change calculation breakdown' : ''">{{ formatPct(u.daily_pct) }}</span>)
                                 </span>
                                 <!-- Tickers sublist if symbols length > 1 (matching legacy) -->
                                 <ul v-if="u.symbols.length > 1" class="toc-sublist">
@@ -730,7 +730,7 @@
                                     <td v-text="formatCommas(u.curr)"></td>
                                     <td :class="getValClass(u.daily_val)">
                                         {{ formatCommas(u.daily_val, true) }}
-                                        <div class="sub-val" v-text="'(' + formatPct(u.daily_pct) + ')'"></div>
+                                        <div class="sub-val" :class="{ 'daily-change-clickable': u.symbols && u.symbols.length === 1 }" @click.stop="u.symbols && u.symbols.length === 1 ? openDailyChangeModal(u.symbols[0]) : null" :title="u.symbols && u.symbols.length === 1 ? 'Click to view daily change calculation breakdown' : ''">({{ formatPct(u.daily_pct) }})</div>
                                     </td>
                                     <td :class="getValClass(u.realized_pnl)" v-text="formatCommas(u.realized_pnl, true)"></td>
                                     <td v-text="formatCommas(u.inc)"></td>
@@ -803,7 +803,7 @@
                                 <div class="highlight">
                                     Daily P/L: 
                                     <span :class="getValClass(u.daily_val)">
-                                        {{ formatCommas(u.daily_val, true) }} SGD ({{ formatPct(u.daily_pct) }})
+                                        {{ formatCommas(u.daily_val, true) }} SGD <span :class="{ 'daily-change-clickable': u.symbols && u.symbols.length === 1 }" @click="u.symbols && u.symbols.length === 1 ? openDailyChangeModal(u.symbols[0]) : null" :title="u.symbols && u.symbols.length === 1 ? 'Click to view daily change calculation breakdown' : ''">({{ formatPct(u.daily_pct) }})</span>
                                     </span>
                                 </div>
                             </div>
@@ -824,7 +824,7 @@
                                     <li>
                                         <strong>Daily Change:</strong> 
                                         <span :class="getValClass(u.daily_val)">
-                                            {{ formatCommas(u.daily_val, true) }} SGD ({{ formatPct(u.daily_pct) }})
+                                            {{ formatCommas(u.daily_val, true) }} SGD <span :class="{ 'daily-change-clickable': u.symbols && u.symbols.length === 1 }" @click="u.symbols && u.symbols.length === 1 ? openDailyChangeModal(u.symbols[0]) : null" :title="u.symbols && u.symbols.length === 1 ? 'Click to view daily change calculation breakdown' : ''">({{ formatPct(u.daily_pct) }})</span>
                                         </span>
                                     </li>
                                     <li><strong>Total Income:</strong> {{ formatCommas(u.inc) }} SGD</li>
