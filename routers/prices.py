@@ -11,19 +11,13 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.post("/api/prices/refresh")
-def refresh_prices(background_tasks: BackgroundTasks = None, force: bool = False, sync: bool = True):
+def refresh_prices(background_tasks: BackgroundTasks = None, force: bool = True, sync: bool = True):
     logger.info("POST /api/prices/refresh (force=%s, sync=%s)", force, sync)
-    if not force and not can_refresh():
-        raise HTTPException(
-            status_code=429, 
-            detail=f"Manual refresh cooldown active. Please wait up to {REFRESH_COOLDOWN.seconds // 60} minutes between refreshes."
-        )
-        
     if sync or force:
-        logger.info("Starting synchronous price refresh (force=%s)...", force)
+        logger.info("Starting synchronous price refresh...")
         conn = get_connection()
         try:
-            update_prices(conn, force=force)
+            update_prices(conn)
             from services.dividend_service import sync_upcoming_dividends
             try:
                 logger.info("Syncing upcoming dividends post price refresh...")

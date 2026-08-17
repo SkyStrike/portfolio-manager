@@ -167,11 +167,10 @@ def get_blacklisted_tickers(conn: sqlite3.Connection, api_type: str = "yfinance_
         logger.warning("Failed to query blacklisted tickers: %s", e)
         return set()
 
-def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_minutes: int = 5) -> dict:
+def update_prices(conn: sqlite3.Connection = None, force: bool = True, cache_minutes: int = 0) -> dict:
     """
-    Fetches latest prices in a single batch from yfinance and caches them in the DB.
-    Only queries tickers whose cached prices are older than `cache_minutes` unless `force` is True.
-    When `force=True`, unconditionally fetches all active tickers regardless of market session status.
+    Fetches latest prices in a single batch from yfinance for all active tickers and caches them in DB.
+    Always updates all active tickers unconditionally.
     """
     close_on_exit = False
     if conn is None:
@@ -207,41 +206,7 @@ def update_prices(conn: sqlite3.Connection = None, force: bool = False, cache_mi
         ticker_id_map = {t['symbol']: t['id'] for t in tickers}
         db_symbols = [t['symbol'] for t in tickers]
         
-        # Check last updated times in ticker_prices
-        cursor.execute("SELECT ticker_id, last_updated FROM ticker_prices")
-        price_rows = cursor.fetchall()
-        price_records = {r['ticker_id']: r['last_updated'] for r in price_rows}
-        
-        tickers_to_fetch = []
-        
-        for t in tickers:
-            ticker_id = t['id']
-            symbol = t['symbol']
-            
-            # Determine if ticker needs update
-            needs_update = False
-            if force or ticker_id not in price_records:
-                needs_update = True
-            else:
-                try:
-                    last_updated = datetime.fromisoformat(price_records[ticker_id])
-                    
-                    if is_exchange_in_session(t['exchange']):
-                        # If the exchange is in session, refresh if cache expired
-                        if get_now_utc() - last_updated > timedelta(minutes=cache_minutes):
-                            needs_update = True
-                    else:
-                        # Exchange is closed. Only refresh if the DB price is not fresh after the last close
-                        if not is_price_fresh_after_close(last_updated, t['exchange']):
-                            needs_update = True
-                except (ValueError, TypeError):
-                    needs_update = True
-                    
-            if needs_update:
-                tickers_to_fetch.append(t)
-                
-        if not tickers_to_fetch:
-            return {"status": "success", "message": "All prices are fresh. No fetch needed."}
+        tickers_to_fetch = tickers
             
         # Map database symbol to yfinance query symbol
         yf_to_db = {}
