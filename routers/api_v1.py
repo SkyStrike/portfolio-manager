@@ -83,6 +83,8 @@ def get_performance_report(price_mode: str = Query("closing")):
         "price_mode": price_mode,
         "years": years,
         "classifications": sorted(list(classifications)),
+        "classification_groups": data.get("classification_groups", []),
+        "individual_portfolios": data.get("individual_portfolios", []),
         "cash_data": cash_by_year_month,
         "portfolio_data": portfolio_by_class_year_month,
         "cash_ytd": data["cash_ytd"],

@@ -1,7 +1,8 @@
 {
   "brokers": [
     "IBKR",
-    "MOOMOO"
+    "MOOMOO",
+    "SRS (DBS)"
   ],
   "finance": {
     "max_workers": 30,

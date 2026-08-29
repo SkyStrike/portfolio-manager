@@ -67,6 +67,8 @@ def get_performance_report_data(db_path):
     port_records = [dict(row) for row in cursor.fetchall()]
     port_map = {row['id']: (row['classification'] or row['name']) for row in port_records}
     port_name_map = {row['id']: row['name'] for row in port_records}
+    classification_groups = sorted(list(set(row['classification'].strip() for row in port_records if row.get('classification') and row['classification'].strip())))
+    individual_portfolios = sorted(list(set(row['name'].strip() for row in port_records if row.get('name') and row['name'].strip())))
     
     # 3. Fetch portfolio metrics records
     cursor.execute("SELECT date, portfolio_id, total_invested, current_value, total_returns FROM daily_portfolio_metrics ORDER BY date ASC")
@@ -195,7 +197,6 @@ def get_performance_report_data(db_path):
             "classification": cls,
             "total_invested": metrics["total_invested"],
             "current_value": metrics["current_value"],
-            "options_profit": options_rows.get(date_str, 0.0),
             "total_returns": metrics["total_returns"]
         })
     
@@ -311,8 +312,6 @@ def get_performance_report_data(db_path):
                 "total_invested": r_last['total_invested'],
                 "current_value_start": r_base['current_value'],
                 "current_value": r_last['current_value'],
-                "options_profit_start": r_base.get('options_profit') if r_base.get('options_profit') is not None else 0.0,
-                "options_profit": r_last.get('options_profit') if r_last.get('options_profit') is not None else 0.0,
                 "total_returns_start": r_base['total_returns'],
                 "total_returns": r_last['total_returns'],
                 "dividends_received": class_dividends_by_month[cls].get(month, 0.0),
@@ -320,7 +319,7 @@ def get_performance_report_data(db_path):
                 "mtm": {}
             }
             
-            for key in ['total_invested', 'current_value', 'options_profit', 'total_returns']:
+            for key in ['total_invested', 'current_value', 'total_returns']:
                 base_val = r_base.get(key) if r_base.get(key) is not None else 0.0
                 last_val = r_last.get(key) if r_last.get(key) is not None else 0.0
                 summary["mtd"][f"{key}_val"], summary["mtd"][f"{key}_pct"] = get_change(last_val, base_val)
@@ -410,7 +409,6 @@ def get_performance_report_data(db_path):
                 
                 inv_diff = r_last['total_invested'] - r_base_ytd['total_invested']
                 ret_diff = r_last['total_returns'] - r_base_ytd['total_returns']
-                opt_diff = (r_last.get('options_profit') or 0.0) - (r_base_ytd.get('options_profit') or 0.0)
                 
                 portfolio_ytd[cls][y] = {
                     "invested_start": r_base_ytd['total_invested'],
@@ -418,9 +416,6 @@ def get_performance_report_data(db_path):
                     "invested_val": inv_diff,
                     "current_start": r_base_ytd['current_value'],
                     "current_end": r_last['current_value'],
-                    "options_start": r_base_ytd.get('options_profit') or 0.0,
-                    "options_end": r_last.get('options_profit') or 0.0,
-                    "options_val": opt_diff,
                     "returns_start": r_base_ytd['total_returns'],
                     "returns_end": r_last['total_returns'],
                     "returns_val": ret_diff,
@@ -574,6 +569,8 @@ def get_performance_report_data(db_path):
     return {
         "years": years,
         "classifications": sorted(list(classifications)),
+        "classification_groups": classification_groups,
+        "individual_portfolios": individual_portfolios,
         "cash_data": cash_by_year_month,
         "portfolio_data": portfolio_by_class_year_month,
         "cash_ytd": cash_ytd,

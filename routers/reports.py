@@ -322,6 +322,8 @@ def get_performance_report():
     return {
         "years": years,
         "classifications": sorted(list(classifications)),
+        "classification_groups": data.get("classification_groups", []),
+        "individual_portfolios": data.get("individual_portfolios", []),
         "cash_data": cash_by_year_month,
         "portfolio_data": portfolio_by_class_year_month,
         "cash_ytd": cash_ytd,

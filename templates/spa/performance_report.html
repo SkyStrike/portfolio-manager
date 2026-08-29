@@ -298,7 +298,15 @@
                     <div class="selector-wrapper spa-selector-row">
                         <label class="selector-label spa-weight-bold">Select Classification:</label>
                         <select v-model="perfSelectedClassification" class="selector-dropdown spa-selector-dropdown">
-                            <option v-for="cls in perfData.classifications" :key="cls" :value="cls">{{ cls }}</option>
+                            <optgroup v-if="perfData.classification_groups && perfData.classification_groups.length" label="Classifications">
+                                <option v-for="cls in perfData.classification_groups" :key="'grp-' + cls" :value="cls">{{ cls }}</option>
+                            </optgroup>
+                            <optgroup v-if="perfData.individual_portfolios && perfData.individual_portfolios.length" label="Individual Portfolios">
+                                <option v-for="port in perfData.individual_portfolios" :key="'port-' + port" :value="port">{{ port }}</option>
+                            </optgroup>
+                            <template v-if="!perfData.classification_groups">
+                                <option v-for="cls in perfData.classifications" :key="cls" :value="cls">{{ cls }}</option>
+                            </template>
                         </select>
                     </div>
                     
@@ -363,16 +371,6 @@
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td class="perf-td-label spa-ta-left">Options Profit</td>
-                                            <td v-for="year in perfData.years" :key="year" class="spa-ta-right">
-                                                <span v-if="perfData.portfolio_ytd[perfSelectedClassification][year]"
-                                                      :class="getValClass(perfData.portfolio_ytd[perfSelectedClassification][year].options_val)">
-                                                    {{ formatCommas(perfData.portfolio_ytd[perfSelectedClassification][year].options_val, true) }}
-                                                </span>
-                                                <span v-else class="spa-color-666">-</span>
-                                            </td>
-                                        </tr>
-                                        <tr>
                                             <td class="perf-td-label spa-ta-left">Dividends Received</td>
                                             <td v-for="year in perfData.years" :key="year" class="spa-ta-right">
                                                 <span v-if="perfData.portfolio_ytd[perfSelectedClassification][year]">
@@ -387,7 +385,7 @@
                         </div>
                     </div>
                     
- <div class="year-nav-container spa-year-nav" >
+                    <div class="year-nav-container spa-year-nav" >
                         <span class="year-nav-label">Select Year:</span>
                         <button v-for="year in [...perfData.years].reverse()" 
                                 :key="year" 
@@ -410,7 +408,6 @@
                                     <tr v-for="row in [
                                         { label: 'Total Invested', startKey: 'total_invested_start', endKey: 'total_invested' },
                                         { label: 'Current Value', startKey: 'current_value_start', endKey: 'current_value' },
-                                        { label: 'Options Profit', startKey: 'options_profit_start', endKey: 'options_profit' },
                                         { label: 'Total Returns', startKey: 'total_returns_start', endKey: 'total_returns' }
                                     ]" :key="row.label">
                                         <td class="metric-label spa-monthly-td-label">{{ row.label }}</td>
@@ -441,8 +438,6 @@
                                         { l: 'Capital Invested (%)', k: 'capital_invested_pct', p: true },
                                         { l: 'Current Value (value)', k: 'current_value_val', p: false },
                                         { l: 'Current Value (%)', k: 'current_value_pct', p: true },
-                                        { l: 'Options Profit (value)', k: 'options_profit_val', p: false },
-                                        { l: 'Options Profit (%)', k: 'options_profit_pct', p: true },
                                         { l: 'Dividends Received (value)', k: 'dividends_received_val', p: false },
                                         { l: 'Dividends Received (%)', k: 'dividends_received_pct', p: true }
                                     ]" :key="'portmetric-' + metric.k">
