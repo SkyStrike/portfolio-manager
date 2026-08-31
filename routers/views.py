@@ -1,12 +1,20 @@
 import logging
 import os
 from fastapi import APIRouter, Form, File, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, FileResponse
 from core.cache import get_cached_view, base_path
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# Favicon Routes
+@router.get("/favicon.ico", include_in_schema=False)
+@router.get("/favicon.svg", include_in_schema=False)
+def get_favicon():
+    if os.path.exists("static/favicon.svg"):
+        return FileResponse("static/favicon.svg", media_type="image/svg+xml")
+    return HTMLResponse(status_code=404)
 
 # Primary SPA Dashboard Routes
 @router.get("/", response_class=HTMLResponse)
