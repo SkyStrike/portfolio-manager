@@ -123,7 +123,11 @@ def get_broker_summary_report(price_mode: str = Query("closing")):
         portfolios = [dict(r) for r in cursor.fetchall()]
         rates = get_exchange_rates()
         
-        # Fetch latest cash on hand, base capital, and liquidation value per broker from daily_cash_report
+        # 1. Fetch cumulative base capital from broker_capital_entries (authoritative source)
+        cursor.execute("SELECT UPPER(broker) as broker, SUM(amount) as base_capital FROM broker_capital_entries GROUP BY UPPER(broker)")
+        capital_entries_map = {row['broker']: row['base_capital'] for row in cursor.fetchall()}
+
+        # 2. Fetch latest snapshot per broker from daily_cash_report
         cursor.execute("""
             SELECT r.broker, r.date, r.liquidation_value, r.base_capital, r.cash_on_hand, r.total_stock_value
             FROM daily_cash_report r
@@ -212,14 +216,26 @@ def get_broker_summary_report(price_mode: str = Query("closing")):
             
         for br, b_info in brokers_data.items():
             c_info = cash_rows.get(br.upper())
-            if c_info and c_info.get("base_capital"):
+            cap_entry = capital_entries_map.get(br.upper())
+            
+            if c_info and c_info.get("liquidation_value") is not None:
                 b_info["tracking_mode"] = "account_nav_tracked"
                 b_info["last_updated_date"] = c_info.get("date")
-                b_info["base_capital_sgd"] = round(c_info.get("base_capital", 0.0), 2)
+                b_info["base_capital_sgd"] = round(cap_entry if cap_entry is not None else c_info.get("base_capital", 0.0), 2)
                 b_info["liquidation_value_sgd"] = round(c_info.get("liquidation_value", 0.0), 2)
                 b_info["cash_on_hand_sgd"] = round(c_info.get("cash_on_hand", 0.0), 2)
+            elif cap_entry is not None:
+                # User entered explicit base capital into broker_capital_entries (e.g. SRS deposit)
+                b_info["tracking_mode"] = "capital_tracked"
+                cursor.execute("SELECT MAX(date) FROM broker_capital_entries WHERE UPPER(broker) = ?", (br.upper(),))
+                b_info["last_updated_date"] = cursor.fetchone()[0] or latest_price_date
+                b_info["base_capital_sgd"] = round(cap_entry, 2)
+                # Cash on hand = base capital deposited minus capital spent buying stocks (if positive)
+                derived_cash = max(0.0, cap_entry - b_info["stock_cost_basis_sgd"])
+                b_info["cash_on_hand_sgd"] = round(derived_cash, 2)
+                b_info["liquidation_value_sgd"] = round(b_info["current_stock_value_sgd"] + b_info["cash_on_hand_sgd"], 2)
             else:
-                # Automated fallback for stock-only brokers (e.g. SRS)
+                # Automated fallback for stock-only brokers with zero capital entries
                 b_info["tracking_mode"] = "stock_holdings_only"
                 b_info["last_updated_date"] = latest_price_date
                 b_info["base_capital_sgd"] = round(b_info["stock_cost_basis_sgd"], 2)
