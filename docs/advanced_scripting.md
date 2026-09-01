@@ -82,7 +82,7 @@ Update ticker attributes (tax rates, categories, classifications).
 Query consolidated portfolio and broker-level summaries for external dashboards and services.
 * **Broker Summary**: `GET /api/v1/reports/broker-summary`
   * *Parameters*: `price_mode` (`closing` [default] or `intraday`).
-  * *Description*: Aggregates total invested cost, fees, current market value, uninvested cash on hand, and total net worth grouped by broker (e.g. `IBKR`, `MooMoo`, `SRS (DBS)`) and consolidated across all portfolios.
+  * *Description*: Aggregates total invested cost, fees, current stock value, unrealized capital gains, realized P&L, net dividends, total returns ($ and %), uninvested cash on hand, and total net worth grouped by broker (e.g. `IBKR`, `MooMoo`, `SRS (DBS)`) and consolidated across all portfolios.
 * **Portfolio Summary**: `GET /api/dashboard/summary?portfolio_id={id}`
   * *Description*: Returns single-portfolio valuation, unrealized/realized P&L, and current holdings list in SGD.
 

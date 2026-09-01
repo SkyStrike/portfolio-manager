@@ -139,6 +139,11 @@ def get_broker_summary_report(price_mode: str = Query("closing")):
             "total_invested_sgd": 0.0,
             "total_fees_sgd": 0.0,
             "current_stock_value_sgd": 0.0,
+            "unrealized_pl_sgd": 0.0,
+            "realized_pl_sgd": 0.0,
+            "dividends_net_sgd": 0.0,
+            "total_returns_sgd": 0.0,
+            "total_returns_pct": 0.0,
             "cash_on_hand_sgd": 0.0,
             "total_net_worth_sgd": 0.0,
             "portfolios": []
@@ -148,6 +153,11 @@ def get_broker_summary_report(price_mode: str = Query("closing")):
             "total_invested_sgd": 0.0,
             "total_fees_sgd": 0.0,
             "current_stock_value_sgd": 0.0,
+            "unrealized_pl_sgd": 0.0,
+            "realized_pl_sgd": 0.0,
+            "dividends_net_sgd": 0.0,
+            "total_returns_sgd": 0.0,
+            "total_returns_pct": 0.0,
             "total_cash_sgd": 0.0,
             "total_net_worth_sgd": 0.0
         }
@@ -159,34 +169,61 @@ def get_broker_summary_report(price_mode: str = Query("closing")):
             inv = summary.get("total_cost_sgd", 0.0)
             fees = summary.get("total_fees_sgd", 0.0)
             val = summary.get("total_value_sgd", 0.0)
+            unrealized = summary.get("total_unrealized_pl_sgd", 0.0)
+            realized = summary.get("total_realized_pl_sgd", 0.0)
+            divs = summary.get("total_dividends_net_sgd", 0.0)
+            returns = summary.get("total_profit_sgd", 0.0)
             
             brokers_data[br]["total_invested_sgd"] += inv
             brokers_data[br]["total_fees_sgd"] += fees
             brokers_data[br]["current_stock_value_sgd"] += val
+            brokers_data[br]["unrealized_pl_sgd"] += unrealized
+            brokers_data[br]["realized_pl_sgd"] += realized
+            brokers_data[br]["dividends_net_sgd"] += divs
+            brokers_data[br]["total_returns_sgd"] += returns
+            
             brokers_data[br]["portfolios"].append({
                 "id": p["id"],
                 "name": p["name"],
                 "total_invested_sgd": round(inv, 2),
                 "total_fees_sgd": round(fees, 2),
-                "current_stock_value_sgd": round(val, 2)
+                "current_stock_value_sgd": round(val, 2),
+                "unrealized_pl_sgd": round(unrealized, 2),
+                "realized_pl_sgd": round(realized, 2),
+                "dividends_net_sgd": round(divs, 2),
+                "total_returns_sgd": round(returns, 2)
             })
             
             consolidated["total_invested_sgd"] += inv
             consolidated["total_fees_sgd"] += fees
             consolidated["current_stock_value_sgd"] += val
+            consolidated["unrealized_pl_sgd"] += unrealized
+            consolidated["realized_pl_sgd"] += realized
+            consolidated["dividends_net_sgd"] += divs
+            consolidated["total_returns_sgd"] += returns
             
         for br, b_info in brokers_data.items():
             b_info["cash_on_hand_sgd"] = round(cash_map.get(br.upper(), 0.0), 2)
             b_info["total_net_worth_sgd"] = round(b_info["current_stock_value_sgd"] + b_info["cash_on_hand_sgd"], 2)
+            b_info["total_returns_pct"] = round((b_info["total_returns_sgd"] / b_info["total_invested_sgd"] * 100) if b_info["total_invested_sgd"] > 0 else 0.0, 2)
             b_info["total_invested_sgd"] = round(b_info["total_invested_sgd"], 2)
             b_info["total_fees_sgd"] = round(b_info["total_fees_sgd"], 2)
             b_info["current_stock_value_sgd"] = round(b_info["current_stock_value_sgd"], 2)
+            b_info["unrealized_pl_sgd"] = round(b_info["unrealized_pl_sgd"], 2)
+            b_info["realized_pl_sgd"] = round(b_info["realized_pl_sgd"], 2)
+            b_info["dividends_net_sgd"] = round(b_info["dividends_net_sgd"], 2)
+            b_info["total_returns_sgd"] = round(b_info["total_returns_sgd"], 2)
             consolidated["total_cash_sgd"] += b_info["cash_on_hand_sgd"]
             
+        consolidated["total_returns_pct"] = round((consolidated["total_returns_sgd"] / consolidated["total_invested_sgd"] * 100) if consolidated["total_invested_sgd"] > 0 else 0.0, 2)
         consolidated["total_net_worth_sgd"] = round(consolidated["current_stock_value_sgd"] + consolidated["total_cash_sgd"], 2)
         consolidated["total_invested_sgd"] = round(consolidated["total_invested_sgd"], 2)
         consolidated["total_fees_sgd"] = round(consolidated["total_fees_sgd"], 2)
         consolidated["current_stock_value_sgd"] = round(consolidated["current_stock_value_sgd"], 2)
+        consolidated["unrealized_pl_sgd"] = round(consolidated["unrealized_pl_sgd"], 2)
+        consolidated["realized_pl_sgd"] = round(consolidated["realized_pl_sgd"], 2)
+        consolidated["dividends_net_sgd"] = round(consolidated["dividends_net_sgd"], 2)
+        consolidated["total_returns_sgd"] = round(consolidated["total_returns_sgd"], 2)
         consolidated["total_cash_sgd"] = round(consolidated["total_cash_sgd"], 2)
         
         return {
