@@ -82,7 +82,10 @@ Update ticker attributes (tax rates, categories, classifications).
 Query consolidated portfolio and broker-level summaries for external dashboards and services.
 * **Broker Summary**: `GET /api/v1/reports/broker-summary`
   * *Parameters*: `price_mode` (`closing` [default] or `intraday`).
-  * *Description*: Aggregates total invested cost, fees, current stock value, unrealized capital gains, realized P&L, net dividends, total returns ($ and %), uninvested cash on hand, and total net worth grouped by broker (e.g. `IBKR`, `MooMoo`, `SRS (DBS)`) and consolidated across all portfolios.
+  * *Description*: Returns broker-level summaries covering:
+    - **Perspective 1 (Account Capital & Real Gains)**: `base_capital_sgd` (net cash deposited), `liquidation_value_sgd` (total account net worth), `account_capital_gains_sgd` (real dollar profit), and `account_capital_gains_pct` (cash ROI %).
+    - **Perspective 2 (Stock Position & Trading)**: `stock_cost_basis_sgd`, `current_stock_value_sgd`, `unrealized_pl_sgd`, `realized_pl_sgd`, `dividends_net_sgd`, `total_fees_sgd`, `stock_total_returns_sgd`, and `stock_total_returns_pct`.
+    - **Cash & Metadata**: `cash_on_hand_sgd`, `tracking_mode` (`account_nav_tracked` vs `stock_holdings_only`), and `last_updated_date`.
 * **Portfolio Summary**: `GET /api/dashboard/summary?portfolio_id={id}`
   * *Description*: Returns single-portfolio valuation, unrealized/realized P&L, and current holdings list in SGD.
 
