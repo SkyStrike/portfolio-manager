@@ -266,11 +266,13 @@ def get_broker_summary_report(price_mode: str = Query("closing")):
         consolidated["account_capital_gains_sgd"] = round(consolidated["liquidation_value_sgd"] - consolidated["base_capital_sgd"], 2)
         consolidated["account_capital_gains_pct"] = round((consolidated["account_capital_gains_sgd"] / consolidated["base_capital_sgd"] * 100) if consolidated["base_capital_sgd"] > 0 else 0.0, 2)
         consolidated["stock_total_returns_pct"] = round((consolidated["stock_total_returns_sgd"] / consolidated["stock_cost_basis_sgd"] * 100) if consolidated["stock_cost_basis_sgd"] > 0 else 0.0, 2)
-
         for k in ["base_capital_sgd", "liquidation_value_sgd", "total_cash_sgd", "stock_cost_basis_sgd", "total_fees_sgd", "current_stock_value_sgd", "unrealized_pl_sgd", "realized_pl_sgd", "dividends_net_sgd", "stock_total_returns_sgd"]:
             consolidated[k] = round(consolidated[k], 2)
 
+        from datetime import datetime
         return {
+            "generated_at": datetime.now().isoformat(),
+            "as_of_date": latest_price_date,
             "price_mode": price_mode,
             "brokers": dict(brokers_data),
             "consolidated": consolidated
