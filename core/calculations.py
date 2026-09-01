@@ -147,7 +147,7 @@ def calculate_holdings(portfolio_id: int, conn: sqlite3.Connection):
     active_holdings = {k: v for k, v in holdings.items() if v["shares"] > 0}
     return active_holdings
 
-def get_portfolio_summary(portfolio_id: int | None, conn: sqlite3.Connection, exchange_rates: dict):
+def get_portfolio_summary(portfolio_id: int | None, conn: sqlite3.Connection, exchange_rates: dict, price_mode: str = "intraday"):
     """
     Computes holding-level details and a portfolio summary (or global net worth if portfolio_id is None).
     """
@@ -155,17 +155,26 @@ def get_portfolio_summary(portfolio_id: int | None, conn: sqlite3.Connection, ex
     
     # 1. Fetch active tickers and their latest prices/prev_closes
     cursor.execute("""
-        SELECT tp.ticker_id, tp.price, tp.intraday_current, tp.intraday_prev_close, tp.currency, t.symbol, t.friendly_name, t.underlying
+        SELECT tp.ticker_id, tp.price, tp.intraday_current, tp.intraday_prev_close,
+               tp.daily_close, tp.daily_prev_close, tp.currency, t.symbol, t.friendly_name, t.underlying
         FROM ticker_prices tp
         JOIN tickers t ON tp.ticker_id = t.id
     """)
     price_rows = cursor.fetchall()
-    prices = {row['ticker_id']: {
-        "price": row['intraday_current'] or row['price'],
-        "prev_close": row['intraday_prev_close'] or row['intraday_current'] or row['price'],
-        "currency": row['currency'],
-        "underlying": row['underlying']
-    } for row in price_rows}
+    if price_mode == "closing":
+        prices = {row['ticker_id']: {
+            "price": row['daily_close'] or row['intraday_current'] or row['price'],
+            "prev_close": row['daily_prev_close'] or row['intraday_prev_close'] or row['daily_close'] or row['intraday_current'] or row['price'],
+            "currency": row['currency'],
+            "underlying": row['underlying']
+        } for row in price_rows}
+    else:
+        prices = {row['ticker_id']: {
+            "price": row['intraday_current'] or row['price'],
+            "prev_close": row['intraday_prev_close'] or row['intraday_current'] or row['price'],
+            "currency": row['currency'],
+            "underlying": row['underlying']
+        } for row in price_rows}
     
     # 2. Get active portfolios
     if portfolio_id is not None:
