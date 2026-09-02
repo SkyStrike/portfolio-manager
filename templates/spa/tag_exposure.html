@@ -1,0 +1,245 @@
+{% raw %}
+<section id="view-tag-exposure" v-show="currentView === 'tags'">
+    <!-- Page Header & Summary Controls -->
+    <div class="tag-exposure-header">
+        <div class="tag-header-left">
+            <div class="tag-view-title-group">
+                <h1 class="tag-view-title">
+                    <span class="tag-icon">🏷️</span> Tag Exposure & Allocation
+                </h1>
+                <span v-if="tagExposureData" class="tag-as-of-badge">
+                    As of {{ tagExposureData.as_of_date || 'Latest Close' }}
+                </span>
+            </div>
+            <p class="tag-view-subtitle">
+                Cross-portfolio allocation, risk exposure, and lifetime returns broken down by thematic tags.
+            </p>
+        </div>
+
+        <div class="tag-header-right">
+            <!-- Price Mode Toggle -->
+            <div class="price-mode-toggle-group">
+                <button 
+                    :class="['price-mode-btn', { active: priceMode === 'closing' }]" 
+                    @click="setPriceMode('closing')"
+                    title="Calculate exposure based on official daily closing prices">
+                    Daily Close
+                </button>
+                <button 
+                    :class="['price-mode-btn', { active: priceMode === 'intraday' }]" 
+                    @click="setPriceMode('intraday')"
+                    title="Calculate exposure based on live intraday quotes">
+                    Live / Intraday
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div v-if="loadingTagExposure" class="tag-loading-box">
+        <div class="spinner"></div>
+        <p>Calculating multi-tag portfolio exposure...</p>
+    </div>
+
+    <div v-else-if="tagExposureData">
+        <!-- Tag Filter Pills Bar -->
+        <div class="tag-pills-bar-wrapper">
+            <div class="tag-pills-bar">
+                <button 
+                    :class="['tag-pill-btn', { active: selectedTag === 'all' }]"
+                    @click="selectTag('all')">
+                    <span class="tag-pill-name">All Holdings</span>
+                    <span class="tag-pill-count">{{ tagExposureData.all_tickers ? tagExposureData.all_tickers.length : 0 }}</span>
+                </button>
+
+                <button 
+                    v-for="tag in tagExposureData.tags" 
+                    :key="tag.id"
+                    :class="['tag-pill-btn', { active: selectedTag === tag.name }]"
+                    @click="selectTag(tag.name)">
+                    <span class="tag-pill-name">{{ tag.name }}</span>
+                    <span class="tag-pill-weight">{{ tag.portfolio_weight_pct }}%</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Selected Tag Metric Cards Grid -->
+        <div class="tag-metrics-grid">
+            <div class="tag-metric-card primary">
+                <div class="tag-metric-label">Selected Exposure</div>
+                <div class="tag-metric-value text-accent">
+                    {{ selectedTag === 'all' ? 'All Active Assets' : selectedTag }}
+                </div>
+                <div class="tag-metric-subtext">
+                    {{ currentTagMetrics.ticker_count }} active {{ currentTagMetrics.ticker_count === 1 ? 'position' : 'positions' }}
+                </div>
+            </div>
+
+            <div class="tag-metric-card">
+                <div class="tag-metric-label">Market Value (SGD)</div>
+                <div class="tag-metric-value stat-value">
+                    ${{ formatNumber(currentTagMetrics.total_market_value_sgd, 2) }} <span class="tag-metric-unit">SGD</span>
+                </div>
+                <div class="tag-metric-subtext">
+                    Cost: ${{ formatNumber(currentTagMetrics.total_cost_basis_sgd, 2) }} SGD
+                </div>
+            </div>
+
+            <div class="tag-metric-card">
+                <div class="tag-metric-label">Portfolio Allocation</div>
+                <div class="tag-metric-value text-highlight">
+                    {{ formatNumber(currentTagMetrics.portfolio_weight_pct, 2) }}%
+                </div>
+                <div class="tag-metric-subtext">
+                    of Total Stock Value (${{ formatNumber(tagExposureData.total_portfolio_value_sgd, 2) }} SGD)
+                </div>
+            </div>
+
+            <div class="tag-metric-card">
+                <div class="tag-metric-label">Unrealized Capital Gain</div>
+                <div :class="['tag-metric-value', currentTagMetrics.total_unrealized_pl_sgd >= 0 ? 'pos-val' : 'neg-val']">
+                    {{ currentTagMetrics.total_unrealized_pl_sgd >= 0 ? '+' : '' }}${{ formatNumber(currentTagMetrics.total_unrealized_pl_sgd, 2) }}
+                </div>
+                <div :class="['tag-metric-subtext', currentTagMetrics.total_unrealized_pl_sgd >= 0 ? 'pos-val' : 'neg-val']">
+                    {{ currentTagMetrics.total_unrealized_pl_pct >= 0 ? '+' : '' }}{{ formatNumber(currentTagMetrics.total_unrealized_pl_pct, 2) }}%
+                </div>
+            </div>
+
+            <div class="tag-metric-card">
+                <div class="tag-metric-label">Total Returns (Lifetime)</div>
+                <div :class="['tag-metric-value', currentTagMetrics.total_returns_sgd >= 0 ? 'pos-val' : 'neg-val']">
+                    {{ currentTagMetrics.total_returns_sgd >= 0 ? '+' : '' }}${{ formatNumber(currentTagMetrics.total_returns_sgd, 2) }}
+                </div>
+                <div :class="['tag-metric-subtext', currentTagMetrics.total_returns_sgd >= 0 ? 'pos-val' : 'neg-val']">
+                    {{ currentTagMetrics.total_returns_pct >= 0 ? '+' : '' }}{{ formatNumber(currentTagMetrics.total_returns_pct, 2) }}% (incl. Divs)
+                </div>
+            </div>
+        </div>
+
+        <!-- Table Card with Search -->
+        <div class="table-card tag-exposure-table-card">
+            <div class="tag-table-header-row">
+                <div class="tag-table-title">
+                    <span>Holdings Breakdown: <strong>{{ selectedTag === 'all' ? 'All Active Assets' : selectedTag }}</strong></span>
+                    <span class="tag-table-badge">{{ filteredTagTickers.length }} {{ filteredTagTickers.length === 1 ? 'asset' : 'assets' }}</span>
+                </div>
+
+                <div class="tag-table-search-wrapper">
+                    <input 
+                        type="text" 
+                        v-model="tagSearchQuery" 
+                        placeholder="Search by symbol, name, or tags..." 
+                        class="search-input-field">
+                </div>
+            </div>
+
+            <div class="table-wrapper tag-table-wrapper">
+                <table class="tag-breakdown-table">
+                    <thead>
+                        <tr>
+                            <th class="col-ticker">Ticker</th>
+                            <th class="col-tags">Tags</th>
+                            <th class="col-portfolios">Portfolios</th>
+                            <th class="col-shares text-right">Shares</th>
+                            <th class="col-price text-right">Price</th>
+                            <th class="col-value text-right">Mkt (SGD)</th>
+                            <th class="col-weight-tag text-right">Tag(%)</th>
+                            <th class="col-weight-total text-right">Portfolio(%)</th>
+                            <th class="col-unrealized text-right">Unrealized P&L</th>
+                            <th class="col-returns text-right">Total Returns</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-if="filteredTagTickers.length === 0">
+                            <td colspan="10" class="text-center text-muted empty-state-cell">
+                                No active holdings found matching tag "{{ selectedTag }}" with search criteria.
+                            </td>
+                        </tr>
+
+                        <tr v-for="t in filteredTagTickers" :key="t.ticker_id" class="tag-ticker-row">
+                            <td class="col-ticker font-semibold">
+                                <div class="ticker-symbol-wrapper">
+                                    <span class="ticker-symbol-link" @click="openTxVisualizer(t.symbol)" :title="t.friendly_name || t.symbol">{{ t.symbol }}</span>
+                                    <span v-if="t.exchange && t.exchange !== 'US'" class="exchange-badge">{{ t.exchange }}</span>
+                                </div>
+                            </td>
+                            <td class="col-tags">
+                                <div class="tag-badges-group">
+                                    <span 
+                                        v-for="tagItem in t.tags" 
+                                        :key="tagItem"
+                                        :class="['tag-chip-badge', { active: selectedTag === tagItem }]"
+                                        @click="selectTag(tagItem)"
+                                        :title="'Filter by ' + tagItem">
+                                        {{ tagItem }}
+                                    </span>
+                                </div>
+                            </td>
+                            <td class="col-portfolios">
+                                <div class="portfolio-tags-group">
+                                    <span 
+                                        v-for="p in t.portfolios" 
+                                        :key="p.portfolio_id" 
+                                        class="portfolio-tag-badge"
+                                        :title="p.shares + ' shares in ' + p.portfolio_name + (p.broker ? ' (' + p.broker + ')' : '')">
+                                        {{ p.portfolio_name }}
+                                    </span>
+                                </div>
+                            </td>
+                            <td class="col-shares text-right font-mono">
+                                {{ formatNumber(t.shares, 0) }}
+                            </td>
+                            <td class="col-price text-right font-mono">
+                                {{ t.currency }} ${{ formatNumber(t.price, 2) }}
+                            </td>
+                            <td class="col-value text-right font-mono font-semibold stat-value">
+                                ${{ formatNumber(t.market_value_sgd, 2) }}
+                            </td>
+                            <td class="col-weight-tag text-right font-mono text-highlight">
+                                {{ formatNumber(t.tag_weight_pct, 2) }}%
+                            </td>
+                            <td class="col-weight-total text-right font-mono text-muted">
+                                {{ formatNumber(t.portfolio_weight_pct, 2) }}%
+                            </td>
+                            <td :class="['col-unrealized', 'text-right', 'font-mono', getValClass(t.unrealized_pl_sgd)]">
+                                <div>{{ t.unrealized_pl_sgd >= 0 ? '+' : '' }}${{ formatNumber(t.unrealized_pl_sgd, 2) }}</div>
+                                <div class="text-xs">({{ t.unrealized_pl_pct >= 0 ? '+' : '' }}{{ formatNumber(t.unrealized_pl_pct, 2) }}%)</div>
+                            </td>
+                            <td :class="['col-returns', 'text-right', 'font-mono', getValClass(t.total_returns_sgd)]">
+                                <div>{{ t.total_returns_sgd >= 0 ? '+' : '' }}${{ formatNumber(t.total_returns_sgd, 2) }}</div>
+                                <div class="text-xs">({{ t.total_returns_pct >= 0 ? '+' : '' }}{{ formatNumber(t.total_returns_pct, 2) }}%)</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tfoot v-if="filteredTagTickers.length > 0">
+                        <tr class="tag-total-row">
+                            <td colspan="3" class="font-bold text-uppercase">
+                                Total ({{ filteredTagTickers.length }} Tickers)
+                            </td>
+                            <td class="text-right font-mono font-bold">—</td>
+                            <td class="text-right font-mono font-bold">—</td>
+                            <td class="text-right font-mono font-bold stat-value">
+                                ${{ formatNumber(displayedTableTotals.market_value_sgd, 2) }} SGD
+                            </td>
+                            <td class="text-right font-mono font-bold text-highlight">
+                                {{ formatNumber(displayedTableTotals.tag_weight_pct, 2) }}%
+                            </td>
+                            <td class="text-right font-mono font-bold text-muted">
+                                {{ formatNumber(displayedTableTotals.portfolio_weight_pct, 2) }}%
+                            </td>
+                            <td :class="['text-right', 'font-mono', 'font-bold', getValClass(displayedTableTotals.unrealized_pl_sgd)]">
+                                <div>{{ displayedTableTotals.unrealized_pl_sgd >= 0 ? '+' : '' }}${{ formatNumber(displayedTableTotals.unrealized_pl_sgd, 2) }}</div>
+                                <div class="text-xs">({{ displayedTableTotals.unrealized_pl_pct >= 0 ? '+' : '' }}{{ formatNumber(displayedTableTotals.unrealized_pl_pct, 2) }}%)</div>
+                            </td>
+                            <td :class="['text-right', 'font-mono', 'font-bold', getValClass(displayedTableTotals.total_returns_sgd)]">
+                                <div>{{ displayedTableTotals.total_returns_sgd >= 0 ? '+' : '' }}${{ formatNumber(displayedTableTotals.total_returns_sgd, 2) }}</div>
+                                <div class="text-xs">({{ displayedTableTotals.total_returns_pct >= 0 ? '+' : '' }}{{ formatNumber(displayedTableTotals.total_returns_pct, 2) }}%)</div>
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+{% endraw %}

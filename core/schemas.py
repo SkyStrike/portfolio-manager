@@ -14,6 +14,7 @@ class TickerUpdate(BaseModel):
     friendly_name: str | None = None
     tax_rate: float | None = None
     notes: str | None = None
+    tags: list[str] | None = None
     underlying: str | None = None
     classification: str | None = None
     category: str | None = None
@@ -21,6 +22,10 @@ class TickerUpdate(BaseModel):
     exchange: str | None = None
     price: float | None = None
     is_manual: bool | int | None = None
+
+class TagCreate(BaseModel):
+    name: str
+    color: str | None = "#3b82f6"
 
 class ManualPriceOverride(BaseModel):
     symbol: str | None = None

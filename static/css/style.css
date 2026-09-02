@@ -4059,3 +4059,462 @@ body.mask-values .sensitive-value::after {
     cursor: not-allowed;
 }
 
+/* ==========================================================================
+   Multi-Tag Exposure & Ticker Tag Chips System
+   ========================================================================== */
+
+/* Tag Badges & Groups */
+.ticker-symbol-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ticker-symbol-link {
+    color: #38bdf8;
+    cursor: pointer;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+.ticker-symbol-link:hover {
+    color: #7dd3fc;
+    text-decoration: underline;
+}
+
+.exchange-badge {
+    display: inline-block;
+    padding: 1px 5px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    border-radius: 4px;
+    background: rgba(148, 163, 184, 0.15);
+    color: #94a3b8;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    line-height: 1.2;
+    letter-spacing: 0.02em;
+}
+
+.tag-badges-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+}
+
+.tag-chip-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    margin: 1px 2px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    border-radius: 9999px;
+    background: rgba(99, 102, 241, 0.12);
+    color: #a5b4fc;
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.tag-chip-badge:hover,
+.tag-chip-badge.active {
+    background: rgba(99, 102, 241, 0.3);
+    border-color: #818cf8;
+    color: #ffffff;
+    box-shadow: 0 0 8px rgba(99, 102, 241, 0.3);
+}
+
+.portfolio-tags-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.portfolio-tag-badge {
+    display: inline-block;
+    padding: 1px 6px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    border-radius: 4px;
+    background: rgba(148, 163, 184, 0.1);
+    color: var(--text-secondary);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    white-space: nowrap;
+}
+
+/* Modal Tag Chips Editor */
+.tag-chips-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 38px;
+    padding: 6px 8px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--card-border);
+    border-radius: 6px;
+    margin-bottom: 8px;
+    align-items: center;
+}
+
+.tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    background: rgba(99, 102, 241, 0.2);
+    color: #c7d2fe;
+    border: 1px solid rgba(99, 102, 241, 0.4);
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.tag-chip-remove {
+    cursor: pointer;
+    font-size: 0.9rem;
+    line-height: 1;
+    color: #94a3b8;
+    transition: color 0.15s ease;
+}
+
+.tag-chip-remove:hover {
+    color: var(--color-loss);
+}
+
+.tag-input-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.tag-text-input {
+    flex: 1;
+}
+
+/* Tag Exposure SPA View */
+.tag-exposure-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--card-border);
+}
+
+.tag-view-title-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 0.35rem;
+}
+
+.tag-view-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    font-family: var(--font-heading);
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.tag-as-of-badge {
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 3px 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--card-border);
+    border-radius: 6px;
+    color: var(--text-secondary);
+}
+
+.tag-view-subtitle {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    max-width: 650px;
+    line-height: 1.4;
+    margin-top: 4px;
+}
+
+/* Price Mode Toggle Controls */
+.price-mode-toggle-group {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    padding: 3px;
+    gap: 4px;
+}
+
+.price-mode-btn {
+    padding: 6px 14px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    outline: none;
+}
+
+.price-mode-btn:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.price-mode-btn.active {
+    background: var(--accent-gradient);
+    color: #ffffff;
+    font-weight: 600;
+    border-color: transparent;
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.35);
+}
+
+.tag-loading-box {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--text-secondary);
+}
+
+/* Tag Pills Filter Bar */
+.tag-pills-bar-wrapper {
+    margin-bottom: 1.5rem;
+    overflow-x: auto;
+    padding-bottom: 6px;
+}
+
+.tag-pills-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.tag-pill-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 9999px;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.tag-pill-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: var(--text-primary);
+}
+
+.tag-pill-btn.active {
+    background: var(--accent-gradient);
+    border-color: transparent;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.tag-pill-count,
+.tag-pill-weight {
+    font-size: 0.75rem;
+    padding: 1px 6px;
+    border-radius: 9999px;
+    background: rgba(0, 0, 0, 0.25);
+}
+
+.tag-pill-btn.active .tag-pill-weight,
+.tag-pill-btn.active .tag-pill-count {
+    background: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+}
+
+/* Tag Exposure Summary Metrics Cards */
+.tag-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.75rem;
+}
+
+.tag-metric-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.tag-metric-card:hover {
+    border-color: var(--card-hover-border);
+    transform: translateY(-2px);
+}
+
+.tag-metric-card.primary {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(99, 102, 241, 0.05) 100%);
+    border-color: rgba(139, 92, 246, 0.3);
+}
+
+.tag-metric-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+}
+
+.tag-metric-value {
+    font-size: 1.55rem;
+    font-weight: 700;
+    font-family: var(--font-heading);
+    color: var(--text-primary);
+    line-height: 1.2;
+    margin-bottom: 0.35rem;
+}
+
+.tag-metric-unit {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.tag-metric-subtext {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+/* Tag Table Card */
+.tag-exposure-table-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.tag-table-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--card-border);
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.tag-table-title {
+    font-size: 1.05rem;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.tag-table-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 9999px;
+    color: var(--text-secondary);
+}
+
+.tag-table-search-wrapper {
+    min-width: 280px;
+}
+
+.tag-table-wrapper {
+    overflow-x: auto;
+}
+
+.tag-breakdown-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.tag-breakdown-table th {
+    padding: 12px 14px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    background: rgba(15, 23, 42, 0.4);
+    border-bottom: 1px solid var(--card-border);
+    white-space: nowrap;
+}
+
+.tag-breakdown-table td {
+    padding: 12px 14px;
+    font-size: 0.88rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    color: var(--text-primary);
+    vertical-align: middle;
+}
+
+.tag-breakdown-table td.pos-val,
+.tag-breakdown-table .pos-val,
+.tag-total-row td.pos-val,
+.tag-total-row .pos-val,
+.tag-metric-card .pos-val {
+    color: var(--color-gain, #10b981) !important;
+}
+
+.tag-breakdown-table td.neg-val,
+.tag-breakdown-table .neg-val,
+.tag-total-row td.neg-val,
+.tag-total-row .neg-val,
+.tag-metric-card .neg-val {
+    color: var(--color-loss, #f43f5e) !important;
+}
+
+.tag-ticker-row:hover td {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.tag-total-row td {
+    padding: 14px 14px;
+    background: rgba(15, 23, 42, 0.7);
+    border-top: 2px solid var(--card-border);
+    border-bottom: none;
+}
+
+.empty-state-cell {
+    padding: 40px 20px !important;
+}
+
+@media (max-width: 768px) {
+    .tag-exposure-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .tag-table-header-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .tag-table-search-wrapper {
+        width: 100%;
+    }
+}
+
+

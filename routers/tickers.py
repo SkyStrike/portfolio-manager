@@ -9,6 +9,26 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+from collections import defaultdict
+
+@router.get("/api/tags")
+def list_tags():
+    """List all available tags with usage counts."""
+    logger.info("GET /api/tags")
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT tg.id, tg.name, tg.color, COUNT(tt.ticker_id) as count
+            FROM tags tg
+            LEFT JOIN ticker_tags tt ON tg.id = tt.tag_id
+            GROUP BY tg.id, tg.name
+            ORDER BY tg.name ASC
+        """)
+        return [dict(r) for r in cursor.fetchall()]
+    finally:
+        conn.close()
+
 @router.get("/api/tickers")
 def list_tickers():
     logger.info("GET /api/tickers")
@@ -25,6 +45,17 @@ def list_tickers():
             for tid, h in holdings.items():
                 ticker_shares[tid] = ticker_shares.get(tid, 0.0) + h['shares']
                 
+        # Fetch tags mapping
+        cursor.execute("""
+            SELECT tt.ticker_id, tg.name
+            FROM ticker_tags tt
+            JOIN tags tg ON tt.tag_id = tg.id
+            ORDER BY tg.name ASC
+        """)
+        ticker_tags_map = defaultdict(list)
+        for r in cursor.fetchall():
+            ticker_tags_map[r['ticker_id']].append(r['name'])
+
         cursor.execute("""
             SELECT t.id, t.symbol, t.friendly_name, t.tax_rate, t.notes, t.exchange, t.underlying, t.category,
                    tp.currency, COALESCE(tp.intraday_current, tp.price) as price,
@@ -40,6 +71,7 @@ def list_tickers():
             d['subclass'] = d.get('category') or 'Other'
             d['category'] = d.get('category') or 'Other'
             d['classification'] = 'Other'
+            d['tags'] = ticker_tags_map.get(d['id'], [])
             tickers.append(d)
         for t in tickers:
             t['shares'] = ticker_shares.get(t['id'], 0.0)
@@ -49,12 +81,28 @@ def list_tickers():
 
 @router.put("/api/tickers/{id}")
 def update_ticker(id: int, ticker: TickerUpdate):
-    logger.info("PUT /api/tickers/%d - friendly_name=%s, category=%s, price=%s",
-                id, ticker.friendly_name, ticker.category, ticker.price)
+    logger.info("PUT /api/tickers/%d - friendly_name=%s, category=%s, price=%s, tags=%s",
+                id, ticker.friendly_name, ticker.category, ticker.price, ticker.tags)
     conn = get_connection()
     try:
         cat_val = ticker.category or ticker.subclass
         cursor = conn.cursor()
+        
+        # Handle tags sync if provided
+        notes_val = ticker.notes
+        if ticker.tags is not None:
+            clean_tags = [t.strip().lower() for t in ticker.tags if t.strip()]
+            cursor.execute("DELETE FROM ticker_tags WHERE ticker_id = ?", (id,))
+            for tag_name in clean_tags:
+                cursor.execute("INSERT OR IGNORE INTO tags (name) VALUES (?)", (tag_name,))
+                cursor.execute("SELECT id FROM tags WHERE name = ?", (tag_name,))
+                tag_row = cursor.fetchone()
+                if tag_row:
+                    cursor.execute("INSERT OR IGNORE INTO ticker_tags (ticker_id, tag_id) VALUES (?, ?)", (id, tag_row[0]))
+            # Also keep notes in sync with tag string if notes wasn't explicitly changed
+            if notes_val is None:
+                notes_val = ", ".join(clean_tags)
+
         cursor.execute("""
             UPDATE tickers
             SET friendly_name = COALESCE(?, friendly_name),
@@ -64,7 +112,7 @@ def update_ticker(id: int, ticker: TickerUpdate):
                 category = COALESCE(?, category),
                 exchange = COALESCE(?, exchange)
             WHERE id = ?
-        """, (ticker.friendly_name, ticker.tax_rate, ticker.notes, ticker.underlying, cat_val, ticker.exchange, id))
+        """, (ticker.friendly_name, ticker.tax_rate, notes_val, ticker.underlying, cat_val, ticker.exchange, id))
 
         # Handle price override in ticker_prices
         if ticker.price is not None:

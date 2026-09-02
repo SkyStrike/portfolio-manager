@@ -137,3 +137,72 @@ The application includes a system to execute custom data repair or patching scri
        print(f"Running custom patch with params: {params}")
    ```
 3. **Execute**: Trigger execution from the Control Center GUI **Maintenance** panel or trigger it programmatically via `POST /api/patches/run`.
+
+---
+
+## 🏷️ 6. Tag Exposure & Thematic Allocation API
+
+Provides cross-portfolio thematic exposure breakdowns, percentage weights, unrealized capital gains, net dividends, and lifetime total returns unified in SGD.
+
+* **Endpoint**: `GET /api/v1/reports/tag-exposure`
+* **Query Parameters**:
+  * `price_mode`: Optional string (`closing` or `intraday`, default: `closing`).
+* **Example Response**:
+  ```json
+  {
+    "generated_at": "2026-09-02T22:15:00.000000",
+    "as_of_date": "2026-09-02",
+    "price_mode": "closing",
+    "total_portfolio_value_sgd": 434286.63,
+    "total_portfolio_cost_sgd": 361420.00,
+    "total_portfolio_unrealized_sgd": 72866.63,
+    "total_portfolio_unrealized_pct": 20.16,
+    "total_portfolio_returns_sgd": 98450.20,
+    "total_portfolio_returns_pct": 27.24,
+    "tags": [
+      {
+        "id": 1,
+        "name": "index",
+        "color": "#3b82f6",
+        "ticker_count": 7,
+        "total_market_value_sgd": 91404.38,
+        "total_cost_basis_sgd": 76500.00,
+        "total_unrealized_pl_sgd": 14904.38,
+        "total_unrealized_pl_pct": 19.48,
+        "total_realized_pl_sgd": 1200.00,
+        "total_dividends_net_sgd": 699.47,
+        "total_returns_sgd": 16803.85,
+        "total_returns_pct": 19.18,
+        "portfolio_weight_pct": 21.05,
+        "tickers": [
+          {
+            "ticker_id": 42,
+            "symbol": "SPY",
+            "friendly_name": "SPDR S&P 500 ETF Trust",
+            "currency": "USD",
+            "price": 585.20,
+            "shares": 61.0,
+            "market_value_sgd": 47989.35,
+            "tag_weight_pct": 52.50,
+            "portfolio_weight_pct": 11.05,
+            "unrealized_pl_sgd": 2450.00,
+            "unrealized_pl_pct": 5.38,
+            "total_returns_sgd": 2630.97,
+            "total_returns_pct": 5.59,
+            "tags": ["index", "s&p500", "spy"],
+            "portfolios": [
+              {
+                "portfolio_id": 1,
+                "portfolio_name": "IBKR Main",
+                "broker": "Interactive Brokers",
+                "shares": 61.0,
+                "cost_basis_native": 33984.59
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+  ```
+

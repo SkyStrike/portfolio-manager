@@ -25,6 +25,8 @@ def get_favicon():
 @router.get("/performance", response_class=HTMLResponse)
 @router.get("/dividend-calendar", response_class=HTMLResponse)
 @router.get("/fd-comparison", response_class=HTMLResponse)
+@router.get("/tags", response_class=HTMLResponse)
+@router.get("/tag-exposure", response_class=HTMLResponse)
 def get_spa_dashboard():
     logger.info("GET SPA Dashboard - serving SPA shell wrapped in base.html")
     if os.path.exists("templates/spa_shell.html"):

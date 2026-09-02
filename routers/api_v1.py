@@ -280,3 +280,227 @@ def get_broker_summary_report(price_mode: str = Query("closing")):
     finally:
         conn.close()
 
+
+@router.get("/reports/tag-exposure")
+def get_tag_exposure_report(price_mode: str = Query("closing")):
+    """
+    Returns cross-portfolio tag exposure breakdown, including market values, cost basis,
+    unrealized gains, total returns, and portfolio percentage weights in SGD.
+    """
+    logger.info("GET /api/v1/reports/tag-exposure (price_mode=%s)", price_mode)
+    from datetime import datetime
+    from collections import defaultdict
+    from core.database import get_connection
+    from core.calculations import calculate_holdings
+    from services.fetch_exchange_rates import get_exchange_rates
+
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        rates = get_exchange_rates()
+        usd_rate = rates.get("USD", 1.0)
+        cad_rate = rates.get("CAD", 1.0)
+
+        cursor.execute("SELECT id, name, broker FROM portfolios ORDER BY sort_order ASC, name ASC")
+        portfolios = [dict(r) for r in cursor.fetchall()]
+
+        # Latest price date
+        cursor.execute("SELECT MAX(daily_close_date) FROM ticker_prices")
+        latest_price_date = cursor.fetchone()[0]
+
+        # Ticker metadata and prices
+        cursor.execute("""
+            SELECT t.id, t.symbol, t.friendly_name, t.category, t.underlying, t.exchange,
+                   tp.currency, tp.daily_close, tp.intraday_current, tp.daily_prev_close, tp.intraday_prev_close
+            FROM tickers t
+            LEFT JOIN ticker_prices tp ON t.id = tp.ticker_id
+        """)
+        ticker_info = {r["id"]: dict(r) for r in cursor.fetchall()}
+
+        # Ticker tags mapping
+        cursor.execute("""
+            SELECT tt.ticker_id, tg.id as tag_id, tg.name, tg.color
+            FROM ticker_tags tt
+            JOIN tags tg ON tt.tag_id = tg.id
+            ORDER BY tg.name ASC
+        """)
+        ticker_to_tags = defaultdict(list)
+        for r in cursor.fetchall():
+            ticker_to_tags[r["ticker_id"]].append({"id": r["tag_id"], "name": r["name"], "color": r["color"]})
+
+        # Lifetime Realized P&L and fees in SGD per ticker
+        cursor.execute("""
+            SELECT ticker_id,
+                   SUM(COALESCE(realized_pl_sgd, 0.0)) as realized_pl_sgd,
+                   SUM(COALESCE(commission, 0.0) * CASE WHEN currency = 'SGD' THEN 1.0 WHEN currency = 'USD' THEN ? WHEN currency = 'CAD' THEN ? ELSE 1.0 END) as total_fees_sgd
+            FROM transactions
+            GROUP BY ticker_id
+        """, (usd_rate, cad_rate))
+        tx_stats = {r["ticker_id"]: dict(r) for r in cursor.fetchall()}
+
+        # Lifetime Net Dividends in SGD per ticker
+        cursor.execute("""
+            SELECT ticker_id,
+                   SUM((amount - tax) * CASE WHEN currency = 'SGD' THEN 1.0 WHEN currency = 'USD' THEN ? WHEN currency = 'CAD' THEN ? ELSE 1.0 END) as dividends_net_sgd
+            FROM dividends
+            GROUP BY ticker_id
+        """, (usd_rate, cad_rate))
+        div_stats = {r["ticker_id"]: dict(r) for r in cursor.fetchall()}
+
+        # Aggregate active holdings across portfolios
+        ticker_holdings = defaultdict(lambda: {
+            "total_shares": 0.0,
+            "total_cost_basis_native": 0.0,
+            "portfolios": []
+        })
+
+        for p in portfolios:
+            h_map = calculate_holdings(p["id"], conn)
+            for tid, h in h_map.items():
+                if h["shares"] > 0:
+                    c_basis = h["shares"] * h["avg_cost"]
+                    ticker_holdings[tid]["total_shares"] += h["shares"]
+                    ticker_holdings[tid]["total_cost_basis_native"] += c_basis
+                    ticker_holdings[tid]["portfolios"].append({
+                        "portfolio_id": p["id"],
+                        "portfolio_name": p["name"],
+                        "broker": p["broker"] or "",
+                        "shares": round(h["shares"], 4),
+                        "cost_basis_native": round(c_basis, 2)
+                    })
+
+        all_active_tickers = {}
+        total_portfolio_value_sgd = 0.0
+        total_portfolio_cost_sgd = 0.0
+        total_portfolio_unrealized_sgd = 0.0
+        total_portfolio_realized_sgd = 0.0
+        total_portfolio_dividends_sgd = 0.0
+        total_portfolio_returns_sgd = 0.0
+
+        for tid, h in ticker_holdings.items():
+            info = ticker_info.get(tid, {})
+            curr = info.get("currency") or "USD"
+            rate = rates.get(curr, 1.0)
+            
+            if price_mode == "closing":
+                price = info.get("daily_close") if info.get("daily_close") is not None else (info.get("intraday_current") or 0.0)
+            else:
+                price = info.get("intraday_current") if info.get("intraday_current") is not None else (info.get("daily_close") or 0.0)
+
+            shares = h["total_shares"]
+            cost_native = h["total_cost_basis_native"]
+            market_val_sgd = shares * price * rate
+            cost_basis_sgd = cost_native * rate
+            unrealized_pl_sgd = market_val_sgd - cost_basis_sgd
+            unrealized_pl_pct = (unrealized_pl_sgd / cost_basis_sgd * 100) if cost_basis_sgd > 0 else 0.0
+
+            realized_pl_sgd = tx_stats.get(tid, {}).get("realized_pl_sgd", 0.0)
+            total_fees_sgd = tx_stats.get(tid, {}).get("total_fees_sgd", 0.0)
+            dividends_net_sgd = div_stats.get(tid, {}).get("dividends_net_sgd", 0.0)
+            total_returns_sgd = unrealized_pl_sgd + realized_pl_sgd + dividends_net_sgd - total_fees_sgd
+            total_returns_pct = (total_returns_sgd / cost_basis_sgd * 100) if cost_basis_sgd > 0 else 0.0
+
+            tag_objs = ticker_to_tags.get(tid, [])
+
+            t_obj = {
+                "ticker_id": tid,
+                "symbol": info.get("symbol", ""),
+                "friendly_name": info.get("friendly_name", ""),
+                "category": info.get("category", "Other"),
+                "underlying": info.get("underlying", ""),
+                "exchange": info.get("exchange", ""),
+                "currency": curr,
+                "price": round(price, 4),
+                "shares": round(shares, 4),
+                "market_value_sgd": round(market_val_sgd, 2),
+                "cost_basis_sgd": round(cost_basis_sgd, 2),
+                "unrealized_pl_sgd": round(unrealized_pl_sgd, 2),
+                "unrealized_pl_pct": round(unrealized_pl_pct, 2),
+                "realized_pl_sgd": round(realized_pl_sgd, 2),
+                "dividends_net_sgd": round(dividends_net_sgd, 2),
+                "total_returns_sgd": round(total_returns_sgd, 2),
+                "total_returns_pct": round(total_returns_pct, 2),
+                "tags": [t["name"] for t in tag_objs],
+                "portfolios": h["portfolios"]
+            }
+            all_active_tickers[tid] = t_obj
+            total_portfolio_value_sgd += market_val_sgd
+            total_portfolio_cost_sgd += cost_basis_sgd
+            total_portfolio_unrealized_sgd += unrealized_pl_sgd
+            total_portfolio_realized_sgd += realized_pl_sgd
+            total_portfolio_dividends_sgd += dividends_net_sgd
+            total_portfolio_returns_sgd += total_returns_sgd
+
+        # Group by tags
+        cursor.execute("SELECT id, name, color FROM tags ORDER BY name ASC")
+        all_tags = [dict(r) for r in cursor.fetchall()]
+
+        tag_reports = []
+        for tag in all_tags:
+            t_name = tag["name"]
+            matching_tickers = [t for t in all_active_tickers.values() if t_name in t["tags"]]
+            if not matching_tickers:
+                continue
+
+            tag_val = sum(t["market_value_sgd"] for t in matching_tickers)
+            tag_cost = sum(t["cost_basis_sgd"] for t in matching_tickers)
+            tag_unrealized = sum(t["unrealized_pl_sgd"] for t in matching_tickers)
+            tag_unrealized_pct = (tag_unrealized / tag_cost * 100) if tag_cost > 0 else 0.0
+            tag_realized = sum(t["realized_pl_sgd"] for t in matching_tickers)
+            tag_dividends = sum(t["dividends_net_sgd"] for t in matching_tickers)
+            tag_returns = sum(t["total_returns_sgd"] for t in matching_tickers)
+            tag_returns_pct = (tag_returns / tag_cost * 100) if tag_cost > 0 else 0.0
+            portfolio_weight_pct = (tag_val / total_portfolio_value_sgd * 100) if total_portfolio_value_sgd > 0 else 0.0
+
+            ticker_list = []
+            for t in sorted(matching_tickers, key=lambda x: x["market_value_sgd"], reverse=True):
+                t_copy = dict(t)
+                t_copy["tag_weight_pct"] = round((t["market_value_sgd"] / tag_val * 100) if tag_val > 0 else 0.0, 2)
+                t_copy["portfolio_weight_pct"] = round((t["market_value_sgd"] / total_portfolio_value_sgd * 100) if total_portfolio_value_sgd > 0 else 0.0, 2)
+                ticker_list.append(t_copy)
+
+            tag_reports.append({
+                "id": tag["id"],
+                "name": t_name,
+                "color": tag["color"],
+                "ticker_count": len(matching_tickers),
+                "total_market_value_sgd": round(tag_val, 2),
+                "total_cost_basis_sgd": round(tag_cost, 2),
+                "total_unrealized_pl_sgd": round(tag_unrealized, 2),
+                "total_unrealized_pl_pct": round(tag_unrealized_pct, 2),
+                "total_realized_pl_sgd": round(tag_realized, 2),
+                "total_dividends_net_sgd": round(tag_dividends, 2),
+                "total_returns_sgd": round(tag_returns, 2),
+                "total_returns_pct": round(tag_returns_pct, 2),
+                "portfolio_weight_pct": round(portfolio_weight_pct, 2),
+                "tickers": ticker_list
+            })
+
+        tag_reports.sort(key=lambda x: x["total_market_value_sgd"], reverse=True)
+
+        # All tickers formatted for "All Tickers" view
+        all_tickers_list = []
+        for t in sorted(all_active_tickers.values(), key=lambda x: x["market_value_sgd"], reverse=True):
+            t_copy = dict(t)
+            t_copy["tag_weight_pct"] = round((t["market_value_sgd"] / total_portfolio_value_sgd * 100) if total_portfolio_value_sgd > 0 else 0.0, 2)
+            t_copy["portfolio_weight_pct"] = t_copy["tag_weight_pct"]
+            all_tickers_list.append(t_copy)
+
+        return {
+            "generated_at": datetime.now().isoformat(),
+            "as_of_date": latest_price_date,
+            "price_mode": price_mode,
+            "total_portfolio_value_sgd": round(total_portfolio_value_sgd, 2),
+            "total_portfolio_cost_sgd": round(total_portfolio_cost_sgd, 2),
+            "total_portfolio_unrealized_sgd": round(total_portfolio_unrealized_sgd, 2),
+            "total_portfolio_unrealized_pct": round((total_portfolio_unrealized_sgd / total_portfolio_cost_sgd * 100) if total_portfolio_cost_sgd > 0 else 0.0, 2),
+            "total_portfolio_realized_sgd": round(total_portfolio_realized_sgd, 2),
+            "total_portfolio_dividends_sgd": round(total_portfolio_dividends_sgd, 2),
+            "total_portfolio_returns_sgd": round(total_portfolio_returns_sgd, 2),
+            "total_portfolio_returns_pct": round((total_portfolio_returns_sgd / total_portfolio_cost_sgd * 100) if total_portfolio_cost_sgd > 0 else 0.0, 2),
+            "tags": tag_reports,
+            "all_tickers": all_tickers_list
+        }
+    finally:
+        conn.close()
+

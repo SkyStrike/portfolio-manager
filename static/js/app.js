@@ -1336,6 +1336,9 @@ function renderTickersTable(tickers) {
             ? ` <button class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-left: 0.25rem;" onclick="deleteTicker(this, ${t.id})">Delete</button>`
             : '';
         const manualBadge = t.is_manual ? ' <span style="font-size: 0.7rem; background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.3);">🔒 Manual</span>' : '';
+        const tagBadges = (t.tags && t.tags.length > 0)
+            ? `<div class="tag-badges-group">${t.tags.map(tag => `<span class="tag-chip-badge">${tag}</span>`).join(' ')}</div>`
+            : `<span class="text-muted text-xs">—</span>`;
         tr.innerHTML = `
             <td style="font-weight: 600; color: #38bdf8;">${t.symbol}${manualBadge}</td>
             <td style="font-weight: 500;">${t.friendly_name || t.symbol}</td>
@@ -1343,7 +1346,7 @@ function renderTickersTable(tickers) {
             <td>${(t.tax_rate * 100).toFixed(0)}%</td>
             <td style="color: var(--text-secondary); font-size: 0.85rem;">${t.exchange || "US"}</td>
             <td style="color: var(--text-secondary); font-size: 0.85rem;">${t.category || t.subclass || "Other"}</td>
-            <td style="color: var(--text-muted);">${t.notes || ""}</td>
+            <td>${tagBadges}</td>
             <td>
                 <button class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="editTicker(${JSON.stringify(t).replace(/"/g, '&quot;')})">Edit</button>
                 ${deleteBtn}
@@ -1352,6 +1355,40 @@ function renderTickersTable(tickers) {
         tbody.appendChild(tr);
     });
 }
+
+let currentEditingTickerTags = [];
+
+function renderModalTagChips() {
+    const container = document.getElementById("ticker-tags-container");
+    if (!container) return;
+    container.innerHTML = "";
+    if (currentEditingTickerTags.length === 0) {
+        container.innerHTML = `<span class="text-muted text-xs">No tags added yet.</span>`;
+        return;
+    }
+    currentEditingTickerTags.forEach((tag, idx) => {
+        const chip = document.createElement("span");
+        chip.className = "tag-chip";
+        chip.innerHTML = `${tag} <span class="tag-chip-remove" onclick="removeModalTag(${idx})">&times;</span>`;
+        container.appendChild(chip);
+    });
+}
+
+window.removeModalTag = function(idx) {
+    if (idx >= 0 && idx < currentEditingTickerTags.length) {
+        currentEditingTickerTags.splice(idx, 1);
+        renderModalTagChips();
+    }
+};
+
+window.addModalTag = function(tagStr) {
+    if (!tagStr) return;
+    const clean = tagStr.trim().toLowerCase();
+    if (clean && !currentEditingTickerTags.includes(clean)) {
+        currentEditingTickerTags.push(clean);
+        renderModalTagChips();
+    }
+};
 
 window.editTicker = function(t) {
     document.getElementById("ticker-id").value = t.id;
@@ -1363,6 +1400,25 @@ window.editTicker = function(t) {
     document.getElementById("ticker-notes").value = t.notes || "";
     document.getElementById("ticker-exchange").value = t.exchange || "US";
     
+    currentEditingTickerTags = [...(t.tags || [])];
+    renderModalTagChips();
+
+    // Populate datalist from /api/tags
+    fetch("/api/tags").then(r => r.json()).then(tags => {
+        const datalist = document.getElementById("all-tags-datalist");
+        if (datalist && Array.isArray(tags)) {
+            datalist.innerHTML = "";
+            tags.forEach(tg => {
+                const opt = document.createElement("option");
+                opt.value = tg.name;
+                datalist.appendChild(opt);
+            });
+        }
+    }).catch(e => console.warn("Tag datalist fetch error:", e));
+
+    const tagInput = document.getElementById("ticker-tag-input");
+    if (tagInput) tagInput.value = "";
+
     const priceInput = document.getElementById("ticker-price");
     if (priceInput) priceInput.value = (t.price !== null && t.price !== undefined) ? t.price : "";
     
@@ -1522,6 +1578,25 @@ function setupFormSubmissions() {
         });
     }
 
+    const tagInput = document.getElementById("ticker-tag-input");
+    const addTagBtn = document.getElementById("btn-add-ticker-tag");
+    if (tagInput) {
+        tagInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" || e.key === ",") {
+                e.preventDefault();
+                addModalTag(tagInput.value);
+                tagInput.value = "";
+            }
+        });
+    }
+    if (addTagBtn && tagInput) {
+        addTagBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            addModalTag(tagInput.value);
+            tagInput.value = "";
+        });
+    }
+
     const tickerForm = document.getElementById("ticker-form");
     if (tickerForm) {
         tickerForm.addEventListener("submit", async (e) => {
@@ -1539,7 +1614,8 @@ function setupFormSubmissions() {
                 notes: document.getElementById("ticker-notes").value,
                 exchange: document.getElementById("ticker-exchange").value,
                 price: priceVal !== "" ? parseFloat(priceVal) : null,
-                is_manual: isManualVal
+                is_manual: isManualVal,
+                tags: currentEditingTickerTags
             };
             
             try {
@@ -2785,7 +2861,8 @@ function setupCustomAppEvents() {
                 t.symbol.toLowerCase().includes(query) ||
                 (t.friendly_name && t.friendly_name.toLowerCase().includes(query)) ||
                 (t.notes && t.notes.toLowerCase().includes(query)) || 
-                (t.underlying && t.underlying.toLowerCase().includes(query))
+                (t.underlying && t.underlying.toLowerCase().includes(query)) ||
+                (t.tags && t.tags.some(tag => tag.toLowerCase().includes(query)))
             );
             renderTickersTable(filtered);
         });
@@ -2843,7 +2920,8 @@ function setupCustomAppEvents() {
                     t.symbol.toLowerCase().includes(query) ||
                     (t.friendly_name && t.friendly_name.toLowerCase().includes(query)) ||
                     (t.notes && t.notes.toLowerCase().includes(query)) || 
-                    (t.underlying && t.underlying.toLowerCase().includes(query))
+                    (t.underlying && t.underlying.toLowerCase().includes(query)) ||
+                    (t.tags && t.tags.some(tag => tag.toLowerCase().includes(query)))
                 );
                 renderTickersTable(filtered);
             }

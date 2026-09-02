@@ -11,8 +11,8 @@
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Custom Style Sheet -->
-    <link rel="stylesheet" href="{{ BASE_PATH }}/static/global-theme.css">
-    <link rel="stylesheet" href="{{ BASE_PATH }}/static/css/style.css">
+    <link rel="stylesheet" href="{{ BASE_PATH }}/static/global-theme.css?v={{ range(1, 100000) | random }}">
+    <link rel="stylesheet" href="{{ BASE_PATH }}/static/css/style.css?v={{ range(1, 100000) | random }}">
     <script>
         window.BASE_PATH = {{ BASE_PATH | tojson | safe }};
         (function() {
@@ -193,7 +193,7 @@
                                 <th>Tax Rate</th>
                                 <th>Exchange</th>
                                 <th>Category</th>
-                                <th>Notes</th>
+                                <th>Tags</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -266,8 +266,19 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label for="ticker-tag-input">Tags</label>
+                    <div class="tag-chips-container" id="ticker-tags-container">
+                        <!-- dynamically rendered tag badges with remove icon -->
+                    </div>
+                    <div class="tag-input-row">
+                        <input type="text" id="ticker-tag-input" placeholder="Type tag & press Enter..." list="all-tags-datalist" class="tag-text-input">
+                        <datalist id="all-tags-datalist"></datalist>
+                        <button type="button" class="btn btn-secondary btn-sm" id="btn-add-ticker-tag">+ Add</button>
+                    </div>
+                </div>
+                <div class="form-group">
                     <label for="ticker-notes">Notes</label>
-                    <textarea id="ticker-notes" rows="2"></textarea>
+                    <textarea id="ticker-notes" rows="2" placeholder="Optional free-text remarks..."></textarea>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('ticker-modal')">Cancel</button>
@@ -342,6 +353,6 @@
     <script id="active-brokers-data" type="application/json">
         {{ BROKERS | tojson | safe }}
     </script>
-    <script src="{{ BASE_PATH }}/static/js/app.js"></script>
+    <script src="{{ BASE_PATH }}/static/js/app.js?v={{ range(1, 100000) | random }}"></script>
 </body>
 </html>

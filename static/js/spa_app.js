@@ -25,6 +25,12 @@ const { createApp } = Vue;
                 editingPriceRow: null,
                 portfolioData: null,
                 vueObserver: null,
+
+                // Tag Exposure fields
+                tagExposureData: null,
+                selectedTag: 'all',
+                tagSearchQuery: '',
+                loadingTagExposure: false,
                 
                 // Dividend Calendar fields
                 calendarData: null,
@@ -86,6 +92,92 @@ const { createApp } = Vue;
             }
         },
         computed: {
+            currentTagMetrics() {
+                if (!this.tagExposureData) {
+                    return {
+                        ticker_count: 0,
+                        total_market_value_sgd: 0.0,
+                        total_cost_basis_sgd: 0.0,
+                        total_unrealized_pl_sgd: 0.0,
+                        total_unrealized_pl_pct: 0.0,
+                        total_returns_sgd: 0.0,
+                        total_returns_pct: 0.0,
+                        portfolio_weight_pct: 100.0
+                    };
+                }
+                if (this.selectedTag === 'all') {
+                    const allT = this.tagExposureData.all_tickers || [];
+                    const val = this.tagExposureData.total_portfolio_value_sgd || 0.0;
+                    const cost = this.tagExposureData.total_portfolio_cost_sgd || 0.0;
+                    const unrealized = this.tagExposureData.total_portfolio_unrealized_sgd || 0.0;
+                    const unrealizedPct = this.tagExposureData.total_portfolio_unrealized_pct || 0.0;
+                    const returns = this.tagExposureData.total_portfolio_returns_sgd || 0.0;
+                    const returnsPct = this.tagExposureData.total_portfolio_returns_pct || 0.0;
+                    return {
+                        ticker_count: allT.length,
+                        total_market_value_sgd: val,
+                        total_cost_basis_sgd: cost,
+                        total_unrealized_pl_sgd: unrealized,
+                        total_unrealized_pl_pct: unrealizedPct,
+                        total_returns_sgd: returns,
+                        total_returns_pct: returnsPct,
+                        portfolio_weight_pct: 100.0
+                    };
+                }
+                const tagObj = (this.tagExposureData.tags || []).find(t => t.name === this.selectedTag);
+                return tagObj || {
+                    ticker_count: 0,
+                    total_market_value_sgd: 0.0,
+                    total_cost_basis_sgd: 0.0,
+                    total_unrealized_pl_sgd: 0.0,
+                    total_unrealized_pl_pct: 0.0,
+                    total_returns_sgd: 0.0,
+                    total_returns_pct: 0.0,
+                    portfolio_weight_pct: 0.0
+                };
+            },
+            filteredTagTickers() {
+                if (!this.tagExposureData) return [];
+                let tickers = [];
+                if (this.selectedTag === 'all') {
+                    tickers = this.tagExposureData.all_tickers || [];
+                } else {
+                    const tagObj = (this.tagExposureData.tags || []).find(t => t.name === this.selectedTag);
+                    tickers = tagObj ? tagObj.tickers : [];
+                }
+                const q = (this.tagSearchQuery || '').trim().toLowerCase();
+                if (!q) return tickers;
+                return tickers.filter(t => {
+                    const sym = (t.symbol || '').toLowerCase();
+                    const name = (t.friendly_name || '').toLowerCase();
+                    const und = (t.underlying || '').toLowerCase();
+                    const tagsMatch = (t.tags || []).some(tag => tag.toLowerCase().includes(q));
+                    return sym.includes(q) || name.includes(q) || und.includes(q) || tagsMatch;
+                });
+            },
+            displayedTableTotals() {
+                const list = this.filteredTagTickers;
+                const totVal = list.reduce((acc, t) => acc + (t.market_value_sgd || 0), 0);
+                const totCost = list.reduce((acc, t) => acc + (t.cost_basis_sgd || 0), 0);
+                const totUnrealized = list.reduce((acc, t) => acc + (t.unrealized_pl_sgd || 0), 0);
+                const totReturns = list.reduce((acc, t) => acc + (t.total_returns_sgd || 0), 0);
+                const unrealizedPct = totCost > 0 ? (totUnrealized / totCost * 100) : 0.0;
+                const returnsPct = totCost > 0 ? (totReturns / totCost * 100) : 0.0;
+                
+                const overallVal = this.tagExposureData ? (this.tagExposureData.total_portfolio_value_sgd || 1.0) : 1.0;
+                const tagVal = this.selectedTag === 'all' ? overallVal : (this.currentTagMetrics.total_market_value_sgd || 1.0);
+                
+                return {
+                    market_value_sgd: totVal,
+                    cost_basis_sgd: totCost,
+                    unrealized_pl_sgd: totUnrealized,
+                    unrealized_pl_pct: unrealizedPct,
+                    total_returns_sgd: totReturns,
+                    total_returns_pct: returnsPct,
+                    tag_weight_pct: tagVal > 0 ? (totVal / tagVal * 100) : 0.0,
+                    portfolio_weight_pct: overallVal > 0 ? (totVal / overallVal * 100) : 0.0
+                };
+            },
             metadata() {
                 return this.portfolioData?.metadata || {};
             },
@@ -644,6 +736,7 @@ const { createApp } = Vue;
                     'transactions': '/history',
                     'charts':       '/charts',
                     'performance':  '/performance',
+                    'tags':         '/tags',
                     'calendar':     '/dividend-calendar',
                     'fdComparison': '/fd-comparison',
                 };
@@ -692,6 +785,10 @@ const { createApp } = Vue;
                         this.fetchPerformanceReport();
                     } else {
                         this.initSpaPerformanceCharts();
+                    }
+                } else if (newView === 'tags') {
+                    if (!this.tagExposureData) {
+                        this.fetchTagExposure();
                     }
                 } else if (newView === 'fdComparison') {
                     if (!this.fdData) {
@@ -805,6 +902,7 @@ const { createApp } = Vue;
                 const linkIds = [
                     'nav-active-main',
                     'nav-perf-main',
+                    'nav-tags-main',
                     'nav-charts-main',
                     'nav-closed-main',
                     'nav-history-main',
@@ -823,6 +921,9 @@ const { createApp } = Vue;
 
                 if (view === 'dashboard') {
                     activeId = 'nav-active-main';
+                } else if (view === 'tags') {
+                    activeId = 'nav-tags-main';
+                    parentId = 'nav-perf-toggle';
                 } else if (view === 'closed') {
                     activeId = 'nav-closed-main';
                     parentId = 'nav-perf-toggle';
@@ -1713,9 +1814,13 @@ const { createApp } = Vue;
                     }
                 }
             },
+            formatNumber(val, prec = 2) {
+                return this.formatCommas(val, false, prec);
+            },
             formatCommas(val, includeSign = false, prec = 2) {
                 if (val === null || val === undefined) return '0.00';
                 const num = parseFloat(val);
+                if (isNaN(num)) return '0.00';
                 const formatted = num.toLocaleString(undefined, { minimumFractionDigits: prec, maximumFractionDigits: prec });
                 const sign = includeSign && num > 0 ? '+' : '';
                 return `${sign}${formatted}`;
@@ -1860,9 +1965,42 @@ const { createApp } = Vue;
                     btn.textContent = "Show Broker Breakdown";
                 }
             },
+            async fetchTagExposure(force = false) {
+                if (this.loadingTagExposure && !force) return;
+                this.loadingTagExposure = true;
+                try {
+                    const bp = this.getBasePath();
+                    const res = await fetch(`${bp}/api/v1/reports/tag-exposure?price_mode=${this.priceMode}`);
+                    if (res.ok) {
+                        this.tagExposureData = await res.json();
+                    } else {
+                        this.showToast('Failed to load tag exposure data', 'error');
+                    }
+                } catch (err) {
+                    console.error('Error fetching tag exposure:', err);
+                    this.showToast('Error fetching tag exposure: ' + err.message, 'error');
+                } finally {
+                    this.loadingTagExposure = false;
+                }
+            },
+            selectTag(tagName) {
+                this.selectedTag = tagName;
+                this.tagSearchQuery = '';
+            },
+            setPriceMode(mode) {
+                if (this.priceMode === mode) return;
+                this.priceMode = mode;
+                this.handlePriceModeChange();
+                if (this.currentView === 'tags') {
+                    this.fetchTagExposure(true);
+                }
+            },
             handlePriceModeChange() {
                 localStorage.setItem("price_mode", this.priceMode);
                 this.initializeDashboardCharts(true);
+                if (this.currentView === 'tags') {
+                    this.fetchTagExposure(true);
+                }
                 if (this.autoRefreshEnabled) {
                     if (this.priceMode === 'intraday') {
                         this.startAutoRefreshTimer(false);
@@ -2658,6 +2796,8 @@ const { createApp } = Vue;
                 '/history':                  'transactions',
                 '/charts':              'charts',
                 '/performance':         'performance',
+                '/tags':                'tags',
+                '/tag-exposure':        'tags',
                 '/dividend-calendar':        'calendar',
                 '/fd-comparison':  'fdComparison',
             };
@@ -2744,6 +2884,13 @@ const { createApp } = Vue;
                 navPerf.addEventListener("click", (e) => {
                     e.preventDefault();
                     this.currentView = 'performance';
+                });
+            }
+            const navTags = document.getElementById("nav-tags-main");
+            if (navTags) {
+                navTags.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    this.currentView = 'tags';
                 });
             }
             const navFd = document.getElementById("nav-fd-comparison");

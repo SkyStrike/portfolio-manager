@@ -169,6 +169,21 @@ def init_db():
         is_manual INTEGER DEFAULT 0,
         PRIMARY KEY (symbol, date, interval)
     );
+
+    CREATE TABLE IF NOT EXISTS tags (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE NOT NULL,
+        color TEXT DEFAULT '#3b82f6',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS ticker_tags (
+        ticker_id INTEGER NOT NULL,
+        tag_id INTEGER NOT NULL,
+        PRIMARY KEY (ticker_id, tag_id),
+        FOREIGN KEY(ticker_id) REFERENCES tickers(id) ON DELETE CASCADE,
+        FOREIGN KEY(tag_id) REFERENCES tags(id) ON DELETE CASCADE
+    );
     """
     conn = get_connection()
     try:
