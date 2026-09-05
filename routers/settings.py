@@ -1,15 +1,31 @@
 import logging
-from fastapi import APIRouter, HTTPException, BackgroundTasks, UploadFile, File
+from fastapi import APIRouter, HTTPException, BackgroundTasks, UploadFile, File, Body
 import json
+from typing import Any
 from core.database import get_connection
 from core.cache import rebuild_dashboard_sync
+from core.schemas import (
+    CashMetricCreate, 
+    CashMetricItem, 
+    CashMetricLastItem, 
+    StatusResponse,
+    CapitalEntryCreate,
+    CapitalEntryItem,
+    CashMetricsUploadPayload
+)
 from services.rebuild_dashboard import load_config, rebuild_all_views
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-@router.get("/api/settings")
+@router.get(
+    "/api/settings",
+    response_model=dict[str, Any],
+    summary="Get application settings",
+    description="Returns current configuration settings loaded from config.json and merged database overrides.",
+    tags=["Settings & Capital"]
+)
 def get_settings():
     logger.info("GET /api/settings")
     try:
@@ -17,8 +33,29 @@ def get_settings():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/api/settings")
-def update_settings(settings: dict):
+@router.post(
+    "/api/settings",
+    response_model=StatusResponse,
+    summary="Update application settings",
+    description="Updates key-value or dot-notated configuration settings in the database and triggers dashboard cache rebuild.",
+    tags=["Settings & Capital"]
+)
+def update_settings(
+    settings: dict[str, Any] = Body(
+        ...,
+        description="Key-value or dot-notated configuration settings dictionary to persist",
+        openapi_examples={
+            "default": {
+                "summary": "Standard settings overrides",
+                "value": {
+                    "sorting.classification_priority": ["Core ETF", "Growth", "Income"],
+                    "external_services.options_tracker_url": "http://yui.home/options-tracker/",
+                    "cron.metrics_run_hour": 6
+                }
+            }
+        }
+    )
+):
     logger.info("POST /api/settings - keys=%s", list(settings.keys()))
     conn = get_connection()
     try:
@@ -39,7 +76,13 @@ def update_settings(settings: dict):
         conn.close()
 
 # Broker Capital Entries API
-@router.get("/api/settings/capital")
+@router.get(
+    "/api/settings/capital",
+    response_model=list[CapitalEntryItem],
+    summary="Get all broker capital entries",
+    description="Returns the history of recorded capital deposit and withdrawal entries across all brokers.",
+    tags=["Settings & Capital"]
+)
 def get_capital_entries():
     logger.info("GET /api/settings/capital")
     conn = get_connection()
@@ -53,23 +96,20 @@ def get_capital_entries():
     finally:
         conn.close()
 
-@router.post("/api/settings/capital")
-def add_capital_entry(entry: dict):
-    # entry keys: date, broker, amount, remarks
-    date = entry.get("date")
-    broker = entry.get("broker")
-    amount = entry.get("amount")
-    remarks = entry.get("remarks", "")
-    logger.info("POST /api/settings/capital - broker=%s, date=%s, amount=%s", broker, date, amount)
+@router.post(
+    "/api/settings/capital",
+    response_model=StatusResponse,
+    summary="Add broker capital entry",
+    description="Records a new capital deposit (positive) or withdrawal (negative) for a broker and updates base capital.",
+    tags=["Settings & Capital"]
+)
+def add_capital_entry(entry: CapitalEntryCreate):
+    date = entry.date
+    broker = entry.broker
+    amount_val = entry.amount
+    remarks = entry.remarks or ""
+    logger.info("POST /api/settings/capital - broker=%s, date=%s, amount=%s", broker, date, amount_val)
     
-    if not date or not broker or amount is None:
-        raise HTTPException(status_code=400, detail="date, broker, and amount are required fields.")
-        
-    try:
-        amount_val = float(amount)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="amount must be numeric.")
-        
     conn = get_connection()
     try:
         cursor = conn.cursor()
@@ -85,7 +125,13 @@ def add_capital_entry(entry: dict):
     finally:
         conn.close()
 
-@router.delete("/api/settings/capital/{entry_id}")
+@router.delete(
+    "/api/settings/capital/{entry_id}",
+    response_model=StatusResponse,
+    summary="Delete broker capital entry",
+    description="Deletes a capital deposit or withdrawal record by ID.",
+    tags=["Settings & Capital"]
+)
 def delete_capital_entry(entry_id: int):
     logger.info("DELETE /api/settings/capital/%d", entry_id)
     conn = get_connection()
@@ -186,7 +232,13 @@ async def import_capital_csv(
 
 
 # Daily Cash Metrics API
-@router.get("/api/settings/cash-metrics/history")
+@router.get(
+    "/api/settings/cash-metrics/history",
+    response_model=list[CashMetricItem],
+    summary="Get daily cash metrics history",
+    description="Returns up to the last 180 recorded daily cash & liquidation metric snapshots across all brokers.",
+    tags=["Settings & Capital"]
+)
 def get_cash_metrics_history():
     logger.info("GET /api/settings/cash-metrics/history")
     conn = get_connection()
@@ -205,7 +257,13 @@ def get_cash_metrics_history():
     finally:
         conn.close()
 
-@router.get("/api/settings/cash-metrics/last")
+@router.get(
+    "/api/settings/cash-metrics/last",
+    response_model=CashMetricLastItem,
+    summary="Get last recorded cash metric for broker",
+    description="Returns the most recent daily cash and liquidation snapshot for a specific broker.",
+    tags=["Settings & Capital"]
+)
 def get_last_cash_metric(broker: str):
     logger.info("GET /api/settings/cash-metrics/last (broker=%s)", broker)
     if not broker:
@@ -229,19 +287,24 @@ def get_last_cash_metric(broker: str):
     finally:
         conn.close()
 
-@router.post("/api/settings/cash-metrics")
-def save_cash_metric(metric: dict):
-    # metric keys: date, broker, liquidation_value, total_stock_value, cash_on_hand
-    date = metric.get("date")
-    broker = metric.get("broker")
-    liq_val = metric.get("liquidation_value")
-    stock_val = metric.get("total_stock_value")
-    cash_val = metric.get("cash_on_hand")
+@router.post(
+    "/api/settings/cash-metrics",
+    response_model=StatusResponse,
+    summary="Record or update daily cash & liquidation metrics",
+    description=(
+        "Saves daily broker liquidity metrics (liquidation value, total stock value, and cash on hand in SGD). "
+        "Calculates cumulative base capital automatically and updates the daily cash report via UPSERT."
+    ),
+    tags=["Settings & Capital"]
+)
+def save_cash_metric(metric: CashMetricCreate):
+    date = metric.date
+    broker = metric.broker
+    liq_val = metric.liquidation_value
+    stock_val = metric.total_stock_value
+    cash_val = metric.cash_on_hand
     logger.info("POST /api/settings/cash-metrics - broker=%s, date=%s, liq_val=%s", broker, date, liq_val)
     
-    if not date or not broker or liq_val is None or stock_val is None or cash_val is None:
-        raise HTTPException(status_code=400, detail="date, broker, liquidation_value, total_stock_value, and cash_on_hand are required.")
-        
     from datetime import datetime, timezone, timedelta
     from zoneinfo import ZoneInfo
     from services.rebuild_dashboard import calculate_trading_date
@@ -257,13 +320,6 @@ def save_cash_metric(metric: dict):
     if date >= today_ny:
         date = calculate_trading_date()
         logger.info("save_cash_metric: date adjusted to last trading day -> %s", date)
-        
-    try:
-        liq_val = float(liq_val)
-        stock_val = float(stock_val)
-        cash_val = float(cash_val)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="liquidation_value, total_stock_value, and cash_on_hand must be numeric.")
         
     conn = get_connection()
     try:
@@ -296,8 +352,14 @@ def save_cash_metric(metric: dict):
     finally:
         conn.close()
 
-@router.post("/api/settings/cash-metrics/upload")
-def upload_cash_metrics(payload: dict, broker: str):
+@router.post(
+    "/api/settings/cash-metrics/upload",
+    response_model=StatusResponse,
+    summary="Upload cash & position metrics for a broker",
+    description="Accepts broker liquidity balances (standard or IBKR payload format) and updates the daily cash report for the current trading date.",
+    tags=["Settings & Capital"]
+)
+def upload_cash_metrics(payload: CashMetricsUploadPayload, broker: str):
     logger.info("POST /api/settings/cash-metrics/upload (broker=%s)", broker)
     if not broker:
         raise HTTPException(status_code=400, detail="broker query parameter is required.")
@@ -305,7 +367,7 @@ def upload_cash_metrics(payload: dict, broker: str):
     broker_name = broker.strip().upper()
     
     # Support flat or nested under "balances", standard or legacy IBKR keys
-    balances = payload.get("balances") if isinstance(payload.get("balances"), dict) else payload
+    balances = payload.balances if payload.balances is not None else payload.model_dump()
     
     liq_val = balances.get("liquidation_value")
     if liq_val is None:

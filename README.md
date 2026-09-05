@@ -83,7 +83,7 @@ To support dynamic configurations and user-specific customizations:
 1. **Database settings table overrides**: Custom configurations stored in the SQLite database (e.g., `sorting.classification_priority`, `external_services.options_tracker_url`, `external_services.backtester_url`) take the highest priority. These can be easily updated via the **Settings** editor tab in the Admin Dashboard.
 2. **`data/config.json`** overrides (falls back to `config/config.json` default templates).
 
-If you want to customize your setup, simply place/upload your custom files into `data/`. For a complete catalog, purpose description, and schema details of all configuration, cache, and input files, see the [JSON Data Files Reference](docs/data_files.md).
+If you want to customize your setup, simply place/upload your custom files into `data/`. For full details on all runtime and static configuration keys, see the [Settings & Configuration Guide](docs/settings_configuration.md) and [JSON Data Files Reference](docs/data_files.md).
 
 ### Environment Variables
 * `BASE_PATH`: Set this (e.g. `/portfolio`) to host the application under a custom prefix path. All internal endpoints, client-side fetch commands, header links, and script references will adapt dynamically.

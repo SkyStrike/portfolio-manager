@@ -13,7 +13,7 @@ Categorizes portfolios into distinct groups.
 * **Usage**: Used to bundle portfolios on the dashboard and charts. Typical classification groups include:
   - `Income + Growth` (e.g. *Income Factory*, *Long Term Holdings*, *MooMoo*)
   - `Discord` (e.g. *Discord Trades*)
-* **Custom Priority**: You can define priority ordering for sorting these sections in the Settings tab of the Admin Dashboard (stored dynamically in the SQLite `settings` table as `sorting.classification_priority`).
+* **Custom Priority**: You can define priority ordering for sorting these sections in the Settings tab of the Admin Dashboard (stored dynamically in the SQLite `settings` table as `sorting.classification_priority`). For full details, see the [Settings & System Configuration Reference](settings_configuration.md).
 
 ### 1.2 `broker`
 Maps the holding institution/brokerage.

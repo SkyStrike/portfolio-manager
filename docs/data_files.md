@@ -57,9 +57,11 @@ This document provides a detailed catalog of the various JSON configuration, cac
 
 #### Finance Parameters
 * **`finance.max_workers`** (integer): Sets the maximum number of concurrent threads/workers utilized by the background `yfinance` price updates. Higher values fetch tickers in parallel faster but can cause rate-limiting issues.
-* **`finance.conversion_rates`** (object): Mapping of conversion rates relative to SGD (e.g., `USD: 1.2754` meaning $1$ USD = $1.2754$ SGD). These act as fallback exchange rates if the dynamic API fetching tool is offline.
+* **`finance.conversion_rates`** (object): Historical fallback conversion rates relative to SGD. *Note: Active exchange rates are dynamically fetched, tracked, and stored in the database `fx_rates` table. See [Settings & System Configuration Reference](settings_configuration.md) for details.*
 
-#### UI Customization
+#### UI Customization (Legacy)
+> [!NOTE]
+> The modern Vue 3 Single Page Application (SPA) uses CSS variables configured in `static/css/style.css`. The `ui.*` properties in `config.json` remain for backwards compatibility with legacy tooling.
 * **`ui.page_width`** (CSS string): Declares the desktop container constraint wrapper size.
 * **`ui.font_size`** & **`ui.mobile_font_size`** (CSS strings): Scales base HTML REM sizing dynamically for responsive UI displays.
 * **`ui.colors`** (hex codes): Color tags mapping to metric cards:
@@ -71,7 +73,8 @@ This document provides a detailed catalog of the various JSON configuration, cac
 #### Allowed Documents Map
 * **`allowed_documents`** (key-value object): Maps internal lookup identifiers to actual filesystem storage paths on disk. Used by the upload API (`POST /api/upload`) to validate target file writes (e.g., writing the `ib-data` payload directly to `data/ib_data.json`).
 
-#### External Integrations
+#### External Integrations & System Settings
+For a full list of all system settings configurable via the Settings GUI or `/api/settings`, see **[Settings & System Configuration Reference](settings_configuration.md)**.
 * **`external_services.options_tracker_url`** (string): The HTTP address of the companion options tracker. If configured, activates option lists and cash stress test components. If left empty (`""`), all options components are dynamically hidden from the UI.
 * **`external_services.backtester_url`** (string): The HTTP address of the companion backtesting service. If populated, renders direct link icons (🔗) next to assets pointing to historical backtests.
 
