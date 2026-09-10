@@ -40,7 +40,12 @@
                         <h3 class="calendar-month-title spa-calendar-month-title">{{ calMonths[calMonth] }} {{ calYear }}</h3>
                         <button class="btn calendar-nav-btn spa-calendar-nav-btn" @click="changeMonth(1)">&rsaquo;</button>
                     </div>
-                    <span class="calendar-month-total spa-calendar-total">+SG$ {{ formatCommas(calMonthlyTotalSgd) }}</span>
+                    <span class="calendar-month-total spa-calendar-total clickable-month-total" 
+                          @click="showCalCurrencyModal = true" 
+                          title="Click to view currency & payout status breakdown">
+                        +SG$ {{ formatCommas(calMonthlyTotalSgd) }}
+                        <span class="cal-breakdown-icon">📊</span>
+                    </span>
                     <button class="btn calendar-today-btn spa-calendar-today-btn" @click="jumpToToday">Today</button>
                 </div>
                 
@@ -190,6 +195,98 @@
                     <button v-if="activeDividend.status !== 'Paid'" class="btn cal-btn-received spa-modal-btn-success" @click="openMarkAsReceivedModal(activeDividend)">Mark as received</button>
                     <button v-if="activeDividend.status === 'Paid'" class="btn cal-btn-edit-modal" @click="openEditDividendModal(activeDividend)">✏️ Edit Dividend</button>
                     <button class="btn cal-btn-close spa-modal-btn-close" @click="activeDividend = null">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monthly Dividend Currency & Status Breakdown Modal -->
+        <div v-if="showCalCurrencyModal" class="modal-overlay cal-div-modal-overlay spa-modal-overlay" @click.self="showCalCurrencyModal = false">
+            <div class="cal-div-modal-box cal-currency-modal-box">
+                <div class="cal-div-modal-header spa-modal-header">
+                    <div>
+                        <h4 class="cal-div-modal-title spa-modal-title">{{ calMonths[calMonth] }} {{ calYear }} Dividends</h4>
+                        <div class="cal-currency-modal-subtitle">Currency & Status Breakdown</div>
+                    </div>
+                    <button class="cal-modal-close-icon" @click="showCalCurrencyModal = false" aria-label="Close modal">✕</button>
+                </div>
+                
+                <!-- Overall Month KPI Highlights -->
+                <div class="cal-currency-summary-card">
+                    <div class="cal-currency-summary-top">
+                        <span class="cal-currency-summary-label">Total Monthly Dividend</span>
+                        <span class="cal-currency-summary-val">+SG$ {{ formatCommas(calMonthlyCurrencyBreakdown.total_sgd) }}</span>
+                    </div>
+                    <div class="cal-currency-summary-bars">
+                        <div class="cal-currency-bar-row">
+                            <div class="cal-currency-bar-meta">
+                                <span class="cal-bar-label"><span class="status-indicator-dot paid"></span> Paid:</span>
+                                <span class="cal-bar-val text-gain">SG$ {{ formatCommas(calMonthlyCurrencyBreakdown.paid_sgd) }} ({{ calMonthlyCurrencyBreakdown.paid_pct.toFixed(1) }}%)</span>
+                            </div>
+                            <div class="cal-currency-bar-meta">
+                                <span class="cal-bar-label"><span class="status-indicator-dot pending"></span> Pending / Upcoming:</span>
+                                <span class="cal-bar-val text-warning">SG$ {{ formatCommas(calMonthlyCurrencyBreakdown.pending_sgd) }} ({{ calMonthlyCurrencyBreakdown.pending_pct.toFixed(1) }}%)</span>
+                            </div>
+                        </div>
+                        <div class="cal-split-progress-track">
+                            <div class="cal-split-progress-paid" :style="{ width: calMonthlyCurrencyBreakdown.paid_pct + '%' }"></div>
+                            <div class="cal-split-progress-pending" :style="{ width: calMonthlyCurrencyBreakdown.pending_pct + '%' }"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Currency Cards Section -->
+                <div class="cal-currency-section-title">Breakdown By Currency</div>
+                <div class="cal-currency-list">
+                    <div v-for="c in calMonthlyCurrencyBreakdown.currencies" :key="c.currency" class="cal-currency-card">
+                        <div class="cal-currency-card-header">
+                            <div class="spa-flex-center-gap-8">
+                                <span class="cal-currency-pill">{{ c.currency }}</span>
+                                <span class="cal-currency-items-count">{{ c.items_count }} payout{{ c.items_count > 1 ? 's' : '' }}</span>
+                            </div>
+                            <div class="cal-currency-share-badge">
+                                {{ c.pct_share.toFixed(1) }}% of Month
+                            </div>
+                        </div>
+
+                        <div class="cal-currency-totals-row">
+                            <div class="cal-currency-foreign-total">
+                                ${{ formatCommas(c.total_foreign) }} <span class="cal-sub-curr">{{ c.currency }}</span>
+                            </div>
+                            <div class="cal-currency-arrow">➔</div>
+                            <div class="cal-currency-sgd-total">
+                                +SG$ {{ formatCommas(c.total_sgd) }}
+                            </div>
+                        </div>
+                        <div v-if="c.currency !== 'SGD'" class="cal-currency-fx-rate">
+                            Effective FX Rate: 1 {{ c.currency }} ≈ {{ c.effective_rate.toFixed(4) }} SGD
+                        </div>
+
+                        <!-- Status Breakdown Sub-grid -->
+                        <div class="cal-currency-status-grid">
+                            <div class="cal-currency-status-col paid-col">
+                                <div class="cal-status-col-title">
+                                    <span class="status-indicator-dot paid"></span> Paid
+                                </div>
+                                <div class="cal-status-col-foreign">${{ formatCommas(c.paid_foreign) }} {{ c.currency }}</div>
+                                <div class="cal-status-col-sgd">SG$ {{ formatCommas(c.paid_sgd) }}</div>
+                            </div>
+                            <div class="cal-currency-status-col pending-col">
+                                <div class="cal-status-col-title">
+                                    <span class="status-indicator-dot pending"></span> Pending / Upcoming
+                                </div>
+                                <div class="cal-status-col-foreign">${{ formatCommas(c.pending_foreign) }} {{ c.currency }}</div>
+                                <div class="cal-status-col-sgd">SG$ {{ formatCommas(c.pending_sgd) }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-if="calMonthlyCurrencyBreakdown.currencies.length === 0" class="spa-table-empty cal-currency-empty-span">
+                        No dividend payouts found for {{ calMonths[calMonth] }} {{ calYear }}.
+                    </div>
+                </div>
+
+                <div class="cal-div-modal-footer spa-modal-footer spa-mt-20">
+                    <button class="btn cal-btn-close spa-modal-btn-close" @click="showCalCurrencyModal = false">Close</button>
                 </div>
             </div>
         </div>

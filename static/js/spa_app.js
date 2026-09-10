@@ -40,6 +40,7 @@ const { createApp } = Vue;
                 calHideWeekends: true,
                 calListSearch: '',
                 activeDividend: null,
+                showCalCurrencyModal: false,
                 calMonths: [
                     "January", "February", "March", "April", "May", "June",
                     "July", "August", "September", "October", "November", "December"
@@ -510,6 +511,85 @@ const { createApp } = Vue;
                 const filterYearMonth = `${year}-${String(month + 1).padStart(2, '0')}`;
                 const monthlyItems = this.calendarData.items.filter(item => item.date.startsWith(filterYearMonth));
                 return monthlyItems.reduce((acc, curr) => acc + curr.net_amount_sgd, 0);
+            },
+            calMonthlyCurrencyBreakdown() {
+                if (!this.calendarData || !this.calendarData.items) {
+                    return {
+                        total_sgd: 0,
+                        paid_sgd: 0,
+                        pending_sgd: 0,
+                        currencies: []
+                    };
+                }
+                const year = this.calYear;
+                const month = this.calMonth;
+                const filterYearMonth = `${year}-${String(month + 1).padStart(2, '0')}`;
+                const monthlyItems = this.calendarData.items.filter(item => item.date && item.date.startsWith(filterYearMonth));
+
+                let totalSgd = 0;
+                let paidSgd = 0;
+                let pendingSgd = 0;
+                const byCurrency = {};
+
+                monthlyItems.forEach(item => {
+                    const c = item.currency || 'USD';
+                    const isPaid = (item.status || '').toLowerCase() === 'paid';
+                    const netForeign = Number(item.net_amount_foreign || 0);
+                    const netSgd = Number(item.net_amount_sgd || 0);
+
+                    totalSgd += netSgd;
+                    if (isPaid) {
+                        paidSgd += netSgd;
+                    } else {
+                        pendingSgd += netSgd;
+                    }
+
+                    if (!byCurrency[c]) {
+                        byCurrency[c] = {
+                            currency: c,
+                            total_foreign: 0,
+                            total_sgd: 0,
+                            paid_foreign: 0,
+                            paid_sgd: 0,
+                            pending_foreign: 0,
+                            pending_sgd: 0,
+                            effective_rate: 1.0,
+                            items_count: 0
+                        };
+                    }
+
+                    const cData = byCurrency[c];
+                    cData.total_foreign += netForeign;
+                    cData.total_sgd += netSgd;
+                    cData.items_count += 1;
+
+                    if (isPaid) {
+                        cData.paid_foreign += netForeign;
+                        cData.paid_sgd += netSgd;
+                    } else {
+                        cData.pending_foreign += netForeign;
+                        cData.pending_sgd += netSgd;
+                    }
+                });
+
+                const currenciesList = Object.values(byCurrency).map(cData => {
+                    const effRate = cData.total_foreign > 0 ? (cData.total_sgd / cData.total_foreign) : 1.0;
+                    const pctShare = totalSgd > 0 ? (cData.total_sgd / totalSgd * 100) : 0;
+                    return {
+                        ...cData,
+                        effective_rate: effRate,
+                        pct_share: pctShare
+                    };
+                }).sort((a, b) => b.total_sgd - a.total_sgd);
+
+                return {
+                    total_sgd: totalSgd,
+                    paid_sgd: paidSgd,
+                    pending_sgd: pendingSgd,
+                    paid_pct: totalSgd > 0 ? (paidSgd / totalSgd * 100) : 0,
+                    pending_pct: totalSgd > 0 ? (pendingSgd / totalSgd * 100) : 0,
+                    currencies: currenciesList
+                };
             },
             filteredCalList() {
                 if (!this.calendarData || !this.calendarData.items) return [];
@@ -2977,6 +3057,14 @@ const { createApp } = Vue;
             // Close context calculator dropdowns on window clicks
             window.addEventListener("click", () => {
                 this.activeMenu = null;
+            });
+
+            // Close modals on Escape key
+            window.addEventListener("keydown", (e) => {
+                if (e.key === "Escape") {
+                    if (this.showCalCurrencyModal) this.showCalCurrencyModal = false;
+                    if (this.activeDividend) this.activeDividend = null;
+                }
             });
 
             // Listen for global transaction saved events to trigger SPA re-fetches

@@ -2664,6 +2664,29 @@ body.mask-values .sensitive-value::after {
     border-radius: 0.5rem;
     font-family: 'Outfit', sans-serif;
     letter-spacing: 0.02em;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.calendar-month-total:hover {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: rgba(16, 185, 129, 0.5);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+}
+
+.cal-breakdown-icon {
+    font-size: 0.85rem;
+    opacity: 0.85;
+    transition: transform 0.2s;
+}
+
+.calendar-month-total:hover .cal-breakdown-icon {
+    transform: scale(1.15);
 }
 
 .calendar-today-btn {
@@ -4515,6 +4538,275 @@ body.mask-values .sensitive-value::after {
     .tag-table-search-wrapper {
         width: 100%;
     }
+}
+
+/* =========================================================
+   Monthly Dividend Currency & Status Breakdown Modal
+   ========================================================= */
+.cal-currency-modal-box {
+    width: 760px;
+    max-width: 95vw;
+    max-height: 88vh;
+    overflow-y: auto;
+}
+
+.cal-currency-modal-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+
+.cal-modal-close-icon {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.25rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: color 0.2s, background-color 0.2s;
+}
+
+.cal-modal-close-icon:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.cal-currency-summary-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--card-border);
+    border-radius: 0.75rem;
+    padding: 1.15rem;
+    margin-bottom: 1.25rem;
+}
+
+.cal-currency-summary-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.85rem;
+}
+
+.cal-currency-summary-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary);
+}
+
+.cal-currency-summary-val {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--color-gain, #10b981);
+}
+
+.cal-currency-bar-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.82rem;
+    margin-bottom: 0.5rem;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.cal-currency-bar-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cal-bar-label {
+    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.cal-bar-val {
+    font-weight: 600;
+}
+
+.status-indicator-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.status-indicator-dot.paid {
+    background-color: #10b981;
+    box-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
+}
+
+.status-indicator-dot.pending {
+    background-color: #f59e0b;
+    box-shadow: 0 0 6px rgba(245, 158, 11, 0.4);
+}
+
+.cal-split-progress-track {
+    width: 100%;
+    height: 7px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    display: flex;
+    overflow: hidden;
+}
+
+.cal-split-progress-paid {
+    background: #10b981;
+    transition: width 0.3s ease;
+}
+
+.cal-split-progress-pending {
+    background: #f59e0b;
+    transition: width 0.3s ease;
+}
+
+.cal-currency-section-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+}
+
+.cal-currency-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.85rem;
+}
+
+@media (max-width: 680px) {
+    .cal-currency-list {
+        grid-template-columns: 1fr;
+    }
+}
+
+.cal-currency-empty-span {
+    grid-column: 1 / -1;
+}
+
+.cal-currency-card {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--card-border);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    transition: border-color 0.2s;
+}
+
+.cal-currency-card:hover {
+    border-color: rgba(139, 92, 246, 0.3);
+}
+
+.cal-currency-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.cal-currency-pill {
+    background: rgba(139, 92, 246, 0.18);
+    border: 1px solid rgba(139, 92, 246, 0.35);
+    color: #c4b5fd;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 5px;
+    letter-spacing: 0.03em;
+}
+
+.cal-currency-items-count {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.cal-currency-share-badge {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+
+.cal-currency-totals-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.cal-currency-foreign-total {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.cal-sub-curr {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.cal-currency-arrow {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.cal-currency-sgd-total {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #10b981;
+    font-family: 'Outfit', sans-serif;
+}
+
+.cal-currency-fx-rate {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-family: 'Inter', sans-serif;
+    margin-top: -4px;
+}
+
+.cal-currency-status-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 0.5rem;
+    padding: 0.65rem 0.85rem;
+}
+
+.cal-currency-status-col {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.cal-status-col-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 2px;
+}
+
+.cal-status-col-foreign {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.cal-status-col-sgd {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
 }
 
 
