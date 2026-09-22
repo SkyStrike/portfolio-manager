@@ -508,7 +508,7 @@ def fetch_options_details(exchange_rates, trading_date=None):
         api_url = url
         if api_url and not api_url.endswith("/api/positions"):
             api_url = f"{api_url.rstrip('/')}/api/positions"
-        response = requests.get(api_url, timeout=1)
+        response = requests.get(api_url, timeout=5)
         response.raise_for_status()
         raw_data = response.json()
     except Exception as e:
