@@ -3,10 +3,9 @@
         <div v-show="currentView === 'dashboard'">
             <!-- Title, Price Mode selection dropdown, and action buttons -->
             <h1 id="top" class="spa-header-row">
+                <span>Portfolio Summary</span>
+                
                 <div class="spa-flex-wrap-center">
-                    <span>Portfolio Summary</span>
-                    
-                    <!-- Price Mode Selection & Force Refresh / Rebuild -->
                     <!-- Price Mode Selection & Force Refresh / Rebuild / Auto-Refresh -->
                     <div class="price-mode-container spa-price-mode-container">
                         <span class="spa-label-secondary">Price Mode:</span>
@@ -72,12 +71,13 @@
                             <span id="rebuild-icon" class="spa-inline-icon">🔨</span>
                         </button>
                     </div>
+
+                    <a href="#detailed-holdings-breakdown" class="back-to-toc" title="Jump to Detailed Holdings Breakdown">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </a>
                 </div>
-                <a href="#detailed-holdings-breakdown" class="back-to-toc" title="Jump to Detailed Holdings Breakdown">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                    </svg>
-                </a>
             </h1>
 
             <!-- Report Info & Sources (Metadata bar) -->
