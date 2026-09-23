@@ -1,3 +1,4 @@
+- Prefix every shell command with `rtk`: `rtk git status`, `rtk cargo test`, `rtk npm run build`, `rtk ls src/`. Keep the prefix inside chains: `rtk git add . && rtk git commit -m "msg"`. Commands RTK has no filter for run as-is, so the prefix is always safe.
 - If you need to run the code, use `docker compose` to build the code instead of executing it natively. 
 - If it is only a non code change (e.g. md file), do not re-run the build.
 - for database schema changes, use `alembic`
