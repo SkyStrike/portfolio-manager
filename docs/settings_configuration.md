@@ -30,7 +30,7 @@ flowchart TD
 
 ## 2. Actively Editable Settings (GUI & REST API)
 
-These **4 operational settings** are dynamically managed through the SQLite database, editable in the Control Center Settings panel, and modified via `POST /api/settings`:
+These **5 operational settings** are dynamically managed through the SQLite database, editable in the Control Center Settings panel, and modified via `POST /api/settings`:
 
 ### 2.1 `sorting.classification_priority`
 * **Type**: `list[str]`
@@ -74,7 +74,21 @@ These **4 operational settings** are dynamically managed through the SQLite data
 
 ---
 
-### 2.4 `cron.metrics_run_hour`
+### 2.4 `external_services.transaction_ocr_url`
+* **Type**: `str`
+* **Default**: `""` (Fallback: `""`)
+* **GUI Location**: Control Center $\rightarrow$ Settings $\rightarrow$ Transaction OCR URL
+* **Usage**: URL for the external transaction OCR service. When configured, an entry for "Transaction OCR" appears in the global top navigation **Services** dropdown.
+* **Example Payload**:
+  ```json
+  {
+    "external_services.transaction_ocr_url": "http://yui.home/transaction-ocr/"
+  }
+  ```
+
+---
+
+### 2.5 `cron.metrics_run_hour`
 * **Type**: `int` (`0`–`23`)
 * **Default**: `6` (6:00 AM SGT)
 * **GUI Location**: Control Center $\rightarrow$ Settings $\rightarrow$ Daily Metrics Run Hour
@@ -120,7 +134,8 @@ Returns the full resolved configuration object merging file defaults and databas
   },
   "external_services": {
     "options_tracker_url": "http://yui.home/options-tracker/api/positions",
-    "backtester_url": "http://yui.home/backtester/"
+    "backtester_url": "http://yui.home/backtester/",
+    "transaction_ocr_url": "http://yui.home/transaction-ocr/"
   },
   "sorting": {
     "classification_priority": ["Core ETF", "Growth", "Income"]
@@ -146,6 +161,7 @@ Persists one or more setting overrides into the SQLite `settings` table using do
   "sorting.classification_priority": ["Core ETF", "Growth", "Income", "Speculative", "Cash"],
   "external_services.options_tracker_url": "http://yui.home/options-tracker/api/positions",
   "external_services.backtester_url": "http://yui.home/backtester/",
+  "external_services.transaction_ocr_url": "http://yui.home/transaction-ocr/",
   "cron.metrics_run_hour": 6
 }
 ```

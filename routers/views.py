@@ -90,6 +90,7 @@ def get_spa_dashboard():
         else:
             options_tracker_main_url = options_tracker_url
         backtester_url = config.get("external_services", {}).get("backtester_url", "")
+        transaction_ocr_url = config.get("external_services", {}).get("transaction_ocr_url", "")
         
         rendered = spa_template.render(
             TITLE="Portfolio Manager - Dashboard",
@@ -98,6 +99,7 @@ def get_spa_dashboard():
             BASE_PATH=base_path,
             OPTIONS_TRACKER_URL=options_tracker_main_url,
             BACKTESTER_URL=backtester_url,
+            TRANSACTION_OCR_URL=transaction_ocr_url,
             UI_FONT_SIZE=ui_config.get("font_size", "14px"),
             UI_MOBILE_FONT_SIZE=ui_config.get("mobile_font_size", "12px"),
             COLOR_INVESTED=colors_config.get("invested", "#8b5cf6"),
@@ -153,6 +155,7 @@ def get_trades():
         else:
             options_tracker_main_url = options_tracker_url
         backtester_url = config.get("external_services", {}).get("backtester_url", "")
+        transaction_ocr_url = config.get("external_services", {}).get("transaction_ocr_url", "")
         metrics_run_hour = config.get("cron", {}).get("metrics_run_hour", 6)
         brokers = config.get("brokers", ["IBKR", "MOOMOO"])
 
@@ -162,6 +165,7 @@ def get_trades():
             BASE_PATH=base_path,
             OPTIONS_TRACKER_URL=options_tracker_main_url,
             BACKTESTER_URL=backtester_url,
+            TRANSACTION_OCR_URL=transaction_ocr_url,
             METRICS_RUN_HOUR=metrics_run_hour,
             BROKERS=brokers
         )
@@ -182,6 +186,7 @@ def get_control_center():
         else:
             options_tracker_main_url = options_tracker_url
         backtester_url = config.get("external_services", {}).get("backtester_url", "")
+        transaction_ocr_url = config.get("external_services", {}).get("transaction_ocr_url", "")
         metrics_run_hour = config.get("cron", {}).get("metrics_run_hour", 6)
         brokers = config.get("brokers", ["IBKR", "MOOMOO"])
 
@@ -191,6 +196,7 @@ def get_control_center():
             BASE_PATH=base_path,
             OPTIONS_TRACKER_URL=options_tracker_main_url,
             BACKTESTER_URL=backtester_url,
+            TRANSACTION_OCR_URL=transaction_ocr_url,
             METRICS_RUN_HOUR=metrics_run_hour,
             BROKERS=brokers
         )

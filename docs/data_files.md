@@ -45,7 +45,8 @@ This document provides a detailed catalog of the various JSON configuration, cac
   },
   "external_services": {
     "options_tracker_url": "",
-    "backtester_url": ""
+    "backtester_url": "",
+    "transaction_ocr_url": ""
   }
 }
 ```
@@ -77,6 +78,7 @@ This document provides a detailed catalog of the various JSON configuration, cac
 For a full list of all system settings configurable via the Settings GUI or `/api/settings`, see **[Settings & System Configuration Reference](settings_configuration.md)**.
 * **`external_services.options_tracker_url`** (string): The HTTP address of the companion options tracker. If configured, activates option lists and cash stress test components. If left empty (`""`), all options components are dynamically hidden from the UI.
 * **`external_services.backtester_url`** (string): The HTTP address of the companion backtesting service. If populated, renders direct link icons (🔗) next to assets pointing to historical backtests.
+* **`external_services.transaction_ocr_url`** (string): The HTTP address of the external transaction OCR service. If configured, adds a direct link under the **Services** top navigation dropdown.
 
 ---
 

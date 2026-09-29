@@ -210,6 +210,10 @@
                             <input type="url" id="settings-backtester-url" placeholder="http://yui.home/backtester/">
                         </div>
                         <div class="form-group">
+                            <label for="settings-transaction-ocr-url">Transaction OCR URL</label>
+                            <input type="url" id="settings-transaction-ocr-url" placeholder="http://yui.home/transaction-ocr/">
+                        </div>
+                        <div class="form-group">
                             <label for="settings-metrics-run-hour">Daily metrics update hour (SGT, 0-23)</label>
                             <input type="number" id="settings-metrics-run-hour" min="0" max="23" placeholder="6" value="{{ METRICS_RUN_HOUR }}" required class="settings-input-hour">
                             <small class="form-help settings-help-text">

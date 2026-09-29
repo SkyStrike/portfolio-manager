@@ -31,6 +31,7 @@
   },
   "external_services": {
     "options_tracker_url": "",
-    "backtester_url": ""
+    "backtester_url": "",
+    "transaction_ocr_url": ""
   }
 }

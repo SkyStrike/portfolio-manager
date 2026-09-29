@@ -40,6 +40,7 @@ def calculate_trading_date():
 
 DEFAULT_OPTIONS_TRACKER_URL = ""
 DEFAULT_BACKTESTER_URL = ""
+DEFAULT_TRANSACTION_OCR_URL = ""
 DEFAULT_CLASSIFICATION_PRIORITY = []
 DEFAULT_METRICS_RUN_HOUR = 6
 DEFAULT_ALLOWED_DOCUMENTS = {
@@ -100,6 +101,8 @@ def load_config():
         config["external_services"]["options_tracker_url"] = DEFAULT_OPTIONS_TRACKER_URL
     if "backtester_url" not in config["external_services"] or not config["external_services"]["backtester_url"]:
         config["external_services"]["backtester_url"] = DEFAULT_BACKTESTER_URL
+    if "transaction_ocr_url" not in config["external_services"] or not config["external_services"]["transaction_ocr_url"]:
+        config["external_services"]["transaction_ocr_url"] = DEFAULT_TRANSACTION_OCR_URL
 
     if "sorting" not in config:
         config["sorting"] = {}

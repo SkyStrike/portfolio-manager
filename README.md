@@ -109,7 +109,8 @@ The application integrates with external services configured under the `"externa
 ```json
   "external_services": {
     "options_tracker_url": "http://yui.home/options-tracker",
-    "backtester_url": "http://yui.home/backtester/"
+    "backtester_url": "http://yui.home/backtester/",
+    "transaction_ocr_url": "http://yui.home/transaction-ocr/"
   }
 ```
 
@@ -138,6 +139,13 @@ The application integrates with external services configured under the `"externa
   * The `startDate` defaults to the earliest transaction date recorded for the underlying group.
 * **Unconfigured/Empty Behavior**:
   * Setting this URL to `""` or omitting it disables the backtester links. No link icons are shown next to the underlying assets.
+
+### 3. Transaction OCR Service (`transaction_ocr_url`)
+* **Purpose**: External OCR service for processing trade confirmations and statements.
+* **Configured Behavior**:
+  * Displays a direct link to the transaction OCR service under the **Services** top navigation dropdown menu across all pages.
+* **Unconfigured/Empty Behavior**:
+  * Setting this URL to `""` or omitting it removes the link from the **Services** dropdown (and hides the Services menu if no other services are configured).
 
 ---
 

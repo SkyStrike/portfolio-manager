@@ -49,7 +49,9 @@ def update_settings(
                 "summary": "Standard settings overrides",
                 "value": {
                     "sorting.classification_priority": ["Core ETF", "Growth", "Income"],
-                    "external_services.options_tracker_url": "http://yui.home/options-tracker/",
+                    "external_services.options_tracker_url": "http://lisbeth.home/options-tracker/",
+                    "external_services.backtester_url": "http://lisbeth.home/backtester/",
+                    "external_services.transaction_ocr_url": "http://lisbeth.home/portfolio-ocr/",
                     "cron.metrics_run_hour": 6
                 }
             }

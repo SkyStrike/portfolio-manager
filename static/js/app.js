@@ -1975,6 +1975,7 @@ function setupFormSubmissions() {
             const priority = priorityStr.split(",").map(s => s.trim()).filter(s => s.length > 0);
             const optionsUrl = document.getElementById("settings-options-tracker-url").value.trim();
             const backtesterUrl = document.getElementById("settings-backtester-url").value.trim();
+            const transactionOcrUrl = document.getElementById("settings-transaction-ocr-url") ? document.getElementById("settings-transaction-ocr-url").value.trim() : "";
             const metricsRunHourVal = parseInt(document.getElementById("settings-metrics-run-hour").value.trim());
             const metricsRunHour = isNaN(metricsRunHourVal) ? 6 : metricsRunHourVal;
             
@@ -1982,6 +1983,7 @@ function setupFormSubmissions() {
                 "sorting.classification_priority": priority,
                 "external_services.options_tracker_url": optionsUrl,
                 "external_services.backtester_url": backtesterUrl,
+                "external_services.transaction_ocr_url": transactionOcrUrl,
                 "cron.metrics_run_hour": metricsRunHour
             };
             
@@ -2033,6 +2035,13 @@ async function loadSettingsEditor() {
             // Backtester URL
             const backtesterUrl = (settings.external_services && settings.external_services.backtester_url) || "";
             document.getElementById("settings-backtester-url").value = backtesterUrl;
+
+            // Transaction OCR URL
+            const transactionOcrUrl = (settings.external_services && settings.external_services.transaction_ocr_url) || "";
+            const transactionOcrEl = document.getElementById("settings-transaction-ocr-url");
+            if (transactionOcrEl) {
+                transactionOcrEl.value = transactionOcrUrl;
+            }
             
             // Metrics Run Hour
             const metricsRunHour = (settings.cron && settings.cron.metrics_run_hour !== undefined) ? settings.cron.metrics_run_hour : 6;
