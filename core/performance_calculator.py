@@ -38,18 +38,6 @@ def get_performance_report_data(db_path):
     # 1. Fetch cash report records split by broker
     cursor.execute("SELECT date, broker, liquidation_value, total_stock_value, cash_on_hand FROM daily_cash_report ORDER BY date ASC")
     raw_cash_rows = [dict(row) for row in cursor.fetchall()]
-    
-    # Check for legacy cash report table to merge
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='daily_cash_report_old'")
-    has_old_table = bool(cursor.fetchone())
-    
-    new_report_dates = set(r['date'] for r in raw_cash_rows)
-    
-    if has_old_table:
-        cursor.execute("SELECT date, 'CONSOLIDATED' as broker, liquidation_value, total_stock_value, cash_on_hand FROM daily_cash_report_old ORDER BY date ASC")
-        old_rows = [dict(row) for row in cursor.fetchall() if row['date'] not in new_report_dates]
-        raw_cash_rows.extend(old_rows)
-        raw_cash_rows.sort(key=lambda x: x['date'])
         
     # Query capital entries to dynamically compute base capital
     cursor.execute("SELECT date, broker, amount FROM broker_capital_entries ORDER BY date ASC")

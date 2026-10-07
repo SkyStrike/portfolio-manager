@@ -1,0 +1,8 @@
+{
+  "patch_id": "0005",
+  "name": "Merge Legacy Cash Report & Drop Old Tables",
+  "description": "Merges historical benchmark records from daily_cash_report_old into daily_cash_report and drops daily_cash_report_old and daily_portfolio_metrics_old.",
+  "script": "patch_merge_old_tables.py",
+  "applicable_version": "<= v2.0.52",
+  "parameters": []
+}

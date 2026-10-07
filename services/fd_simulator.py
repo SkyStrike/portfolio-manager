@@ -164,17 +164,6 @@ def get_monthly_actual_market_values(conn):
     cursor.execute("SELECT date, broker, liquidation_value FROM daily_cash_report ORDER BY date ASC")
     rows = [dict(row) for row in cursor.fetchall()]
 
-    # Retrieve legacy rows if table exists
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='daily_cash_report_old'")
-    if cursor.fetchone():
-        cursor.execute("SELECT date, 'CONSOLIDATED' as broker, liquidation_value FROM daily_cash_report_old ORDER BY date ASC")
-        old_rows = [dict(row) for row in cursor.fetchall()]
-        dates_in_new = {r['date'] for r in rows}
-        for r in old_rows:
-            if r['date'] not in dates_in_new:
-                rows.append(r)
-        rows.sort(key=lambda x: x['date'])
-
     # Group by month (YYYY-MM)
     rows_by_month = defaultdict(list)
     for r in rows:
