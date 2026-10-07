@@ -24,12 +24,26 @@ def upgrade() -> None:
     ).fetchone()
 
     if has_cash_old:
+        # 1a. For historical rows before MooMoo/multi-broker started (prior to 2025-08-18),
+        # 100% of the portfolio activity and capital was exclusively IBKR.
+        conn.execute(sa.text("""
+            INSERT OR IGNORE INTO daily_cash_report (date, broker, liquidation_value, base_capital, total_stock_value, cash_on_hand)
+            SELECT date, 'IBKR', liquidation_value, base_capital, total_stock_value, cash_on_hand
+            FROM daily_cash_report_old
+            WHERE date < '2025-08-18'
+              AND date NOT IN (SELECT DISTINCT date FROM daily_cash_report)
+        """))
+
+        # 1b. For historical rows with multi-broker activity (2025-08-18 up to per-broker reporting cutoff),
+        # record as 'CONSOLIDATED' net worth for portfolio-level historical tracking.
         conn.execute(sa.text("""
             INSERT OR IGNORE INTO daily_cash_report (date, broker, liquidation_value, base_capital, total_stock_value, cash_on_hand)
             SELECT date, 'CONSOLIDATED', liquidation_value, base_capital, total_stock_value, cash_on_hand
             FROM daily_cash_report_old
-            WHERE date NOT IN (SELECT DISTINCT date FROM daily_cash_report)
+            WHERE date >= '2025-08-18'
+              AND date NOT IN (SELECT DISTINCT date FROM daily_cash_report)
         """))
+
         op.drop_table('daily_cash_report_old')
 
     # 2. Check if daily_portfolio_metrics_old exists, drop it

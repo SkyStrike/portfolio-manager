@@ -24,14 +24,26 @@ def patch(params: dict = None):
         # 1. Check if daily_cash_report_old exists
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='daily_cash_report_old'")
         if cursor.fetchone():
+            # 1a. Pre-multi-broker (prior to 2025-08-18): 100% IBKR
+            cursor.execute("""
+                INSERT OR IGNORE INTO daily_cash_report (date, broker, liquidation_value, base_capital, total_stock_value, cash_on_hand)
+                SELECT date, 'IBKR', liquidation_value, base_capital, total_stock_value, cash_on_hand
+                FROM daily_cash_report_old
+                WHERE date < '2025-08-18'
+                  AND date NOT IN (SELECT DISTINCT date FROM daily_cash_report)
+            """)
+            ibkr_cnt = cursor.rowcount
+
+            # 1b. Post-multi-broker (2025-08-18 onwards): CONSOLIDATED
             cursor.execute("""
                 INSERT OR IGNORE INTO daily_cash_report (date, broker, liquidation_value, base_capital, total_stock_value, cash_on_hand)
                 SELECT date, 'CONSOLIDATED', liquidation_value, base_capital, total_stock_value, cash_on_hand
                 FROM daily_cash_report_old
-                WHERE date NOT IN (SELECT DISTINCT date FROM daily_cash_report)
+                WHERE date >= '2025-08-18'
+                  AND date NOT IN (SELECT DISTINCT date FROM daily_cash_report)
             """)
-            inserted_count = cursor.rowcount
-            print(f"[Patch 0005] Merged {inserted_count} historical rows from daily_cash_report_old.")
+            consolidated_cnt = cursor.rowcount
+            print(f"[Patch 0005] Merged {ibkr_cnt} IBKR rows and {consolidated_cnt} CONSOLIDATED rows from daily_cash_report_old.")
             cursor.execute("DROP TABLE daily_cash_report_old")
             print("[Patch 0005] Dropped table daily_cash_report_old.")
 

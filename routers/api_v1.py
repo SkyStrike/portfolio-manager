@@ -318,10 +318,10 @@ def get_broker_summary_report(year: int | None = None, price_mode: str = Query("
 
                         cursor.execute("SELECT close FROM ticker_price_history WHERE symbol = ? AND date <= ? ORDER BY date DESC LIMIT 1", (sym, cutoff_date))
                         pr_row = cursor.fetchone()
-                        close_pr = pr_row[0] if pr_row else 0.0
                         cursor.execute("SELECT cost_basis_after FROM transactions WHERE portfolio_id = ? AND ticker_id = ? AND date <= ? ORDER BY date DESC, id DESC LIMIT 1", (p["id"], tid, cutoff_date))
                         cb_row = cursor.fetchone()
-                        avg_c = cb_row[0] if (cb_row and cb_row[0] is not None) else close_pr
+                        avg_c = cb_row[0] if (cb_row and cb_row[0] is not None) else 0.0
+                        close_pr = pr_row[0] if (pr_row and pr_row[0] is not None and pr_row[0] > 0) else avg_c
 
                         fx = rates.get(curr, 1.0)
                         inv += sh * avg_c * fx
@@ -358,9 +358,25 @@ def get_broker_summary_report(year: int | None = None, price_mode: str = Query("
                 "dividends_net_sgd": round(divs, 2),
                 "stock_total_returns_sgd": round(returns, 2)
             })
-            
-        for br, b_info in brokers_data.items():
-            c_info = cash_rows.get(br.upper()) or cash_rows.get('CONSOLIDATED')
+
+        # Identify which brokers had any actual activity (transactions, capital entries, or dedicated cash reports)
+        # up to the cutoff date to exclude inactive brokers for historical years (e.g. SRS in 2024/2025)
+        active_broker_names = set()
+        for br, b_info in list(brokers_data.items()):
+            br_upper = br.upper()
+            has_tx = any(p["stock_cost_basis_sgd"] > 0 or p["current_stock_value_sgd"] > 0 or p["total_fees_sgd"] > 0 for p in b_info["portfolios"])
+            has_cap = (capital_entries_map.get(br_upper) or 0.0) > 0
+            has_cash = br_upper in cash_rows
+            if is_historical and not (has_tx or has_cap or has_cash):
+                del brokers_data[br]
+            else:
+                active_broker_names.add(br)
+
+        consolidated_row = cash_rows.get('CONSOLIDATED')
+
+        for br in list(brokers_data.keys()):
+            b_info = brokers_data[br]
+            c_info = cash_rows.get(br.upper())
             cap_entry = capital_entries_map.get(br.upper())
             
             if c_info and c_info.get("liquidation_value") is not None:
@@ -370,7 +386,7 @@ def get_broker_summary_report(year: int | None = None, price_mode: str = Query("
                 b_info["liquidation_value_sgd"] = round(c_info.get("liquidation_value", 0.0), 2)
                 b_info["cash_on_hand_sgd"] = round(c_info.get("cash_on_hand", 0.0), 2)
             elif cap_entry is not None:
-                # User entered explicit base capital into broker_capital_entries (e.g. SRS deposit)
+                # Explicit base capital into broker_capital_entries (e.g. MooMoo or SRS deposit)
                 b_info["tracking_mode"] = "capital_tracked"
                 if is_historical:
                     cursor.execute("SELECT MAX(date) FROM broker_capital_entries WHERE UPPER(broker) = ? AND date <= ?", (br.upper(), cutoff_date))
@@ -410,6 +426,21 @@ def get_broker_summary_report(year: int | None = None, price_mode: str = Query("
             consolidated["realized_pl_sgd"] += b_info["realized_pl_sgd"]
             consolidated["dividends_net_sgd"] += b_info["dividends_net_sgd"]
             consolidated["stock_total_returns_sgd"] += b_info["stock_total_returns_sgd"]
+
+        # If a CONSOLIDATED cash report row existed for this historical year (total net worth snapshot),
+        # use its authoritative total liquidation value and adjust primary broker (IBKR) accordingly.
+        if consolidated_row and consolidated_row.get("liquidation_value") is not None:
+            total_legacy_liq = round(float(consolidated_row["liquidation_value"]), 2)
+            # Find other brokers' liquidation
+            other_liq = sum(b["liquidation_value_sgd"] for br, b in brokers_data.items() if br.upper() != 'IBKR')
+            if 'IBKR' in brokers_data:
+                brokers_data['IBKR']["liquidation_value_sgd"] = round(total_legacy_liq - other_liq, 2)
+                brokers_data['IBKR']["account_capital_gains_sgd"] = round(brokers_data['IBKR']["liquidation_value_sgd"] - brokers_data['IBKR']["base_capital_sgd"], 2)
+                brokers_data['IBKR']["account_capital_gains_pct"] = round(
+                    (brokers_data['IBKR']["account_capital_gains_sgd"] / brokers_data['IBKR']["base_capital_sgd"] * 100)
+                    if brokers_data['IBKR']["base_capital_sgd"] > 0 else 0.0, 2
+                )
+            consolidated["liquidation_value_sgd"] = total_legacy_liq
 
         consolidated["account_capital_gains_sgd"] = round(consolidated["liquidation_value_sgd"] - consolidated["base_capital_sgd"], 2)
         consolidated["account_capital_gains_pct"] = round((consolidated["account_capital_gains_sgd"] / consolidated["base_capital_sgd"] * 100) if consolidated["base_capital_sgd"] > 0 else 0.0, 2)
