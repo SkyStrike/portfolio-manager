@@ -80,12 +80,14 @@ Update ticker attributes (tax rates, categories, classifications).
 
 ### D. Reporting & Broker Summary APIs
 Query consolidated portfolio and broker-level summaries for external dashboards and services.
-* **Broker Summary**: `GET /api/v1/reports/broker-summary`
-  * *Parameters*: `price_mode` (`closing` [default] or `intraday`).
+* **Broker Summary**: `GET /api/v1/reports/broker-summary` or `GET /api/v1/reports/broker-summary/{year}`
+  * *Parameters*:
+    * `year` (optional path parameter, integer e.g. `2024`, `2025`): Targets the cumulative summary frozen at that year's end (`YYYY-12-31`). If omitted, defaults to the current year with latest active data.
+    * `price_mode` (query parameter, `closing` [default] or `intraday`).
   * *Description*: Returns broker-level summaries covering:
     - **Perspective 1 (Account Capital & Real Gains)**: `base_capital_sgd` (net cash deposited), `liquidation_value_sgd` (total account net worth), `account_capital_gains_sgd` (real dollar profit), and `account_capital_gains_pct` (cash ROI %).
     - **Perspective 2 (Stock Position & Trading)**: `stock_cost_basis_sgd`, `current_stock_value_sgd`, `unrealized_pl_sgd`, `realized_pl_sgd`, `dividends_net_sgd`, `total_fees_sgd`, `stock_total_returns_sgd`, and `stock_total_returns_pct`.
-    - **Cash & Metadata**: `cash_on_hand_sgd`, `tracking_mode` (`account_nav_tracked` vs `stock_holdings_only`), and `last_updated_date`.
+    - **Cash & Metadata**: `cash_on_hand_sgd`, `tracking_mode` (`account_nav_tracked` vs `stock_holdings_only`), `year`, and `as_of_date`.
 * **Portfolio Summary**: `GET /api/dashboard/summary?portfolio_id={id}`
   * *Description*: Returns single-portfolio valuation, unrealized/realized P&L, and current holdings list in SGD.
 

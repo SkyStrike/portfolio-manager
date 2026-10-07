@@ -104,13 +104,21 @@ def get_dividend_calendar_report(price_mode: str = Query("closing")):
         raise HTTPException(status_code=500, detail="Dividend calendar data empty")
     return cal_data
 
+@router.get("/reports/broker-summary/{year}")
 @router.get("/reports/broker-summary")
-def get_broker_summary_report(price_mode: str = Query("closing")):
+def get_broker_summary_report(year: int | None = None, price_mode: str = Query("closing")):
     """
     Returns aggregated portfolio metrics (total invested, current value, cash, real gains) grouped by broker.
-    Defaults to closing prices.
+    Defaults to closing prices. If year is specified (or omitted defaulting to current year),
+    metrics are aggregated up to the selected year-end (or current date for current year).
     """
-    logger.info("GET /api/v1/reports/broker-summary (price_mode=%s)", price_mode)
+    from datetime import datetime
+    current_year = datetime.now().year
+    target_year = year if year is not None else current_year
+    is_historical = target_year < current_year
+    cutoff_date = f"{target_year}-12-31"
+
+    logger.info("GET /api/v1/reports/broker-summary (year=%s, cutoff_date=%s, price_mode=%s)", target_year, cutoff_date if is_historical else "latest", price_mode)
     from core.database import get_connection
     from core.calculations import get_portfolio_summary
     from services.fetch_exchange_rates import get_exchange_rates
@@ -124,25 +132,65 @@ def get_broker_summary_report(price_mode: str = Query("closing")):
         rates = get_exchange_rates()
         
         # 1. Fetch cumulative base capital from broker_capital_entries (authoritative source)
-        cursor.execute("SELECT UPPER(broker) as broker, SUM(amount) as base_capital FROM broker_capital_entries GROUP BY UPPER(broker)")
+        if is_historical:
+            cursor.execute("SELECT UPPER(broker) as broker, SUM(amount) as base_capital FROM broker_capital_entries WHERE date <= ? GROUP BY UPPER(broker)", (cutoff_date,))
+        else:
+            cursor.execute("SELECT UPPER(broker) as broker, SUM(amount) as base_capital FROM broker_capital_entries GROUP BY UPPER(broker)")
         capital_entries_map = {row['broker']: row['base_capital'] for row in cursor.fetchall()}
 
         # 2. Fetch latest snapshot per broker from daily_cash_report
-        cursor.execute("""
-            SELECT r.broker, r.date, r.liquidation_value, r.base_capital, r.cash_on_hand, r.total_stock_value
-            FROM daily_cash_report r
-            INNER JOIN (
-                SELECT broker, MAX(date) as max_date
-                FROM daily_cash_report
-                GROUP BY broker
-            ) m ON r.broker = m.broker AND r.date = m.max_date
-        """)
-        cash_rows = {row['broker'].upper(): dict(row) for row in cursor.fetchall()}
+        if is_historical:
+            cursor.execute("""
+                SELECT r.broker, r.date, r.liquidation_value, r.base_capital, r.cash_on_hand, r.total_stock_value
+                FROM daily_cash_report r
+                INNER JOIN (
+                    SELECT broker, MAX(date) as max_date
+                    FROM daily_cash_report
+                    WHERE date <= ?
+                    GROUP BY broker
+                ) m ON r.broker = m.broker AND r.date = m.max_date
+            """, (cutoff_date,))
+            cash_rows = {row['broker'].upper(): dict(row) for row in cursor.fetchall()}
+        else:
+            cursor.execute("""
+                SELECT r.broker, r.date, r.liquidation_value, r.base_capital, r.cash_on_hand, r.total_stock_value
+                FROM daily_cash_report r
+                INNER JOIN (
+                    SELECT broker, MAX(date) as max_date
+                    FROM daily_cash_report
+                    GROUP BY broker
+                ) m ON r.broker = m.broker AND r.date = m.max_date
+            """)
+            cash_rows = {row['broker'].upper(): dict(row) for row in cursor.fetchall()}
         
-        # Query latest price date from ticker_prices
-        cursor.execute("SELECT MAX(daily_close_date) FROM ticker_prices")
-        latest_price_date = cursor.fetchone()[0]
+        # Query effective as-of price date
+        if is_historical:
+            cursor.execute("SELECT MAX(date) FROM ticker_price_history WHERE date <= ?", (cutoff_date,))
+            hist_date = cursor.fetchone()[0]
+            if not hist_date:
+                # Fallback to transactions or daily_cash_report max date on or before cutoff
+                cursor.execute("SELECT MAX(date) FROM transactions WHERE date <= ?", (cutoff_date,))
+                hist_date = cursor.fetchone()[0]
+            latest_price_date = hist_date or cutoff_date
+        else:
+            cursor.execute("SELECT MAX(daily_close_date) FROM ticker_prices")
+            latest_price_date = cursor.fetchone()[0]
         
+        # 3. Check for historical portfolio metrics snapshot if is_historical
+        port_metrics_snapshot = {}
+        if is_historical:
+            cursor.execute("""
+                SELECT m.portfolio_id, m.date, m.total_invested, m.current_value, m.total_returns
+                FROM daily_portfolio_metrics m
+                INNER JOIN (
+                    SELECT portfolio_id, MAX(date) as max_date
+                    FROM daily_portfolio_metrics
+                    WHERE date <= ?
+                    GROUP BY portfolio_id
+                ) latest ON m.portfolio_id = latest.portfolio_id AND m.date = latest.max_date
+            """, (cutoff_date,))
+            port_metrics_snapshot = {row['portfolio_id']: dict(row) for row in cursor.fetchall()}
+
         brokers_data = defaultdict(lambda: {
             "tracking_mode": "stock_holdings_only",
             "last_updated_date": None,
@@ -183,15 +231,112 @@ def get_broker_summary_report(price_mode: str = Query("closing")):
         
         for p in portfolios:
             br = (p.get("broker") or p["name"]).strip()
-            summary = get_portfolio_summary(p["id"], conn, rates, price_mode=price_mode)
             
-            inv = summary.get("total_cost_sgd", 0.0)
-            fees = summary.get("total_fees_sgd", 0.0)
-            val = summary.get("total_value_sgd", 0.0)
-            unrealized = summary.get("total_unrealized_pl_sgd", 0.0)
-            realized = summary.get("total_realized_pl_sgd", 0.0)
-            divs = summary.get("total_dividends_net_sgd", 0.0)
-            returns = summary.get("total_profit_sgd", 0.0)
+            if is_historical and p["id"] in port_metrics_snapshot:
+                # Use historical portfolio metric snapshot if recorded
+                p_metric = port_metrics_snapshot[p["id"]]
+                inv = float(p_metric.get("total_invested", 0.0))
+                val = float(p_metric.get("current_value", 0.0))
+                unrealized = val - inv
+
+                cursor.execute("""
+                    SELECT SUM(COALESCE(realized_pl_sgd, 0.0))
+                    FROM transactions
+                    WHERE portfolio_id = ? AND action = 'SELL' AND date <= ?
+                """, (p["id"], cutoff_date))
+                realized = cursor.fetchone()[0] or 0.0
+
+                from services.fetch_exchange_rates import get_historical_exchange_rate
+
+                cursor.execute("""
+                    SELECT amount, tax, currency, date
+                    FROM dividends
+                    WHERE portfolio_id = ? AND date <= ?
+                """, (p["id"], cutoff_date))
+                divs = sum(
+                    ((r['amount'] or 0.0) - (r['tax'] or 0.0)) * get_historical_exchange_rate(r['date'], r['currency'], conn)
+                    for r in cursor.fetchall()
+                )
+
+                cursor.execute("""
+                    SELECT commission, currency, date
+                    FROM transactions
+                    WHERE portfolio_id = ? AND commission > 0 AND date <= ?
+                """, (p["id"], cutoff_date))
+                fees = sum(
+                    (r['commission'] or 0.0) * get_historical_exchange_rate(r['date'], r['currency'], conn)
+                    for r in cursor.fetchall()
+                )
+
+                returns = unrealized + realized + divs - fees
+            elif is_historical:
+                # Filter transactions and dividends up to cutoff date
+                cursor.execute("""
+                    SELECT SUM(COALESCE(realized_pl_sgd, 0.0))
+                    FROM transactions
+                    WHERE portfolio_id = ? AND action = 'SELL' AND date <= ?
+                """, (p["id"], cutoff_date))
+                realized = cursor.fetchone()[0] or 0.0
+
+                from services.fetch_exchange_rates import get_historical_exchange_rate
+
+                cursor.execute("""
+                    SELECT amount, tax, currency, date
+                    FROM dividends
+                    WHERE portfolio_id = ? AND date <= ?
+                """, (p["id"], cutoff_date))
+                divs = sum(
+                    ((r['amount'] or 0.0) - (r['tax'] or 0.0)) * get_historical_exchange_rate(r['date'], r['currency'], conn)
+                    for r in cursor.fetchall()
+                )
+
+                cursor.execute("""
+                    SELECT commission, currency, date
+                    FROM transactions
+                    WHERE portfolio_id = ? AND commission > 0 AND date <= ?
+                """, (p["id"], cutoff_date))
+                fees = sum(
+                    (r['commission'] or 0.0) * get_historical_exchange_rate(r['date'], r['currency'], conn)
+                    for r in cursor.fetchall()
+                )
+
+                # Compute historical holdings from transactions up to cutoff
+                from core.calculations import get_shares_on_date
+                cursor.execute("SELECT DISTINCT ticker_id FROM transactions WHERE portfolio_id = ? AND date <= ?", (p["id"], cutoff_date))
+                ticker_ids = [r[0] for r in cursor.fetchall()]
+                inv = 0.0
+                val = 0.0
+                for tid in ticker_ids:
+                    sh = get_shares_on_date(p["id"], tid, cutoff_date, conn)
+                    if sh > 0.0001:
+                        cursor.execute("SELECT symbol FROM tickers WHERE id = ?", (tid,))
+                        tk_row = cursor.fetchone()
+                        sym = tk_row[0] if tk_row else ""
+                        cursor.execute("SELECT currency FROM transactions WHERE ticker_id = ? ORDER BY id DESC LIMIT 1", (tid,))
+                        curr_row = cursor.fetchone()
+                        curr = curr_row[0] if curr_row else "USD"
+
+                        cursor.execute("SELECT close FROM ticker_price_history WHERE symbol = ? AND date <= ? ORDER BY date DESC LIMIT 1", (sym, cutoff_date))
+                        pr_row = cursor.fetchone()
+                        close_pr = pr_row[0] if pr_row else 0.0
+                        cursor.execute("SELECT cost_basis_after FROM transactions WHERE portfolio_id = ? AND ticker_id = ? AND date <= ? ORDER BY date DESC, id DESC LIMIT 1", (p["id"], tid, cutoff_date))
+                        cb_row = cursor.fetchone()
+                        avg_c = cb_row[0] if (cb_row and cb_row[0] is not None) else close_pr
+
+                        fx = rates.get(curr, 1.0)
+                        inv += sh * avg_c * fx
+                        val += sh * close_pr * fx
+                unrealized = val - inv
+                returns = unrealized + realized + divs - fees
+            else:
+                summary = get_portfolio_summary(p["id"], conn, rates, price_mode=price_mode)
+                inv = summary.get("total_cost_sgd", 0.0)
+                fees = summary.get("total_fees_sgd", 0.0)
+                val = summary.get("total_value_sgd", 0.0)
+                unrealized = summary.get("total_unrealized_pl_sgd", 0.0)
+                realized = summary.get("total_realized_pl_sgd", 0.0)
+                divs = summary.get("total_dividends_net_sgd", 0.0)
+                returns = summary.get("total_profit_sgd", 0.0)
             
             b = brokers_data[br]
             b["stock_cost_basis_sgd"] += inv
@@ -215,7 +360,7 @@ def get_broker_summary_report(price_mode: str = Query("closing")):
             })
             
         for br, b_info in brokers_data.items():
-            c_info = cash_rows.get(br.upper())
+            c_info = cash_rows.get(br.upper()) or cash_rows.get('CONSOLIDATED')
             cap_entry = capital_entries_map.get(br.upper())
             
             if c_info and c_info.get("liquidation_value") is not None:
@@ -227,7 +372,10 @@ def get_broker_summary_report(price_mode: str = Query("closing")):
             elif cap_entry is not None:
                 # User entered explicit base capital into broker_capital_entries (e.g. SRS deposit)
                 b_info["tracking_mode"] = "capital_tracked"
-                cursor.execute("SELECT MAX(date) FROM broker_capital_entries WHERE UPPER(broker) = ?", (br.upper(),))
+                if is_historical:
+                    cursor.execute("SELECT MAX(date) FROM broker_capital_entries WHERE UPPER(broker) = ? AND date <= ?", (br.upper(), cutoff_date))
+                else:
+                    cursor.execute("SELECT MAX(date) FROM broker_capital_entries WHERE UPPER(broker) = ?", (br.upper(),))
                 b_info["last_updated_date"] = cursor.fetchone()[0] or latest_price_date
                 b_info["base_capital_sgd"] = round(cap_entry, 2)
                 # Cash on hand = base capital deposited minus capital spent buying stocks (if positive)
@@ -269,9 +417,9 @@ def get_broker_summary_report(price_mode: str = Query("closing")):
         for k in ["base_capital_sgd", "liquidation_value_sgd", "total_cash_sgd", "stock_cost_basis_sgd", "total_fees_sgd", "current_stock_value_sgd", "unrealized_pl_sgd", "realized_pl_sgd", "dividends_net_sgd", "stock_total_returns_sgd"]:
             consolidated[k] = round(consolidated[k], 2)
 
-        from datetime import datetime
         return {
             "generated_at": datetime.now().isoformat(),
+            "year": target_year,
             "as_of_date": latest_price_date,
             "price_mode": price_mode,
             "brokers": dict(brokers_data),
